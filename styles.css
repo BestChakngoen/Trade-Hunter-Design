@@ -289,12 +289,21 @@ body {
   }
 
   .sort-toggles {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
     width: 100%;
+    padding: 4px 2px;
+    gap: 8px;
+  }
+
+  .sort-toggles::-webkit-scrollbar {
+    display: none;
   }
 
   .sort-toggle-btn {
-    flex: 1;
-    justify-content: center;
+    flex: 0 0 auto;
   }
 }
 
@@ -627,13 +636,6 @@ body {
   .chart-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-  }
-
-  .sort-toggles {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    width: 100%;
   }
 }
 
