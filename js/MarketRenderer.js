@@ -4,6 +4,7 @@ class MarketRenderer {
     this.sectorPills = document.getElementById('sectorPills');
     this.sortPriceBtn = document.getElementById('sortPriceBtn');
     this.sortBetaBtn = document.getElementById('sortBetaBtn');
+    this.sortSectorBtn = document.getElementById('sortSectorBtn');
     this.resetBtn = document.getElementById('resetBtn');
     this.resetMarketBtn = document.getElementById('resetMarketBtn');
     this.stockChartCanvas = document.getElementById('stockChart');
@@ -66,29 +67,30 @@ class MarketRenderer {
     });
   }
 
-  updateSortButtonsUI(activeSort) {
-    const priceIcon = this.sortPriceBtn.querySelector('.sort-icon');
-    const betaIcon = this.sortBetaBtn.querySelector('.sort-icon');
-    
-    if (activeSort.type === 'PRICE') {
-      this.sortPriceBtn.classList.add('active');
-      priceIcon.textContent = activeSort.dir === 'DESC' ? '▼' : '▲';
-      
-      this.sortBetaBtn.classList.remove('active');
-      betaIcon.textContent = '↕';
-    } else if (activeSort.type === 'BETA') {
-      this.sortBetaBtn.classList.add('active');
-      betaIcon.textContent = activeSort.dir === 'DESC' ? '▼' : '▲';
-      
-      this.sortPriceBtn.classList.remove('active');
-      priceIcon.textContent = '↕';
+  updateSortButtonsUI(sortStates) {
+    const buttons = [
+      { btn: this.sortPriceBtn, type: 'PRICE', label: 'Price' },
+      { btn: this.sortBetaBtn, type: 'BETA', label: 'Beta' }
+    ];
+
+    buttons.forEach(({ btn, type, label }) => {
+      const state = sortStates[type];
+      if (state.enabled) {
+        btn.classList.add('active');
+        const icon = state.dir === 'DESC' ? '▼' : '▲';
+        btn.innerHTML = `<span class="sort-label">${label}</span><span class="sort-icon">${icon}</span>`;
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = `<span class="sort-label">${label}</span><span class="sort-icon">↕</span>`;
+      }
+    });
+
+    if (sortStates.SECTOR.enabled) {
+      this.sortSectorBtn.classList.add('active');
     } else {
-      this.sortPriceBtn.classList.remove('active');
-      priceIcon.textContent = '↕';
-      
-      this.sortBetaBtn.classList.remove('active');
-      betaIcon.textContent = '↕';
+      this.sortSectorBtn.classList.remove('active');
     }
+    this.sortSectorBtn.innerHTML = `<span class="sort-label" style="justify-content: center; width: 100%;">Sector</span>`;
   }
 
   updateSectorPillsUI(selectedSectors) {

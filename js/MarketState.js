@@ -2,7 +2,11 @@ class MarketState {
   constructor(cardElements) {
     this.originalCards = cardElements;
     this.selectedSectors = new Set(['ALL']);
-    this.activeSort = { type: 'NONE', dir: 'NONE' };
+    this.sortStates = {
+      SECTOR: { enabled: false, dir: 'ASC' },
+      BETA: { enabled: false, dir: 'DESC' },
+      PRICE: { enabled: false, dir: 'DESC' }
+    };
     this.initialPrices = {};
     this.priceHistory = {};
     
@@ -30,7 +34,11 @@ class MarketState {
   }
 
   resetFilters() {
-    this.activeSort = { type: 'NONE', dir: 'NONE' };
+    this.sortStates = {
+      SECTOR: { enabled: false, dir: 'ASC' },
+      BETA: { enabled: false, dir: 'DESC' },
+      PRICE: { enabled: false, dir: 'DESC' }
+    };
     this.selectedSectors.clear();
     this.selectedSectors.add('ALL');
   }
@@ -51,17 +59,37 @@ class MarketState {
       return this.selectedSectors.has('ALL') || this.selectedSectors.has(sector);
     });
 
-    if (this.activeSort.type !== 'NONE' && this.activeSort.dir !== 'NONE') {
+    const isSectorActive = this.sortStates.SECTOR.enabled;
+    const isBetaActive = this.sortStates.BETA.enabled;
+    const isPriceActive = this.sortStates.PRICE.enabled;
+
+    if (isSectorActive || isBetaActive || isPriceActive) {
       filtered.sort((a, b) => {
-        let valA, valB;
-        if (this.activeSort.type === 'PRICE') {
-          valA = parseFloat(a.getAttribute('data-price'));
-          valB = parseFloat(b.getAttribute('data-price'));
-        } else if (this.activeSort.type === 'BETA') {
-          valA = parseFloat(a.getAttribute('data-beta'));
-          valB = parseFloat(b.getAttribute('data-beta'));
+        // 1. Sort by Sector (if enabled) - always ASC (A-Z)
+        if (isSectorActive) {
+          const valA = a.getAttribute('data-sector') || '';
+          const valB = b.getAttribute('data-sector') || '';
+          const comparison = valA.localeCompare(valB);
+          if (comparison !== 0) return comparison;
         }
-        return this.activeSort.dir === 'DESC' ? valB - valA : valA - valB;
+
+        // 2. Sort by Beta (if enabled)
+        if (isBetaActive) {
+          const valA = parseFloat(a.getAttribute('data-beta'));
+          const valB = parseFloat(b.getAttribute('data-beta'));
+          const comparison = this.sortStates.BETA.dir === 'DESC' ? valB - valA : valA - valB;
+          if (comparison !== 0) return comparison;
+        }
+
+        // 3. Sort by Price (if enabled)
+        if (isPriceActive) {
+          const valA = parseFloat(a.getAttribute('data-price'));
+          const valB = parseFloat(b.getAttribute('data-price'));
+          const comparison = this.sortStates.PRICE.dir === 'DESC' ? valB - valA : valA - valB;
+          if (comparison !== 0) return comparison;
+        }
+
+        return 0;
       });
     }
     return filtered;

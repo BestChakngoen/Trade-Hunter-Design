@@ -59,27 +59,43 @@ class MarketController {
   }
 
   bindSortButtons() {
-    const handleSort = (type) => {
-      const sort = this.state.activeSort;
-      if (sort.type === type) {
-        sort.dir = sort.dir === 'DESC' ? 'ASC' : 'DESC';
+    const handleSortClick = (type, e) => {
+      const sortStates = this.state.sortStates;
+      
+      if (type === 'SECTOR') {
+        sortStates.SECTOR.enabled = !sortStates.SECTOR.enabled;
       } else {
-        sort.type = type;
-        sort.dir = 'DESC';
+        const sort = sortStates[type];
+        const isIconClick = e.target.closest('.sort-icon') !== null;
+        
+        if (isIconClick) {
+          if (sort.enabled) {
+            sort.dir = sort.dir === 'DESC' ? 'ASC' : 'DESC';
+          } else {
+            sort.enabled = true;
+            sort.dir = 'DESC';
+          }
+        } else {
+          sort.enabled = !sort.enabled;
+          if (sort.enabled) {
+            sort.dir = 'DESC';
+          }
+        }
       }
       
-      this.renderer.updateSortButtonsUI(sort);
+      this.renderer.updateSortButtonsUI(sortStates);
       this.updateViewGrid();
     };
 
-    this.renderer.sortPriceBtn.addEventListener('click', () => handleSort('PRICE'));
-    this.renderer.sortBetaBtn.addEventListener('click', () => handleSort('BETA'));
+    this.renderer.sortPriceBtn.addEventListener('click', (e) => handleSortClick('PRICE', e));
+    this.renderer.sortBetaBtn.addEventListener('click', (e) => handleSortClick('BETA', e));
+    this.renderer.sortSectorBtn.addEventListener('click', (e) => handleSortClick('SECTOR', e));
   }
 
   bindResetBtn() {
     this.renderer.resetBtn.addEventListener('click', () => {
       this.state.resetFilters();
-      this.renderer.updateSortButtonsUI(this.state.activeSort);
+      this.renderer.updateSortButtonsUI(this.state.sortStates);
       this.renderer.updateSectorPillsUI(this.state.selectedSectors);
       this.renderer.clearAllCardAnimations(this.state.originalCards);
       this.updateViewGrid();
@@ -149,7 +165,7 @@ class MarketController {
     document.getElementById('confirmResetBtn').addEventListener('click', () => {
       this.state.resetMarket();
       
-      this.renderer.updateSortButtonsUI(this.state.activeSort);
+      this.renderer.updateSortButtonsUI(this.state.sortStates);
       this.renderer.updateSectorPillsUI(this.state.selectedSectors);
       this.renderer.clearAllCardAnimations(this.state.originalCards);
       

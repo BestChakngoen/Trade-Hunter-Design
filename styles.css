@@ -199,29 +199,68 @@ body {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
   color: var(--muted);
-  padding: 12px 24px;
   border-radius: 16px;
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sort-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
   border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
 }
 
+.sort-label {
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sort-label:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.sort-icon {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  border-left: 1px solid var(--border);
+  transition: background 0.2s, color 0.2s, transform 0.2s ease;
+}
+
+.sort-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
 .sort-toggle-btn.active {
-  background: linear-gradient(135deg, rgba(96, 255, 184, 0.15) 0%, rgba(96, 255, 184, 0.03) 100%);
+  background: linear-gradient(135deg, rgba(96, 255, 184, 0.12) 0%, rgba(96, 255, 184, 0.02) 100%);
   border-color: var(--accent);
   color: var(--accent);
   box-shadow: 0 0 16px rgba(96, 255, 184, 0.12);
+}
+
+.sort-toggle-btn.active .sort-icon {
+  border-left-color: rgba(96, 255, 184, 0.2);
+}
+
+.sort-toggle-btn.active .sort-label:hover {
+  background: rgba(96, 255, 184, 0.08);
+}
+
+.sort-toggle-btn.active .sort-icon:hover {
+  background: rgba(96, 255, 184, 0.18);
 }
 
 .sort-toggle-btn.reset-btn {
@@ -237,9 +276,9 @@ body {
   transform: translateY(-1px);
 }
 
-.sort-icon {
-  font-size: 0.95rem;
-  transition: transform 0.2s ease;
+.sort-toggle-btn.reset-btn .sort-label:hover {
+  background: transparent;
+  color: inherit;
 }
 
 @media (max-width: 768px) {
