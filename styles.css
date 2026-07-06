@@ -219,6 +219,7 @@ body {
   padding: 12px 18px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex: 1;
   transition: background 0.2s, color 0.2s;
@@ -626,6 +627,13 @@ body {
   .chart-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
+  }
+
+  .sort-toggles {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
   }
 }
 
