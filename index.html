@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Findice Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="logo">FINDICE</div>
+    </header>
+
+    <div class="filter-container">
+      <div class="filter-section">
+        <span class="filter-title">Sector</span>
+        <div class="sector-pills" id="sectorPills">
+          <button class="pill active" data-value="ALL">All</button>
+          <button class="pill" data-value="FINCIAL">FINCIAL</button>
+          <button class="pill" data-value="CONSUMP">CONSUMP</button>
+          <button class="pill" data-value="RESOURCE">RESOURCE</button>
+          <button class="pill" data-value="INDUS">INDUS</button>
+          <button class="pill" data-value="TECH">TECH</button>
+          <button class="pill" data-value="PROPCON">PROPCON</button>
+          <button class="pill" data-value="AGRO">AGRO</button>
+          <button class="pill" data-value="SERVICE">SERVICE</button>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-title">Sort By</span>
+        <div class="sort-toggles">
+          <button id="sortPriceBtn" class="sort-toggle-btn">
+            Price <span class="sort-icon">↕</span>
+          </button>
+          <button id="sortBetaBtn" class="sort-toggle-btn">
+            Beta <span class="sort-icon">↕</span>
+          </button>
+          <button id="resetBtn" class="sort-toggle-btn reset-btn">
+            Reset ↺
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <section class="price-section">
+      <div class="section-title">Price Level</div>
+      <div class="price-grid" id="priceGrid">
+        <article class="price-card" data-sector="FINCIAL" data-price="5000" data-beta="1.20">
+          <div class="card-icon icon-pink">KTF</div>
+          <div class="card-value">5,000</div>
+          <div class="card-meta">
+            <span class="card-sector">FINCIAL</span>
+            <span class="card-beta">Beta 1.20</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="AGRO" data-price="5000" data-beta="2.03">
+          <div class="card-icon icon-green-dark">ABF</div>
+          <div class="card-value">5,000</div>
+          <div class="card-meta">
+            <span class="card-sector">AGRO</span>
+            <span class="card-beta">Beta 2.03</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="INDUS" data-price="6300" data-beta="1.15">
+          <div class="card-icon icon-gray">ZIF</div>
+          <div class="card-value">6,300</div>
+          <div class="card-meta">
+            <span class="card-sector">INDUS</span>
+            <span class="card-beta">Beta 1.15</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="FINCIAL" data-price="5000" data-beta="0.43">
+          <div class="card-icon icon-pink">FSF</div>
+          <div class="card-value">5,000</div>
+          <div class="card-meta">
+            <span class="card-sector">FINCIAL</span>
+            <span class="card-beta">Beta 0.43</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="TECH" data-price="7500" data-beta="2.11">
+          <div class="card-icon icon-blue">SICF</div>
+          <div class="card-value">7,500</div>
+          <div class="card-meta">
+            <span class="card-sector">TECH</span>
+            <span class="card-beta">Beta 2.11</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="AGRO" data-price="7000" data-beta="1.61">
+          <div class="card-icon icon-green-dark">SUF</div>
+          <div class="card-value">7,000</div>
+          <div class="card-meta">
+            <span class="card-sector">AGRO</span>
+            <span class="card-beta">Beta 1.61</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="RESOURCE" data-price="7000" data-beta="0.73">
+          <div class="card-icon icon-purple">SAAF</div>
+          <div class="card-value">7,000</div>
+          <div class="card-meta">
+            <span class="card-sector">RESOURCE</span>
+            <span class="card-beta">Beta 0.73</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="TECH" data-price="10500" data-beta="1.73">
+          <div class="card-icon icon-blue">VCOF</div>
+          <div class="card-value">10,500</div>
+          <div class="card-meta">
+            <span class="card-sector">TECH</span>
+            <span class="card-beta">Beta 1.73</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="PROPCON" data-price="10000" data-beta="0.58">
+          <div class="card-icon icon-brown">ARROF</div>
+          <div class="card-value">10,000</div>
+          <div class="card-meta">
+            <span class="card-sector">PROPCON</span>
+            <span class="card-beta">Beta 0.58</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="CONSUMP" data-price="10000" data-beta="1.23">
+          <div class="card-icon icon-peach">KISF</div>
+          <div class="card-value">10,000</div>
+          <div class="card-meta">
+            <span class="card-sector">CONSUMP</span>
+            <span class="card-beta">Beta 1.23</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="SERVICE" data-price="15000" data-beta="0.35">
+          <div class="card-icon icon-green-light">TNF</div>
+          <div class="card-value">15,000</div>
+          <div class="card-meta">
+            <span class="card-sector">SERVICE</span>
+            <span class="card-beta">Beta 0.35</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="TECH" data-price="15000" data-beta="1.27">
+          <div class="card-icon icon-blue">DTSF</div>
+          <div class="card-value">15,000</div>
+          <div class="card-meta">
+            <span class="card-sector">TECH</span>
+            <span class="card-beta">Beta 1.27</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="AGRO" data-price="8200" data-beta="0.80">
+          <div class="card-icon icon-green-dark">DPF</div>
+          <div class="card-value">8,200</div>
+          <div class="card-meta">
+            <span class="card-sector">AGRO</span>
+            <span class="card-beta">Beta 0.80</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="INDUS" data-price="4100" data-beta="0.33">
+          <div class="card-icon icon-gray">DTF</div>
+          <div class="card-value">4,100</div>
+          <div class="card-meta">
+            <span class="card-sector">INDUS</span>
+            <span class="card-beta">Beta 0.33</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="RESOURCE" data-price="12000" data-beta="1.25">
+          <div class="card-icon icon-purple">PTF</div>
+          <div class="card-value">12,000</div>
+          <div class="card-meta">
+            <span class="card-sector">RESOURCE</span>
+            <span class="card-beta">Beta 1.25</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+        <article class="price-card" data-sector="CONSUMP" data-price="3500" data-beta="0.17">
+          <div class="card-icon icon-peach">CUF</div>
+          <div class="card-value">3,500</div>
+          <div class="card-meta">
+            <span class="card-sector">CONSUMP</span>
+            <span class="card-beta">Beta 0.17</span>
+          </div>
+          <div class="card-controls">
+            <button class="control-btn up">▲</button>
+            <button class="control-btn down">▼</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Danger Zone for Board Game Restart -->
+    <section class="danger-zone-section">
+      <div class="danger-zone-card">
+        <div class="danger-zone-info">
+          <span class="danger-zone-title">Danger Zone</span>
+          <p class="danger-zone-desc">Restart the game board. This will reset all stock prices to their initial starting values and wipe the price history graphs.</p>
+        </div>
+        <button id="resetMarketBtn" class="danger-btn">Reset Market Prices</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal for Stock Chart -->
+  <div id="chartModal" class="modal">
+    <div class="modal-content">
+      <header class="modal-header">
+        <div class="modal-title-group">
+          <span id="modalStockIcon" class="modal-stock-icon">KTF</span>
+          <h2 id="modalStockSymbol" class="modal-stock-symbol">KTF</h2>
+          <span id="modalStockSector" class="modal-stock-sector">FINCIAL</span>
+        </div>
+        <button id="closeModalBtn" class="close-modal-btn">&times;</button>
+      </header>
+      <div class="modal-body">
+        <div class="chart-container">
+          <canvas id="stockChart"></canvas>
+        </div>
+        <div class="chart-stats">
+          <div class="stat-card">
+            <span class="stat-label">Starting Price</span>
+            <span id="statStartPrice" class="stat-value">5,000</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Current Price</span>
+            <span id="statPrice" class="stat-value">5,000</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Beta</span>
+            <span id="statBeta" class="stat-value">1.20</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Total Change</span>
+            <span id="statChange" class="stat-value">+0.0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirmation Dialog Modal -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content confirm-modal-content">
+      <header class="modal-header">
+        <h3 class="confirm-modal-title">⚠️ Reset Market?</h3>
+        <button id="closeConfirmModalBtn" class="close-modal-btn">&times;</button>
+      </header>
+      <div class="modal-body confirm-modal-body">
+        <p>Are you sure you want to reset all stock prices and history graphs to their starting values? This will restart the game board state. This action cannot be undone.</p>
+        <div class="confirm-actions">
+          <button id="cancelResetBtn" class="confirm-btn cancel-btn">Cancel</button>
+          <button id="confirmResetBtn" class="confirm-btn reset-btn-confirm">Reset Prices</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/MarketState.js"></script>
+  <script src="js/MarketRenderer.js"></script>
+  <script src="js/MarketController.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
