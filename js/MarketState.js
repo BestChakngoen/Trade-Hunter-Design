@@ -1,4 +1,4 @@
-class MarketState {
+export class MarketState {
   constructor(cardElements) {
     this.originalCards = cardElements;
     this.selectedSectors = new Set(['ALL']);
@@ -7,30 +7,160 @@ class MarketState {
       BETA: { enabled: false, dir: 'DESC' },
       PRICE: { enabled: false, dir: 'DESC' }
     };
-    this.initialPrices = {};
+    
+    this.roomCode = null;
+    this.role = 'player'; // default role
+    this.isSpectating = false; // spectator mode for GM
+    
+    // Master settings from Firestore (key: Stock Name)
+    this.masterStocks = {}; 
+    
+    // Current board state from Realtime Database (key: Stock Name)
+    this.boardStocks = {};
+    
+    // Track price history locally for charts
     this.priceHistory = {};
     
-    // Parse metadata and record starting values
-    this.originalCards.forEach(card => {
-      const symbol = card.querySelector('.card-icon').textContent.trim();
-      const price = parseFloat(card.getAttribute('data-price'));
-      this.initialPrices[symbol] = price;
-      this.priceHistory[symbol] = [price];
+    // Player portfolio state
+    this.portfolio = {
+      cash: 1000000,
+      stocks: {}
+    };
+    
+    // Pending orders queue
+    this.pendingOrders = {};
+  }
+
+  setRoomCode(code) {
+    this.roomCode = code;
+  }
+
+  setRole(role) {
+    this.role = role;
+  }
+
+  // Populate master settings from Firestore
+  setMasterStocks(firestoreStocks) {
+    this.masterStocks = {};
+    firestoreStocks.forEach(stock => {
+      this.masterStocks[stock.name] = {
+        name: stock.name,
+        steps: stock.steps,
+        startStep: stock.startStep
+      };
     });
   }
 
-  adjustPrice(symbol, delta) {
-    const card = this.originalCards.find(c => c.querySelector('.card-icon').textContent.trim() === symbol);
-    if (!card) return null;
+  // Update local state when Firebase Realtime Database triggers an update
+  updateFromFirebaseBoard(firebaseBoard) {
+    if (!firebaseBoard || !firebaseBoard.stocks) return;
 
-    let price = parseFloat(card.getAttribute('data-price'));
-    price = Math.max(0, price + delta);
+    firebaseBoard.stocks.forEach(stock => {
+      const symbol = stock.name;
+      this.boardStocks[symbol] = stock;
+
+      // Find the corresponding HTML card element and sync its attribute
+      const card = this.originalCards.find(c => c.querySelector('.card-icon').textContent.trim() === symbol);
+      if (card) {
+        card.setAttribute('data-price', stock.value);
+      }
+
+      // Record price history for chart rendering
+      if (!this.priceHistory[symbol]) {
+        // Initialize history with starting price if available
+        const master = this.masterStocks[symbol];
+        const startPrice = master ? master.steps[master.startStep - 1] : stock.value;
+        this.priceHistory[symbol] = [startPrice];
+      }
+
+      // Push latest value if it differs from the last recorded one
+      const history = this.priceHistory[symbol];
+      if (history[history.length - 1] !== stock.value) {
+        history.push(stock.value);
+      }
+    });
+  }
+
+  // Generate updated stocks list for saving to Firebase when upgrading price step
+  getUpdatedStocksForUp(symbol) {
+    const boardStocksArray = Object.values(this.boardStocks);
+    const stockIndex = boardStocksArray.findIndex(s => s.name === symbol);
+    if (stockIndex === -1) return null;
+
+    const currentStock = boardStocksArray[stockIndex];
+    const master = this.masterStocks[symbol];
+    if (!master) return null;
+
+    const nextStep = currentStock.step + 1;
+    if (nextStep >= master.steps.length) return null; // Already at max step
     
-    card.setAttribute('data-price', price);
-    if (this.priceHistory[symbol]) {
-      this.priceHistory[symbol].push(price);
+    const nextValue = master.steps[nextStep];
+    if (nextValue < 0) return null; // Prevent value dropping below 0
+
+    const updatedStocks = boardStocksArray.map(s => {
+      if (s.name === symbol) {
+        return {
+          ...s,
+          step: nextStep,
+          value: nextValue,
+          oldValue: currentStock.value,
+          updatedAt: Date.now()
+        };
+      }
+      return s;
+    });
+
+    return updatedStocks;
+  }
+
+  // Generate updated stocks list for saving to Firebase when downgrading price step
+  getUpdatedStocksForDown(symbol) {
+    const boardStocksArray = Object.values(this.boardStocks);
+    const stockIndex = boardStocksArray.findIndex(s => s.name === symbol);
+    if (stockIndex === -1) return null;
+
+    const currentStock = boardStocksArray[stockIndex];
+    const master = this.masterStocks[symbol];
+    if (!master) return null;
+
+    let prevStep = currentStock.step - 1;
+    if (prevStep < 0) {
+      prevStep = 0; // Clamp to lowest step 0 instead of wrapping
     }
-    return price;
+
+    const nextValue = master.steps[prevStep];
+    if (nextValue < 0) return null; // Prevent value dropping below 0
+
+    const updatedStocks = boardStocksArray.map(s => {
+      if (s.name === symbol) {
+        return {
+          ...s,
+          step: prevStep,
+          value: nextValue,
+          oldValue: currentStock.value,
+          updatedAt: Date.now()
+        };
+      }
+      return s;
+    });
+
+    return updatedStocks;
+  }
+
+  // Reset entire market state back to initial steps
+  getResetStocks() {
+    return Object.values(this.boardStocks).map(s => {
+      const master = this.masterStocks[s.name];
+      if (!master) return s;
+      const startIdx = master.startStep - 1;
+      return {
+        ...s,
+        step: startIdx,
+        value: master.steps[startIdx],
+        oldValue: null,
+        updatedAt: Date.now()
+      };
+    });
   }
 
   resetFilters() {
@@ -41,16 +171,6 @@ class MarketState {
     };
     this.selectedSectors.clear();
     this.selectedSectors.add('ALL');
-  }
-
-  resetMarket() {
-    this.resetFilters();
-    this.originalCards.forEach(card => {
-      const symbol = card.querySelector('.card-icon').textContent.trim();
-      const startPrice = this.initialPrices[symbol];
-      card.setAttribute('data-price', startPrice);
-      this.priceHistory[symbol] = [startPrice];
-    });
   }
 
   getFilteredAndSortedCards() {
@@ -121,5 +241,51 @@ class MarketState {
       changePct,
       history
     };
+  }
+
+  updatePortfolioFromMemberData(memberData) {
+    if (memberData && memberData.portfolio) {
+      this.portfolio = {
+        cash: memberData.portfolio.cash ?? 1000000,
+        stocks: memberData.portfolio.stocks ?? {}
+      };
+    } else {
+      this.portfolio = {
+        cash: 1000000,
+        stocks: {}
+      };
+    }
+  }
+
+  getPortfolioStats() {
+    let totalStocksValue = 0;
+    let totalCost = 0;
+    
+    Object.keys(this.portfolio.stocks).forEach(symbol => {
+      const holding = this.portfolio.stocks[symbol];
+      if (holding.volume > 0) {
+        const currentStock = this.boardStocks[symbol];
+        const marketPrice = currentStock ? currentStock.value : holding.avgPrice;
+        
+        totalStocksValue += holding.volume * marketPrice;
+        totalCost += holding.volume * holding.avgPrice;
+      }
+    });
+    
+    const totalAssets = this.portfolio.cash + totalStocksValue;
+    const totalPnL = totalStocksValue - totalCost;
+    const totalPnLPct = totalCost === 0 ? 0 : (totalPnL / totalCost) * 100;
+    
+    return {
+      cash: this.portfolio.cash,
+      stocksValue: totalStocksValue,
+      totalAssets: totalAssets,
+      totalPnL: totalPnL,
+      totalPnLPct: totalPnLPct
+    };
+  }
+
+  updatePendingOrders(ordersData) {
+    this.pendingOrders = ordersData || {};
   }
 }

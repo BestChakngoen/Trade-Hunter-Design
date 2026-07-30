@@ -1,0 +1,286 @@
+/* ==========================================================================
+   PORTFOLIO & TRADE STYLESHEET (css/portfolio.css)
+   สไตล์พอร์ตโฟลิโอ ตารางพอร์ต การส่งคำสั่งซื้อขาย และ เมนูเลือกหุ้น Dropdown
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 💼 Portfolio Summary Cards (การ์ดสรุปมูลค่าสินทรัพย์และเงินคงเหลือ)
+   -------------------------------------------------------------------------- */
+.port-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* ปรับคอลัมน์อัตโนมัติ */
+  gap: 16px;                        /* 👈 ระยะห่างระหว่างกล่องสรุปแต่ละตัว */
+}
+
+/* กล่องแสดงมูลค่าพอร์ตแต่ละกล่อง */
+.summary-card {
+  background: rgba(255, 255, 255, 0.02); /* 👈 สีพื้นหลังการ์ดสรุป */
+  border: 1px solid rgba(255, 255, 255, 0.05); /* 👈 สีเส้นขอบจางๆ */
+  border-radius: 12px;               /* 👈 ความมนของมุมกล่องสรุป */
+  padding: 16px;                     /* 👈 ระยะห่างขอบในกล่องสรุป */
+  text-align: center;
+}
+
+/* ข้อความชื่อหัวข้อ (เช่น TOTAL ASSETS VALUE, AVAILABLE CASH) */
+.summary-label {
+  display: block;
+  font-size: 10px;                  /* 👈 ขนาดตัวอักษรชื่อหัวข้อ */
+  color: #6b7280;                   /* 👈 สีตัวอักษรชื่อหัวข้อ */
+  font-weight: bold;
+  letter-spacing: 0.1em;           /* 👈 ระยะห่างตัวอักษร */
+  margin-bottom: 6px;
+}
+
+/* ตัวเลขสรุปยอดเงินคงเหลือ / กำไรขาดทุน */
+.summary-value {
+  font-size: 20px;                  /* 👈 ขนาดตัวอักษรยอดเงินสรุป */
+  font-weight: bold;
+}
+
+/* --------------------------------------------------------------------------
+   2. 📋 Holdings & Pending Tables (ตารางแสดงรายการพอร์ตและคำสั่งรออนุมัติ)
+   -------------------------------------------------------------------------- */
+.holdings-title, .trade-title {
+  font-size: 12px;                  /* 👈 ขนาดตัวอักษรหัวข้อตารางพอร์ต */
+  color: #9ca3af;                   /* 👈 สีตัวอักษรหัวข้อตารางพอร์ต */
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;              /* 👈 ระยะห่างใต้หัวข้อก่อนถึงตาราง */
+}
+
+.table-container {
+  overflow-x: auto;                 /* รองรับการสไลด์แนวนอนบนมือถือ */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;               /* 👈 ความมนขอบตารางพอร์ต */
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;                  /* 👈 ขนาดตัวอักษรข้อมูลในตาราง */
+}
+
+.holdings-table th, .holdings-table td {
+  padding: 12px 16px;                /* 👈 ความห่างช่องตาราง [บน-ล่าง] [ซ้าย-ขวา] */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.holdings-table th {
+  background: rgba(255, 255, 255, 0.02); /* 👈 สีพื้นหลังแถบหัวตาราง */
+  font-size: 11px;                  /* 👈 ขนาดตัวอักษรแถบหัวตาราง */
+  color: #6b7280;                   /* 👈 สีตัวอักษรแถบหัวตาราง */
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --------------------------------------------------------------------------
+   3. 🛒 Trade Order Form Widget (ฟอร์มส่งคำสั่งซื้อขาย Buy/Sell Order)
+   -------------------------------------------------------------------------- */
+
+/* กล่องครอบฟอร์มส่งคำสั่งซื้อขาย */
+.trade-card {
+  background: rgba(255, 255, 255, 0.02); /* 👈 สีพื้นหลังกล่องส่งคำสั่ง */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;               /* 👈 ความมนมุมกล่องส่งคำสั่ง */
+  padding: 24px;                     /* 👈 ระยะห่างขอบในกล่องส่งคำสั่ง */
+}
+
+/* ปุ่มแท็บสลับโหมด BUY / SELL */
+.trade-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: 8px;
+  width: 200px;                      /* 👈 ความกว้างกล่องสลับแท็บ BUY / SELL */
+  margin-bottom: 20px;
+}
+
+.trade-tab-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+/* เมื่อเลือกแท็บ BUY (สีเขียว) */
+.trade-tab-btn.buy.active {
+  background: #2dcc86 !important;   /* 👈 สีพื้นหลังแท็บ BUY (สีเขียวสว่าง) */
+  color: #000000 !important;        /* 👈 สีตัวอักษรแท็บ BUY (สีดำ) */
+}
+
+/* เมื่อเลือกแท็บ SELL (สีแดง) */
+.trade-tab-btn.sell.active {
+  background: #ef4566 !important;   /* 👈 สีพื้นหลังแท็บ SELL (สีแดงสว่าง) */
+  color: #ffffff !important;        /* 👈 สีตัวอักษรแท็บ SELL (สีขาว) */
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 11px;                  /* 👈 ขนาดฟอนต์ป้ายชื่อช่องกรอก (Label) */
+  color: #6b7280;                   /* 👈 สีป้ายชื่อช่องกรอก */
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.form-input {
+  width: 100% !important;
+  background-color: #111827 !important; /* 👈 สีพื้นหลังช่องกรอกข้อมูล */
+  color: #ffffff !important;         /* 👈 สีตัวอักษรที่กรอก */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;     /* 👈 ความมนของมุมช่องกรอก */
+  padding: 10px 12px !important;     /* 👈 ระยะห่างขอบในช่องกรอก */
+  font-size: 13px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.2s !important;
+}
+
+.form-input:focus {
+  border-color: #4b5563 !important; /* สีเส้นขอบเมื่อกดกรอกข้อมูล */
+}
+
+/* ปุ่มกดส่งคำสั่ง SUBMIT ORDER */
+.submit-order-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;               /* 👈 ความมนของมุมปุ่มกดส่งคำสั่ง */
+  padding: 14px;                     /* 👈 ความใหญ่ปุ่มกดส่งคำสั่ง */
+  font-size: 14px;                   /* 👈 ขนาดตัวอักษรบนปุ่มส่งคำสั่ง */
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+/* ปุ่มสั่งซื้อ BUY ORDER (ธีมเขียว) */
+.submit-order-btn.buy-theme {
+  background: #2dcc86;              /* 👈 สีปุ่มกดส่งคำสั่งซื้อ BUY ORDER (สีเขียว) */
+  color: #000000;
+}
+
+.submit-order-btn.buy-theme:hover {
+  background: #27b676;              /* 👈 สีปุ่ม BUY ORDER เมื่อเอาเมาส์ไปวาง */
+}
+
+/* ปุ่มขายหุ้น SELL ORDER (ธีมแดง) */
+.submit-order-btn.sell-theme {
+  background: #ef4566;              /* 👈 สีปุ่มกดส่งคำสั่งขาย SELL ORDER (สีแดง) */
+  color: #ffffff;
+}
+
+.submit-order-btn.sell-theme:hover {
+  background: #d63755;              /* 👈 สีปุ่ม SELL ORDER เมื่อเอาเมาส์ไปวาง */
+}
+
+.trade-form-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.trade-form-col {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 50% !important;             /* แบ่งความกว้าง 50% เท่ากันสองฝั่ง */
+  box-sizing: border-box !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. 🔽 Custom Dropup Dropdown (เมนูเลือกหุ้นแบบเด้งขึ้นด้านบน Dropup)
+   -------------------------------------------------------------------------- */
+.custom-dropdown {
+  position: relative !important;
+  width: 100%;
+}
+
+/* กล่องแสดงผลหุ้นตัวที่กำลังเลือกอยู่ */
+.custom-dropdown-selected {
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.custom-dropdown-selected:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.custom-dropdown-selected img {
+  width: 16px !important;           /* 👈 ขนาดไอคอนหุ้นใน Dropdown (16px) */
+  height: 16px !important;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* เมนูตัวเลือกทั้งหมดที่เด้งขยายขึ้นด้านบน (Dropup Options Container) */
+.custom-dropdown-options {
+  display: none;                    /* ซ่อนเมนูไว้เป็นค่าเริ่มต้น */
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 100% !important;          /* 👈 เปิดเด้งขึ้นด้านบนสุด (Dropup) */
+  margin-bottom: 6px !important;    /* 👈 ระยะห่างจากลอยขึ้นด้านบน */
+  width: 100% !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-sizing: border-box;
+  background-color: #0b0f19 !important; /* 👈 สีพื้นหลังรายการเลือกหุ้น (สีทึบไม่บังตา) */
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7) !important;
+  z-index: 99999 !important;        /* 👈 ลอยอยู่ชั้นบนสุดเสมอ */
+}
+
+/* แต่ละรายการตัวเลือกหุ้น (Item) */
+.dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+}
+
+.dropdown-item img {
+  width: 16px !important;           /* 👈 ขนาดรูปไอคอนหุ้นแต่ละตัว */
+  height: 16px !important;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* แถบเลื่อน Scrollbar ภายในกล่องเลือกหุ้น Dropdown */
+.custom-dropdown-options::-webkit-scrollbar {
+  width: 6px;                       /* 👈 ความกว้างของ Scrollbar ใน Dropdown */
+}
+
+.custom-dropdown-options::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.custom-dropdown-options::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.custom-dropdown-options::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

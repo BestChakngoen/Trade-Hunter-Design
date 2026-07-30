@@ -1,0 +1,84 @@
+# ==========================================================================
+   TRADE HUNTER DESIGN - GITIGNORE FILE (.gitignore)
+   ไฟล์ระบุรายการที่ไม่ต้องการให้ Git ติดตาม (Ignore List)
+   ==========================================================================
+
+# --------------------------------------------------------------------------
+# 📦 Node.js & Package Managers (โฟลเดอร์โมดูลและไลบรารี)
+# --------------------------------------------------------------------------
+node_modules/
+jspm_packages/
+.npm
+.yarn/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --------------------------------------------------------------------------
+# 🔑 Environment Variables & Secrets (ไฟล์ตั้งค่าความลับและ API Keys)
+# --------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.json
+
+# --------------------------------------------------------------------------
+# 🛠️ Build & Output Directories (โฟลเดอร์คอมไพล์และไฟล์ชั่วคราว)
+# --------------------------------------------------------------------------
+dist/
+build/
+out/
+.cache/
+.tmp/
+temp/
+tmp/
+*.log
+
+# --------------------------------------------------------------------------
+# 💻 Operating System Files (ไฟล์ชั่วคราวจากระบบปฏิบัติการ Windows / macOS)
+# --------------------------------------------------------------------------
+# Windows OS
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Trashes
+
+# --------------------------------------------------------------------------
+# 🖥️ IDE & Code Editors (ไฟล์การตั้งค่าของโปรแกรมเขียนโค้ด)
+# --------------------------------------------------------------------------
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains (WebStorm, IntelliJ)
+.idea/
+
+# Visual Studio
+*.suo
+*.user
+*.userosv
+*.sln.docstates
+
+# --------------------------------------------------------------------------
+# 🤖 AI Agents Temporary Artifacts (ไฟล์รูปชั่วคราวของเอเจนต์)
+# --------------------------------------------------------------------------
+.agents/*.png
+.agents/*.jpg
+.agents/*.jpeg

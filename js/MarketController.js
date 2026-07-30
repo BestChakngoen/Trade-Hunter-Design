@@ -1,187 +1,191 @@
-class MarketController {
-  constructor(state, renderer) {
+import { LobbyController } from './controllers/LobbyController.js';
+import { TradeController } from './controllers/TradeController.js';
+import { MarketBoardController } from './controllers/MarketBoardController.js';
+
+/**
+ * MarketController - Main Facade Controller coordinating Lobby, Trading, and Market Board modules.
+ */
+export class MarketController {
+  constructor(state, renderer, firebaseService) {
     this.state = state;
     this.renderer = renderer;
+    this.firebaseService = firebaseService;
+
+    // Sub-controllers following Single Responsibility Principle
+    this.lobbyController = new LobbyController(state, renderer, firebaseService);
+    this.tradeController = new TradeController(state, renderer, firebaseService);
+    this.marketBoardController = new MarketBoardController(state, renderer, firebaseService);
+
+    this.boardListenerUnsubscribe = null;
+    this.roomListenerUnsubscribe = null;
+  }
+
+  get updateTradeFormPrice() {
+    return this.tradeController.updateTradeFormPrice;
   }
 
   init() {
+    this.renderer.ensureViewGraphButtons();
     this.renderer.applyBetaColors(this.state.originalCards);
-    this.bindSectorFilter();
-    this.bindSortButtons();
-    this.bindResetBtn();
-    this.bindPriceControls();
-    this.bindStockModals();
-    this.bindDangerZone();
-  }
+    this.renderer.showLobby();
 
-  bindSectorFilter() {
-    this.renderer.sectorPills.addEventListener('click', (e) => {
-      const pill = e.target.closest('.pill');
-      if (!pill) return;
-      
-      const value = pill.getAttribute('data-value');
-      const selected = this.state.selectedSectors;
-      
-      if (value === 'ALL') {
-        selected.clear();
-        selected.add('ALL');
-        this.renderer.sectorPills.querySelectorAll('.pill').forEach(p => {
-          if (p.getAttribute('data-value') === 'ALL') {
-            p.classList.add('active');
-          } else {
-            p.classList.remove('active');
-          }
-        });
-      } else {
-        if (selected.has('ALL')) {
-          selected.delete('ALL');
-          const allPill = this.renderer.sectorPills.querySelector('[data-value="ALL"]');
-          if (allPill) allPill.classList.remove('active');
-        }
-        
-        if (selected.has(value)) {
-          selected.delete(value);
-          pill.classList.remove('active');
-        } else {
-          selected.add(value);
-          pill.classList.add('active');
-        }
-        
-        if (selected.size === 0) {
-          selected.add('ALL');
-          const allPill = this.renderer.sectorPills.querySelector('[data-value="ALL"]');
-          if (allPill) allPill.classList.add('active');
+    // 1. Bind Lobby Flow
+    this.lobbyController.bindLobbyEntrance((code) => {
+      this.activateBoardRealtimeListener();
+    });
+
+    // 2. Bind Market Board Operations
+    this.marketBoardController.bindSectorFilter();
+    this.marketBoardController.bindSortButtons();
+    this.marketBoardController.bindResetBtn();
+    this.marketBoardController.bindPriceControls();
+    this.marketBoardController.bindStockModals();
+    this.marketBoardController.bindDangerZone();
+    this.marketBoardController.bindSpectatorEvents();
+
+    // 3. Tab Navigation & Trade Form Events
+    this.renderer.bindTabEvents((tab) => {
+      if (tab === 'portfolio') {
+        const stats = this.state.getPortfolioStats();
+        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks);
+        if (this.tradeController.updateTradeFormPrice) {
+          this.tradeController.updateTradeFormPrice();
         }
       }
-      
-      this.updateViewGrid();
     });
+
+    this.tradeController.bindTradeFormEvents();
   }
 
-  bindSortButtons() {
-    const handleSortClick = (type, e) => {
-      const sortStates = this.state.sortStates;
-      
-      if (type === 'SECTOR') {
-        sortStates.SECTOR.enabled = !sortStates.SECTOR.enabled;
-      } else {
-        const sort = sortStates[type];
-        const isIconClick = e.target.closest('.sort-icon') !== null;
-        
-        if (isIconClick) {
-          if (sort.enabled) {
-            sort.dir = sort.dir === 'DESC' ? 'ASC' : 'DESC';
-          } else {
-            sort.enabled = true;
-            sort.dir = 'DESC';
-          }
-        } else {
-          sort.enabled = !sort.enabled;
-          if (sort.enabled) {
-            sort.dir = 'DESC';
-          }
-        }
-      }
-      
-      this.renderer.updateSortButtonsUI(sortStates);
-      this.updateViewGrid();
-    };
+  // Real-time synchronization Orchestrator
+  activateBoardRealtimeListener() {
+    const code = this.state.roomCode;
+    if (!code) return;
 
-    this.renderer.sortPriceBtn.addEventListener('click', (e) => handleSortClick('PRICE', e));
-    this.renderer.sortBetaBtn.addEventListener('click', (e) => handleSortClick('BETA', e));
-    this.renderer.sortSectorBtn.addEventListener('click', (e) => handleSortClick('SECTOR', e));
-  }
+    const user = this.firebaseService.getCurrentUser();
 
-  bindResetBtn() {
-    this.renderer.resetBtn.addEventListener('click', () => {
-      this.state.resetFilters();
-      this.renderer.updateSortButtonsUI(this.state.sortStates);
-      this.renderer.updateSectorPillsUI(this.state.selectedSectors);
-      this.renderer.clearAllCardAnimations(this.state.originalCards);
-      this.updateViewGrid();
-    });
-  }
+    if (this.boardListenerUnsubscribe) {
+      this.boardListenerUnsubscribe();
+    }
 
-  bindPriceControls() {
-    this.renderer.priceGrid.addEventListener('click', (e) => {
-      const btn = e.target.closest('.control-btn');
-      if (!btn) return;
-      
-      const card = btn.closest('.price-card');
-      if (!card) return;
-      
-      const symbol = card.querySelector('.card-icon').textContent.trim();
-      const delta = btn.classList.contains('up') ? 100 : -100;
-      
-      const newPrice = this.state.adjustPrice(symbol, delta);
-      if (newPrice !== null) {
-        const direction = btn.classList.contains('up') ? 'up' : 'down';
-        this.renderer.updateCardValue(card, newPrice, direction);
-      }
-    });
-  }
+    this.boardListenerUnsubscribe = this.firebaseService.listenToBoard(code, (firebaseBoard) => {
+      if (!firebaseBoard) return;
 
-  bindStockModals() {
-    this.renderer.priceGrid.addEventListener('click', (e) => {
-      const icon = e.target.closest('.card-icon');
-      if (!icon) return;
-      
-      const card = icon.closest('.price-card');
-      if (!card) return;
-      
-      const symbol = icon.textContent.trim();
-      const sector = card.getAttribute('data-sector');
-      const price = parseFloat(card.getAttribute('data-price'));
-      const beta = parseFloat(card.getAttribute('data-beta'));
-      
-      let sectorClass = '';
-      icon.classList.forEach(cls => {
-        if (cls.startsWith('icon-')) sectorClass = cls;
-      });
-      
-      const metrics = this.state.getChartMetrics(symbol, price);
-      this.renderer.openChartModal(symbol, sector, price, beta, sectorClass, metrics);
-    });
-
-    this.renderer.closeModalBtn.addEventListener('click', () => this.renderer.closeChartModal());
-    this.renderer.chartModal.addEventListener('click', (e) => {
-      if (e.target === this.renderer.chartModal) this.renderer.closeChartModal();
-    });
-  }
-
-  bindDangerZone() {
-    this.renderer.resetMarketBtn.addEventListener('click', () => {
-      this.renderer.openConfirmModal();
-    });
-
-    const closeConfirm = () => this.renderer.closeConfirmModal();
-    
-    document.getElementById('closeConfirmModalBtn').addEventListener('click', closeConfirm);
-    document.getElementById('cancelResetBtn').addEventListener('click', closeConfirm);
-    this.renderer.confirmModal.addEventListener('click', (e) => {
-      if (e.target === this.renderer.confirmModal) closeConfirm();
-    });
-
-    document.getElementById('confirmResetBtn').addEventListener('click', () => {
-      this.state.resetMarket();
-      
-      this.renderer.updateSortButtonsUI(this.state.sortStates);
-      this.renderer.updateSectorPillsUI(this.state.selectedSectors);
-      this.renderer.clearAllCardAnimations(this.state.originalCards);
-      
-      this.state.originalCards.forEach(card => {
-        const symbol = card.querySelector('.card-icon').textContent.trim();
-        const startPrice = this.state.initialPrices[symbol];
-        card.querySelector('.card-value').textContent = startPrice.toLocaleString('en-US');
+      const oldPrices = {};
+      Object.keys(this.state.boardStocks).forEach(name => {
+        oldPrices[name] = this.state.boardStocks[name].value;
       });
 
-      this.updateViewGrid();
-      closeConfirm();
+      this.state.updateFromFirebaseBoard(firebaseBoard);
+
+      firebaseBoard.stocks.forEach(stock => {
+        const symbol = stock.name;
+        const currentVal = stock.value;
+        const prevVal = oldPrices[symbol];
+
+        const card = this.state.originalCards.find(c => c.querySelector('.card-icon').textContent.trim() === symbol);
+        if (card) {
+          card.setAttribute('data-price', currentVal);
+
+          const valueText = card.querySelector('.card-value');
+          if (valueText) {
+            valueText.textContent = currentVal.toLocaleString('en-US');
+          }
+
+          if (prevVal !== undefined && prevVal !== currentVal) {
+            const direction = currentVal > prevVal ? 'up' : 'down';
+            this.renderer.updateCardValue(card, currentVal, direction);
+
+            const chartContainer = card.querySelector('.chart-container');
+            if (chartContainer && chartContainer.style.display === 'block') {
+              const master = this.state.masterStocks[symbol];
+              const history = this.state.priceHistory[symbol] || [currentVal];
+              const startPrice = master ? master.steps[master.startStep - 1] : currentVal;
+
+              const changePct = startPrice === 0 ? 0 : ((currentVal - startPrice) / startPrice) * 100;
+
+              const currentEl = chartContainer.querySelector('.stat-current-price');
+              const changeEl = chartContainer.querySelector('.stat-change-pct');
+
+              if (currentEl) {
+                currentEl.textContent = currentVal.toLocaleString('en-US');
+                currentEl.className = currentVal > startPrice ? 'stat-current-price text-xs font-bold text-positive' :
+                                     currentVal < startPrice ? 'stat-current-price text-xs font-bold text-negative' :
+                                     'stat-current-price text-xs font-bold text-neutral';
+              }
+              if (changeEl) {
+                changeEl.textContent = `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`;
+                changeEl.className = changePct > 0 ? 'stat-change-pct text-xs font-bold text-positive' :
+                                    changePct < 0 ? 'stat-change-pct text-xs font-bold text-negative' :
+                                    'stat-change-pct text-xs font-bold text-gray-400';
+              }
+
+              const canvas = chartContainer.querySelector('.stock-chart-canvas');
+              if (canvas) {
+                this.renderer.drawCardChart(canvas, history);
+              }
+            }
+          }
+        }
+      });
+
+      if (this.state.portfolio) {
+        const stats = this.state.getPortfolioStats();
+        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks);
+      }
+
+      if (this.tradeController.updateTradeFormPrice) {
+        this.tradeController.updateTradeFormPrice();
+      }
     });
+
+    if (user) {
+      this.roomListenerUnsubscribe = this.firebaseService.listenToRoom(code, (roomData) => {
+        if (!roomData) return;
+
+        if (roomData.members && roomData.members[user.uid]) {
+          const memberData = roomData.members[user.uid];
+          this.state.updatePortfolioFromMemberData(memberData);
+
+          const stats = this.state.getPortfolioStats();
+          this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks);
+        }
+
+        const orders = roomData.pendingOrders || {};
+        this.state.updatePendingOrders(orders);
+
+        this.renderer.updatePlayerPendingOrdersUI(orders, user.uid);
+
+        if (this.state.role === 'game_master' && !this.state.isSpectating) {
+          if (this.renderer.gmPendingOrdersSection) {
+            this.renderer.gmPendingOrdersSection.style.display = 'block';
+          }
+          this.renderer.updateGMPendingOrdersUI(
+            orders,
+            async (orderId) => {
+              await this.tradeController.approvePlayerOrder(orderId);
+            },
+            async (orderId) => {
+              await this.tradeController.rejectPlayerOrder(orderId);
+            }
+          );
+        } else {
+          if (this.renderer.gmPendingOrdersSection) {
+            this.renderer.gmPendingOrdersSection.style.display = 'none';
+          }
+        }
+      });
+    }
   }
 
-  updateViewGrid() {
-    const sortedFiltered = this.state.getFilteredAndSortedCards();
-    this.renderer.renderGrid(sortedFiltered);
+  unsubscribeAll() {
+    if (this.boardListenerUnsubscribe) {
+      this.boardListenerUnsubscribe();
+      this.boardListenerUnsubscribe = null;
+    }
+    if (this.roomListenerUnsubscribe) {
+      this.roomListenerUnsubscribe();
+      this.roomListenerUnsubscribe = null;
+    }
   }
 }

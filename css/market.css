@@ -1,0 +1,407 @@
+/* ==========================================================================
+   MARKET BOARD STYLESHEET (css/market.css)
+   สไตล์ตารางกระดานหุ้น ตัวกรอง Sector ปุ่มเรียงลำดับ การ์ดราคา และ ชาร์ตกราฟ
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 🎛️ Filter & Sort Container (ส่วนตัวกรอง Sector และปุ่มจัดเรียง)
+   -------------------------------------------------------------------------- */
+
+/* กล่องรวมเมนูตัวกรองทั้งหมดด้านบน */
+.filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;                        /* 👈 ระยะห่างระหว่างโซน Sector กับโซน Sort By */
+  margin-bottom: 32px;              /* 👈 ระยะห่างใต้กล่องตัวกรอง ก่อนถึงตารางหุ้น */
+  background: rgba(16, 18, 30, 0.92); /* 👈 สีพื้นหลังกล่องตัวกรอง (สีเข้มใส) */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* 👈 เส้นขอบกระจกใส */
+  padding: 24px 28px;               /* 👈 ระยะห่างขอบในกล่องตัวกรอง */
+  border-radius: 28px;              /* 👈 ความมนของมุมกล่องตัวกรอง */
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); /* 👈 เงาสมจริง */
+  backdrop-filter: blur(12px);       /* 👈 เอฟเฟกต์เบลอฉากหลัง (Glassmorphism) */
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;                        /* 👈 ระยะห่างระหว่างหัวข้อตัวกรองกับปุ่มกด */
+  min-width: 0;
+}
+
+/* ข้อความหัวข้อตัวกรอง (เช่น Sector, Sort By) */
+.filter-title {
+  font-size: 0.76rem;               /* 👈 ขนาดฟอนต์หัวข้อตัวกรอง */
+  font-weight: 800;                /* 👈 ความหนาตัวอักษรหัวข้อ */
+  color: #b3b6c1;                   /* 👈 สีตัวอักษรหัวข้อ (สีเทาสว่าง) */
+  text-transform: uppercase;
+  letter-spacing: 0.08em;           /* 👈 ระยะห่างตัวอักษรหัวข้อ */
+}
+
+/* === ปุ่มเลือกกลุ่มอุตสาหกรรม (Sector Pills) === */
+.sector-pills {
+  display: flex;
+  gap: 8px;                         /* 👈 ระยะห่างระหว่างแต่ละปุ่มกลุ่มหุ้น */
+  overflow-x: auto;                 /* เลื่อนแนวนอนได้บนหน้าจอมือถือ */
+  scrollbar-width: none;            /* ซ่อนแถบ Scrollbar ใน Firefox */
+  padding: 2px 0;
+}
+
+.sector-pills::-webkit-scrollbar {
+  display: none;                    /* ซ่อนแถบ Scrollbar ใน Chrome/Safari */
+}
+
+/* เม็ดปุ่ม Sector ปกติ (เช่น ALL, FINCIAL, TECH) */
+.pill {
+  background: rgba(255, 255, 255, 0.03); /* 👈 สีพื้นหลังปุ่มปกติ */
+  border: 1px solid rgba(255, 255, 255, 0.1);  /* 👈 สีเส้นขอบปุ่มปกติ */
+  color: #b3b6c1;                    /* 👈 สีข้อความบนปุ่ม */
+  padding: 10px 20px;                /* 👈 ขนาดความใหญ่ปุ่ม [บน-ล่าง] [ซ้าย-ขวา] */
+  border-radius: 14px;               /* 👈 ความมนของเม็ดปุ่ม */
+  font-size: 0.82rem;                /* 👈 ขนาดตัวอักษรในปุ่ม */
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;               /* ห้ามตัดคำขึ้นบรรทัดใหม่ */
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pill:hover {
+  background: rgba(255, 255, 255, 0.08); /* 👈 สีปุ่มเมื่อเอาเมาส์ไปวาง (Hover) */
+  color: #f7f8fb;
+  transform: translateY(-1px);      /* 👈 ยกปุ่มลอยขึ้นเล็กน้อย */
+}
+
+/* เม็ดปุ่ม Sector ที่กำลังเลือกใช้งานอยู่ (Active Pill) */
+.pill.active {
+  background: linear-gradient(135deg, rgba(96, 255, 184, 0.15) 0%, rgba(96, 255, 184, 0.03) 100%); /* 👈 สีพื้นหลังตอนเลือก (สีเขียวตระการตา) */
+  border-color: #60ffb8;             /* 👈 สีเส้นขอบตอนเลือก */
+  color: #60ffb8;                    /* 👈 สีตัวอักษรตอนเลือก */
+  box-shadow: 0 0 16px rgba(96, 255, 184, 0.12); /* 👈 เอฟเฟกต์เรืองแสงสีเขียวรอบปุ่ม */
+}
+
+/* === ปุ่มกดจัดเรียง (Sort Toggle Buttons) === */
+.sort-toggles {
+  display: flex;
+  gap: 12px;                         /* 👈 ระยะห่างระหว่างปุ่ม Sort แต่ละตัว */
+}
+
+.sort-toggle-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #b3b6c1;
+  border-radius: 16px;               /* 👈 ความมนปุ่มเรียงลำดับ */
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sort-toggle-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.sort-label {
+  padding: 12px 18px;                /* 👈 ระยะห่างปุ่มข้อความคำว่า Price / Beta */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sort-label:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7f8fb;
+}
+
+/* ลูกศรชี้ขึ้น/ลงของปุ่ม Sort */
+.sort-icon {
+  padding: 12px 16px;                /* 👈 ขนาดช่องใส่ลูกศรเรียงลำดับ */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s, color 0.2s, transform 0.2s ease;
+}
+
+.sort-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f7f8fb;
+}
+
+/* ปุ่มจัดเรียงที่เปิดใช้งานอยู่ */
+.sort-toggle-btn.active {
+  background: linear-gradient(135deg, rgba(96, 255, 184, 0.12) 0%, rgba(96, 255, 184, 0.02) 100%);
+  border-color: #60ffb8;
+  color: #60ffb8;
+  box-shadow: 0 0 16px rgba(96, 255, 184, 0.12);
+}
+
+.sort-toggle-btn.active .sort-icon {
+  border-left-color: rgba(96, 255, 184, 0.2);
+}
+
+.sort-toggle-btn.active .sort-label:hover {
+  background: rgba(96, 255, 184, 0.08);
+}
+
+.sort-toggle-btn.active .sort-icon:hover {
+  background: rgba(96, 255, 184, 0.18);
+}
+
+/* ปุ่ม Reset ตัวกรอง (ปุ่มสีแดงล้างการตั้งค่า) */
+.sort-toggle-btn.reset-btn {
+  background: rgba(250, 55, 95, 0.03);
+  border-color: rgba(250, 55, 95, 0.15);
+  color: #fa375f;                    /* 👈 สีตัวอักษรและไอคอน Reset (สีชมพูแดง) */
+}
+
+.sort-toggle-btn.reset-btn:hover {
+  background: rgba(250, 55, 95, 0.1);
+  border-color: rgba(250, 55, 95, 0.3);
+  color: #ff5277;
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   2. 📈 Stock Cards Grid & Controls (การ์ดแสดงราคาหุ้นและปุ่มปรับราคา)
+   -------------------------------------------------------------------------- */
+.section-title {
+  margin-bottom: 16px;              /* 👈 ระยะห่างใต้คำว่า Price Level */
+  font-size: 1.05rem;              /* 👈 ขนาดตัวอักษรหัวข้อ Price Level */
+  font-weight: 700;
+  color: #60ffb8;                   /* 👈 สีตัวอักษรหัวข้อ Price Level */
+}
+
+.price-section {
+  margin-bottom: 32px;              /* 👈 ระยะห่างใต้ส่วนแสดงหุ้นทั้งหมด */
+}
+
+.price-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;                        /* 👈 ระยะห่างระหว่างการ์ดหุ้นแต่ละตัว (px) */
+  width: 100%;
+}
+
+/* ปุ่ม View Graph (เปิด/ปิดดูแนวกราฟย่อย) */
+.view-graph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;               /* 👈 ขนาดตัวอักษรบนปุ่ม View Graph */
+  font-weight: 700;
+  color: #3730a3;                   /* 👈 สีตัวอักษร View Graph */
+  cursor: pointer;
+  padding: 8px 18px;                /* 👈 ขนาดความใหญ่ของปุ่ม View Graph */
+  border-radius: 20px;              /* 👈 ความมนของปุ่ม View Graph */
+  background: rgba(79, 70, 229, 0.12); /* 👈 สีพื้นหลังปุ่ม View Graph */
+  border: 1px solid rgba(79, 70, 229, 0.3); /* 👈 เส้นขอบปุ่ม View Graph */
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.view-graph-btn:hover {
+  color: #1e1b4b;
+  background: rgba(79, 70, 229, 0.25);
+  border-color: rgba(79, 70, 229, 0.6);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+  transform: translateY(-1px);
+}
+
+.view-graph-btn.active {
+  color: #9f1239;                   /* 👈 สีตัวอักษรเมื่อกำลังเปิดกราฟอยู่ (สีแดงเข้ม) */
+  background: rgba(225, 29, 72, 0.15);
+  border-color: rgba(225, 29, 72, 0.4);
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.2);
+}
+
+/* ช่องสีเหลี่ยมแสดงตัวเลขราคาหุ้น */
+.price-box {
+  width: 170px;                     /* 👈 ความกว้างของกล่องราคาบนหน้าจอมือถือ */
+  height: 48px;                     /* 👈 ความสูงของกล่องราคาบนหน้าจอมือถือ */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e5e7eb;        /* 👈 สีพื้นหลังกล่องราคา (สีเทาสว่าง) */
+  border-radius: 0.5rem;            /* 👈 ความมนของมุมกล่องราคา */
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .price-box {
+    width: 240px;                   /* 👈 ความกว้างของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
+    height: 56px;                   /* 👈 ความสูงของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
+  }
+}
+
+/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) */
+.card-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 4px;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;                      /* 👈 ความกว้างปุ่มลูกศรบนมือถือ */
+  height: 22px;                     /* 👈 ความสูงปุ่มลูกศรบนมือถือ */
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.88;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.control-btn:hover {
+  opacity: 1;
+  transform: scale(1.18);           /* 👈 ขยายขนาดปุ่มลูกศร 18% เมื่อเอาเมาส์ไปชี้ */
+}
+
+.control-btn:active {
+  transform: scale(0.9);            /* 👈 ย่อขนาดลงเมื่อกดปุ่ม */
+}
+
+.control-btn img {
+  width: 20px;                      /* 👈 ขนาดไอคอนลูกศรบนมือถือ */
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .card-controls {
+    padding-left: 8px;
+  }
+  .control-btn {
+    width: 34px;                    /* 👈 ความกว้างปุ่มลูกศรบนคอมพิวเตอร์ */
+    height: 26px;                   /* 👈 ความสูงปุ่มลูกศรบนคอมพิวเตอร์ */
+  }
+  .control-btn img {
+    width: 24px;                    /* 👈 ขนาดไอคอนลูกศรบนคอมพิวเตอร์ */
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. 📊 Inline Expandable Chart (กราฟราคาสต็อคแบบยืดหดคลี่ออกด้านล่างการ์ด)
+   -------------------------------------------------------------------------- */
+.chart-container {
+  border-top: 1px dashed rgba(255, 255, 255, 0.1); /* 👈 เส้นปรุกระจายกั้นระหว่างการ์ดกับกราฟ */
+  margin-top: 16px;                 /* 👈 ระยะห่างขอบบนกราฟ */
+  padding-top: 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; /* 👈 แอนิเมชันคลี่กราฟลง */
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stock-chart-canvas {
+  background: rgba(255, 255, 255, 0.015); /* 👈 สีพื้นหลังพื้นที่วาดกราฟ */
+  border-radius: 8px;               /* 👈 ความมนของมุมกราฟ */
+  padding: 4px;
+}
+
+/* ตารางแสดงสถิติตัวเลขใต็กราฟ (Start, Price, Beta, Change) */
+.chart-stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important; /* แบ่งเป็น 4 คอลัมน์เท่าๆ กัน */
+  gap: 8px !important;
+  margin-top: 12px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. ⚠️ Danger Zone (กล่องสำหรับกดรีเซ็ตกระดานหุ้นทั้งหมด)
+   -------------------------------------------------------------------------- */
+.danger-zone-section {
+  margin-top: 48px;                 /* 👈 ระยะห่างขอบบนกล่อง Danger Zone */
+  margin-bottom: 48px;              /* 👈 ระยะห่างขอบล่างกล่อง Danger Zone */
+}
+
+.danger-zone-card {
+  background: rgba(250, 55, 95, 0.02); /* 👈 สีพื้นหลังกล่องเตือน (สีชมพูจางๆ) */
+  border: 1px dashed rgba(250, 55, 95, 0.25); /* 👈 เส้นขอบเส้นประเตือนภัย */
+  border-radius: 24px;              /* 👈 ความมนกล่อง Danger Zone */
+  padding: 24px;                    /* 👈 ระยะห่างขอบในกล่อง Danger Zone */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.3s ease;
+}
+
+.danger-zone-card:hover {
+  background: rgba(250, 55, 95, 0.04);
+  border-color: rgba(250, 55, 95, 0.4);
+}
+
+.danger-zone-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ข้อความคำว่า Danger Zone */
+.danger-zone-title {
+  font-size: 1.1rem;                /* 👈 ขนาดตัวอักษร Danger Zone */
+  font-weight: 800;
+  color: #fa375f;                   /* 👈 สีตัวอักษรคำว่า Danger Zone (สีชมพูแดง) */
+  text-shadow: 0 0 10px rgba(250, 55, 95, 0.15); /* เอฟเฟกต์เรืองแสง */
+}
+
+.danger-zone-desc {
+  font-size: 0.85rem;               /* 👈 ขนาดคำอธิบายการ Reset */
+  color: #b3b6c1;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ปุ่มกด Reset Market Prices */
+.danger-btn {
+  background: #fa375f;              /* 👈 สีพื้นหลังปุ่ม Reset (สีชมพูแดงเด่น) */
+  color: #ffffff;                   /* 👈 สีข้อความบนปุ่ม Reset */
+  border: none;
+  padding: 14px 28px;               /* 👈 ขนาดความใหญ่ของปุ่ม Reset */
+  border-radius: 16px;              /* 👈 ความมนของมุมปุ่ม Reset */
+  font-size: 0.9rem;                /* 👈 ขนาดตัวอักษรปุ่ม Reset */
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(250, 55, 95, 0.25);
+  white-space: nowrap;
+}
+
+.danger-btn:hover {
+  background: #ff5277;              /* 👈 สีปุ่ม Reset เมื่อเอาเมาส์ไปวาง (Hover) */
+  transform: translateY(-2px);      /* 👈 ยกปุ่มลอยขึ้น */
+  box-shadow: 0 8px 24px rgba(250, 55, 95, 0.4);
+}
+
+.danger-btn:active {
+  transform: translateY(0) scale(0.96); /* 👈 ย่อลงเมื่อคลิกกด */
+  box-shadow: 0 4px 12px rgba(250, 55, 95, 0.2);
+}

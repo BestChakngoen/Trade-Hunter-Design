@@ -1,0 +1,105 @@
+/* ==========================================================================
+   MODAL & OVERLAY STYLESHEET (css/modal.css)
+   สไตล์หน้าต่างป๊อบอัพโมดอล ฉากเบลอพื้นหลัง และ กล่องยืนยันการรีเซ็ต
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 🪟 Custom Modal Base & Backdrop (โครงสร้างหน้าต่างโมดอลป๊อบอัพ)
+   -------------------------------------------------------------------------- */
+
+/* ฉากหลังสีเข้มบังหน้าจอหลังป๊อบอัพ */
+.modal {
+  display: none;                    /* ซ่อนฉากหลังไว้ก่อน */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(8, 10, 18, 0.85); /* 👈 สีฉากบังหน้าจอ (สีดำมืดใส) */
+  backdrop-filter: blur(12px);       /* 👈 เอฟเฟกต์เบลอฉากด้านหลัง (Glassmorphism Blur) */
+  z-index: 1000;                     /* ความสูงชั้นลอย */
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* เมื่อโมดอลแสดงผล (Show) */
+.modal.show {
+  opacity: 1;
+}
+
+/* ตัวกล่องเนื้อหาโมดอลตรงกลางหน้าจอ */
+.modal-content {
+  background: #171a2a;              /* 👈 สีพื้นหลังกล่องป๊อบอัพ */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* 👈 เส้นขอบจางๆ */
+  width: 90%;
+  max-width: 680px;                 /* 👈 ความกว้างสูงสุดของกล่องป๊อบอัพทั่วไป */
+  border-radius: 28px;              /* 👈 ความมนของมุมกล่องป๊อบอัพ */
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); /* 👈 เงาลอยลึก 3D */
+  padding: 32px;                    /* 👈 ระยะห่างขอบในกล่องป๊อบอัพ */
+  position: relative;
+  transform: translateY(20px);      /* สไลด์เด้งขึ้นเล็กน้อย */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal.show .modal-content {
+  transform: translateY(0);
+}
+
+/* กล่องโมดอลสำหรับยืนยันการ Reset */
+.confirm-modal-content {
+  max-width: 420px !important;       /* 👈 ความกว้างสูงสุดของกล่องยืนยัน Reset */
+  padding: 28px !important;          /* 👈 ระยะห่างขอบในกล่องยืนยัน Reset */
+  border-radius: 24px;               /* 👈 ความมนของกล่องยืนยัน Reset */
+}
+
+/* --------------------------------------------------------------------------
+   2. 🔘 Reset Confirmation Dialog Buttons (ปุ่มในกล่องยืนยันการรีเซ็ต)
+   -------------------------------------------------------------------------- */
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;         /* จัดปุ่มไว้ชิดฝั่งขวา */
+  gap: 12px;                         /* 👈 ระยะห่างระหว่างปุ่ม Cancel กับ Reset */
+}
+
+/* สไตล์ปุ่มกดในกล่องโมดอล */
+.confirm-btn {
+  border: none;
+  padding: 12px 24px;                /* 👈 ขนาดความใหญ่ของปุ่มกด [บน-ล่าง] [ซ้าย-ขวา] */
+  border-radius: 14px;               /* 👈 ความมนของปุ่มกด */
+  font-size: 0.85rem;                /* 👈 ขนาดตัวอักษรบนปุ่มกด */
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* ปุ่มยกเลิก Cancel */
+.confirm-btn.cancel-btn {
+  background: rgba(255, 255, 255, 0.03); /* 👈 สีพื้นหลังปุ่ม Cancel */
+  color: #f7f8fb;                    /* 👈 สีตัวอักษรปุ่ม Cancel */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.confirm-btn.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* ปุ่มยืนยัน Reset Prices (สีแดงเด่น) */
+.confirm-btn.reset-btn-confirm {
+  background: #fa375f;              /* 👈 สีพื้นหลังปุ่มยืนยัน Reset (สีชมพูแดง) */
+  color: #ffffff;                   /* 👈 สีตัวอักษรปุ่มยืนยัน Reset */
+  box-shadow: 0 4px 12px rgba(250, 55, 95, 0.25);
+}
+
+.confirm-btn.reset-btn-confirm:hover {
+  background: #ff5277;              /* 👈 สีปุ่ม Reset เมื่อเอาเมาส์ไปวาง */
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(250, 55, 95, 0.35);
+}
+
+.confirm-btn:active {
+  transform: translateY(0) scale(0.96);
+}
