@@ -226,31 +226,73 @@
   box-shadow: 0 2px 8px rgba(225, 29, 72, 0.2);
 }
 
+/* --------------------------------------------------------------------------
+   🔒 [LOCKED & FROZEN] การจัดวางตำแหน่งเลย์เอาต์การ์ดหุ้น (ห้ามเปลี่ยนแปลงในภายหลัง)
+   - 0% - 22%: โลโก้และชื่อหุ้น (ชิดซ้าย)
+   - 22% - 48%: ปุ่ม View Graph (เริ่มต้นที่ตำแหน่ง 22% อยู่ใกล้ชื่อหุ้นและเรียงตรงกันแนวตั้ง)
+   - 48% - 88%: ช่องแสดงราคาหุ้น (.price-box)
+   - 88% - 100%: ปุ่มปรับราคาขึ้น-ลง (.card-controls ชิดขวาที่ตำแหน่ง ~90%)
+   -------------------------------------------------------------------------- */
+.price-card > div:first-child {
+  display: grid;
+  grid-template-columns: 22% 26% 40% 12%;
+  align-items: center;
+  width: 100%;
+}
+
+/* ส่วนที่ 1 & 2: โลโก้ + ชื่อหุ้น และ ปุ่ม View Graph */
+.price-card > div:first-child > div:first-child {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.price-card > div:first-child > div:first-child > div:first-child {
+  width: 45.83%;                    /* 👈 จัดพื้นที่ชื่อหุ้นฝั่งซ้ายที่ 22% ของการ์ดพอดี */
+  flex-shrink: 0;
+}
+
+.price-card .view-graph-btn {
+  justify-self: start;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  flex-shrink: 0;
+}
+
 /* ช่องสีเหลี่ยมแสดงตัวเลขราคาหุ้น */
 .price-box {
-  width: 170px;                     /* 👈 ความกว้างของกล่องราคาบนหน้าจอมือถือ */
-  height: 48px;                     /* 👈 ความสูงของกล่องราคาบนหน้าจอมือถือ */
+  grid-column: 3;
+  justify-self: center;
+  width: 100%;
+  max-width: 160px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: #e5e7eb;        /* 👈 สีพื้นหลังกล่องราคา (สีเทาสว่าง) */
   border-radius: 0.5rem;            /* 👈 ความมนของมุมกล่องราคา */
   flex-shrink: 0;
+  margin: 0 auto;
 }
 
 @media (min-width: 640px) {
   .price-box {
-    width: 240px;                   /* 👈 ความกว้างของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
+    max-width: 240px;               /* 👈 ความกว้างสูงสุดของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
     height: 56px;                   /* 👈 ความสูงของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
   }
 }
 
-/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) */
+/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) ชิดขวาที่ตำแหน่ง 90% */
 .card-controls {
+  grid-column: 4;
+  justify-self: end;                /* 👈 ดันให้ชิดขวาที่ตำแหน่ง 90%-100% */
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-left: 4px;
+  width: 100%;
+  max-width: 48px;
+  min-height: 44px;
 }
 
 .control-btn {
@@ -286,7 +328,10 @@
 
 @media (min-width: 640px) {
   .card-controls {
-    padding-left: 8px;
+    width: 100%;
+    max-width: 48px;
+    min-height: 56px;
+    padding-left: 0;
   }
   .control-btn {
     width: 34px;                    /* 👈 ความกว้างปุ่มลูกศรบนคอมพิวเตอร์ */

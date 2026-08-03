@@ -1,0 +1,319 @@
+/* ==========================================================================
+   FLAT DESIGN SYSTEM - PROFESSIONAL FINANCIAL TERMINAL THEME
+   (css/flat-theme.css)
+   ดีไซน์แบบ Flat Design ระดับมืออาชีพ ปราศจากเอฟเฟกต์ AI โกลว์เรืองแสง
+   และคงพฤติกรรมของระบบเดิม 100% พร้อมล็อคเลย์เอาต์การ์ดหุ้นเดิมไว้คงที่
+   ========================================================================== */
+
+:root {
+  --bg-dark-root: #090c15;
+  --bg-dark-surface: #111625;
+  --bg-dark-card: #161c2e;
+  --bg-dark-hover: #1e263d;
+  --border-flat: #232d42;
+  --border-flat-subtle: rgba(255, 255, 255, 0.08);
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent-primary: #3b82f6;
+  --accent-success: #10b981;
+  --accent-danger: #ef4444;
+}
+
+/* 1. 🏢 Body & Global Background (Flat Dark Navy Slate) */
+body {
+  background-color: var(--bg-dark-root) !important;
+  background: var(--bg-dark-root) !important;
+  color: var(--text-main) !important;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body, #lobbyScreen, .lobby-wrapper {
+  background-color: var(--bg-dark-root) !important;
+  background: var(--bg-dark-root) !important;
+}
+
+/* 2. 🏛️ Flat Hero Header & Logo */
+.hero {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid var(--border-flat) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: none !important;
+  padding: 20px 24px !important;
+}
+
+.logo {
+  color: #f8fafc !important;
+  letter-spacing: 0.15em !important;
+  font-weight: 900 !important;
+}
+
+/* 3. 🔖 Flat Navigation Tab Bar */
+#mainNavTabs {
+  background: var(--bg-dark-root) !important;
+  border-bottom: 1px solid var(--border-flat) !important;
+}
+
+.tab-active {
+  color: var(--accent-primary) !important;
+  border-bottom: 2px solid var(--accent-primary) !important;
+  background: rgba(59, 130, 246, 0.06) !important;
+  font-weight: 700 !important;
+}
+
+.tab-inactive {
+  color: var(--text-muted) !important;
+  border-bottom: 2px solid transparent !important;
+}
+
+.tab-inactive:hover {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* 4. 🎛️ Flat Filter & Sort Container */
+.filter-container {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid var(--border-flat) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: none !important;
+  padding: 20px 24px !important;
+}
+
+.filter-title {
+  color: var(--text-muted) !important;
+  letter-spacing: 0.1em !important;
+  font-weight: 700 !important;
+}
+
+.pill {
+  background: var(--bg-dark-card) !important;
+  border: 1px solid var(--border-flat) !important;
+  color: var(--text-muted) !important;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
+}
+
+.pill:hover {
+  background: var(--bg-dark-hover) !important;
+  color: var(--text-main) !important;
+  border-color: var(--accent-primary) !important;
+  transform: none !important;
+}
+
+.pill.active {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+  box-shadow: none !important;
+}
+
+.sort-toggle-btn {
+  background: var(--bg-dark-card) !important;
+  border: 1px solid var(--border-flat) !important;
+  color: var(--text-muted) !important;
+  border-radius: 10px !important;
+}
+
+.sort-toggle-btn:hover {
+  border-color: var(--accent-primary) !important;
+  color: var(--text-main) !important;
+  transform: none !important;
+}
+
+.sort-toggle-btn.active {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+  box-shadow: none !important;
+}
+
+.sort-toggle-btn.reset-btn {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: var(--accent-danger) !important;
+}
+
+.sort-toggle-btn.reset-btn:hover {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: var(--accent-danger) !important;
+}
+
+/* 5. 📈 Flat Stock Cards (คงทับสิทธิ์ตามกฎ LOCKED 4-Section Layout 22% 26% 40% 12%) */
+.price-card {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid var(--border-flat) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease !important;
+}
+
+.price-card:hover {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  background: var(--bg-dark-card) !important;
+}
+
+.price-card .view-graph-btn {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: #60a5fa !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.price-card .view-graph-btn:hover {
+  background: rgba(59, 130, 246, 0.25) !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+  transform: none !important;
+}
+
+.price-card .view-graph-btn.active {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #f87171 !important;
+}
+
+/* กล่องราคาแบบ Flat Slate Terminal */
+.price-box {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.price-box .card-value {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* ปุ่ม Caret Up/Down */
+.control-btn {
+  opacity: 0.9 !important;
+  transition: transform 0.15s ease !important;
+}
+
+.control-btn:hover {
+  transform: scale(1.15) !important;
+  opacity: 1 !important;
+}
+
+/* 6. 📊 Flat Inline Expandable Chart & Stats Grid */
+.chart-container {
+  border-top: 1px solid var(--border-flat) !important;
+}
+
+.stock-chart-canvas {
+  background: #0f172a !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 8px !important;
+}
+
+.chart-stats-grid {
+  border-top: 1px solid var(--border-flat) !important;
+}
+
+/* 7. 🔔 Flat GM Pending Orders & Portfolio Panels */
+#gmPendingOrdersSection > div {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid rgba(234, 179, 8, 0.3) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.summary-card {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid var(--border-flat) !important;
+  border-radius: 12px !important;
+}
+
+.summary-label {
+  color: var(--text-muted) !important;
+}
+
+.table-container, .holdings-table {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid var(--border-flat) !important;
+  border-radius: 12px !important;
+}
+
+.holdings-table th {
+  background: var(--bg-dark-card) !important;
+  color: var(--text-muted) !important;
+  border-bottom: 1px solid var(--border-flat) !important;
+}
+
+.holdings-table td {
+  border-bottom: 1px solid var(--border-flat-subtle) !important;
+}
+
+.trade-card {
+  background: var(--bg-dark-surface) !important;
+  border: 1px solid var(--border-flat) !important;
+  border-radius: 14px !important;
+}
+
+.trade-tabs {
+  background: var(--bg-dark-card) !important;
+  border: 1px solid var(--border-flat) !important;
+}
+
+/* 8. ⚠️ Flat Danger Zone Section */
+.danger-zone-card {
+  background: rgba(239, 68, 68, 0.04) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+.danger-btn {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.danger-btn:hover {
+  background: #b91c1c !important;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
+}
+
+/* 9. ⚡ Crisp Flat Price Flashing Animations */
+@keyframes flashGreenFlat {
+  0% {
+    color: #10b981 !important;
+    transform: scale(1.05);
+  }
+  100% {
+    color: #ffffff !important;
+    transform: scale(1);
+  }
+}
+
+@keyframes flashRedFlat {
+  0% {
+    color: #ef4444 !important;
+    transform: scale(1.05);
+  }
+  100% {
+    color: #ffffff !important;
+    transform: scale(1);
+  }
+}
+
+.flash-up {
+  animation: flashGreenFlat 0.4s ease-out !important;
+}
+
+.flash-down {
+  animation: flashRedFlat 0.4s ease-out !important;
+}
