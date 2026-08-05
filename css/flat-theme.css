@@ -12,27 +12,27 @@
    ========================================================================== */
 
 :root {
-  /* 60% Dominant Backgrounds (Off-black, Deep Charcoal Navy - ไม่ใช่ #000000 สนิท) */
-  --bg-dominant-root: #0b0f19;
-  --bg-dominant-surface: #111827;
-  --bg-dominant-card: #1f2937;
-  --bg-dominant-hover: #2d3748;
+  /* 60% Dominant Backgrounds (Professional Off-Black Navy & Deep Charcoal) */
+  --bg-dominant-root: #141313;
+  --bg-dominant-surface: #1c252e;
+  --bg-dominant-card: #121720;
+  --bg-dominant-hover: #463355;
 
-  /* 30% Secondary Elements & Text (Off-white / Slate Light - ไม่ใช่ #ffffff สนิท) */
+  /* 30% Secondary Elements & Text (Soft Slate & Off-White) */
   --text-secondary-bright: #f8fafc;
   --text-secondary-muted: #cbd5e1;
   --text-secondary-dim: #94a3b8;
-  --border-secondary: #1f2937;
-  --border-secondary-subtle: #374151;
+  --border-secondary: #1e293b;
+  --border-secondary-subtle: #334155;
 
-  /* 10% Accent Color (Professional Financial Royal Blue) */
+  /* 10% Accent Color (Professional Financial Royal Sapphire Blue) */
   --accent-blue-primary: #2563eb;
   --accent-blue-hover: #1d4ed8;
-  --accent-blue-subtle: rgba(37, 99, 235, 0.15);
-  --accent-blue-border: rgba(37, 99, 235, 0.4);
+  --accent-blue-subtle: rgba(37, 99, 235, 0.12);
+  --accent-blue-border: rgba(37, 99, 235, 0.35);
 }
 
-/* 1. 🏢 Body & Global Background (60% Dominant - Off-Black Navy) */
+/* 1. 🏢 Body & Global Background (60% Dominant - Financial Navy) */
 body {
   background-color: var(--bg-dominant-root) !important;
   background: var(--bg-dominant-root) !important;
@@ -196,39 +196,43 @@ html, body, #lobbyScreen, .lobby-wrapper {
 
 .summary-card {
   background: var(--bg-dominant-surface) !important;
-  border: 1px solid var(--border-secondary) !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
   border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
 }
 
 .summary-label {
-  color: var(--text-secondary-muted) !important;
+  color: var(--text-secondary-dim) !important;
+  font-weight: 700 !important;
 }
 
 .table-container, .holdings-table {
   background: var(--bg-dominant-surface) !important;
-  border: 1px solid var(--border-secondary) !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
   border-radius: 12px !important;
 }
 
 .holdings-table th {
   background: var(--bg-dominant-card) !important;
   color: var(--text-secondary-muted) !important;
-  border-bottom: 1px solid var(--border-secondary) !important;
+  border-bottom: 1px solid var(--border-secondary-subtle) !important;
+  font-weight: 700 !important;
 }
 
 .holdings-table td {
-  border-bottom: 1px solid var(--border-secondary-subtle) !important;
+  border-bottom: 1px solid var(--border-secondary) !important;
 }
 
 .trade-card {
   background: var(--bg-dominant-surface) !important;
-  border: 1px solid var(--border-secondary) !important;
-  border-radius: 14px !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
 }
 
 .trade-tabs {
   background: var(--bg-dominant-card) !important;
-  border: 1px solid var(--border-secondary) !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
 }
 
 /* 8. ⚠️ Flat Danger Zone Section */
