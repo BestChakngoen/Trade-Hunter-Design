@@ -529,30 +529,42 @@
    ========================================================================== */
 @media (max-width: 640px) {
   .price-card {
-    padding: 12px 10px !important;
+    padding: 10px 8px !important;
   }
 
+  /* ขยายพื้นที่ไอคอน+ชื่อหุ้นเป็น 38% และกระชับช่องราคาหุ้นลงเหลือ 30% */
   .price-card > div:first-child {
-    grid-template-columns: 32% 18% 36% 14% !important;
+    grid-template-columns: 38% 18% 30% 14% !important;
     gap: 4px !important;
   }
 
+  /* รักษาสัดส่วนไอคอนหุ้นให้เด่นชัด คมชัด ไม่ถูกบีบเบี้ยวเด็ดขาด */
+  .price-card img {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    flex-shrink: 0 !important;
+    object-fit: contain !important;
+  }
+
   .view-graph-btn {
-    font-size: 0.62rem !important;
-    padding: 4px 8px !important;
-    border-radius: 12px !important;
+    font-size: 0.6rem !important;
+    padding: 4px 6px !important;
+    border-radius: 10px !important;
   }
 
   .card-icon {
-    font-size: 1.1rem !important;
+    font-size: 1.05rem !important;
   }
 
+  /* ปรับกระชับขนาดช่องราคาหุ้น */
   .price-box .card-value {
-    font-size: 1.15rem !important;
+    font-size: 1.05rem !important;
   }
 
   .control-btn {
-    width: 24px !important;
-    height: 24px !important;
+    width: 22px !important;
+    height: 22px !important;
   }
 }
