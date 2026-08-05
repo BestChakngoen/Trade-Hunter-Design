@@ -153,7 +153,17 @@ export class CardGridRenderer {
         icon: 'error',
         title: title,
         text: text,
-        confirmButtonColor: '#fa375f'
+        background: '#0b0f19',
+        color: '#f8fafc',
+        iconColor: '#ef4444',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'trade-alert-popup',
+          title: 'trade-alert-title',
+          htmlContainer: 'trade-alert-text',
+          confirmButton: 'trade-alert-error-btn'
+        },
+        buttonsStyling: false
       });
     } else {
       alert(`${title}\n${text}`);
@@ -166,7 +176,17 @@ export class CardGridRenderer {
         icon: 'success',
         title: title,
         text: text,
-        confirmButtonColor: '#2dcc86'
+        background: '#0b0f19',
+        color: '#f8fafc',
+        iconColor: '#2563eb',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'trade-alert-popup',
+          title: 'trade-alert-title',
+          htmlContainer: 'trade-alert-text',
+          confirmButton: 'trade-alert-ok-btn'
+        },
+        buttonsStyling: false
       });
     } else {
       alert(`${title}\n${text}`);

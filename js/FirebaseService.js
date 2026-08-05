@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously, setPersistence, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getDatabase, ref, get, set, update, onValue, onDisconnect } from 'firebase/database';
 
@@ -28,6 +28,13 @@ export class FirebaseService {
     this.auth = getAuth(this.app);
     this.firestore = getFirestore(this.app);
     this.realtimeDb = getDatabase(this.app);
+
+    // Set persistence to inMemoryPersistence so each tab gets a unique independent UID
+    try {
+      await setPersistence(this.auth, inMemoryPersistence);
+    } catch (e) {
+      console.warn("Could not set inMemoryPersistence:", e);
+    }
 
     // Sign in anonymously to obtain a UID for the Realtime Database member tracking
     const credential = await signInAnonymously(this.auth);

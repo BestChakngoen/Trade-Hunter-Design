@@ -82,9 +82,12 @@ export class LobbyController {
       await this.firebaseService.createRoom(code, gameSetting.roomSettings, {
         [user.uid]: {
           role: 'game_master',
+          displayName: 'GM',
           joinedAt: now
         }
       });
+      this.state.setRole('game_master');
+      this.state.setPlayerName('GM');
     } else {
       // Room already exists -> Determine role based on current members
       const roomData = roomSnapshot.val();
@@ -92,20 +95,22 @@ export class LobbyController {
       const memberUids = Object.keys(members);
       
       let role = 'player';
+      let displayName = 'Player_1';
       
       if (members[user.uid]) {
-        // Re-joining player uses their existing role
+        // Re-joining player uses their existing role and name
         role = members[user.uid].role;
+        displayName = members[user.uid].displayName || (role === 'game_master' ? 'GM' : 'Player_1');
         if (!members[user.uid].portfolio) {
           await this.firebaseService.updateRoom(code, {
             [`members/${user.uid}/portfolio`]: {
-              cash: 1000000
+              cash: 20000
             }
           });
         }
       } else {
         // New participant: If max capacity allows, add them. Otherwise raise error.
-        const maxPlayers = roomData.roomSettings.maxPlayers || 10;
+        const maxPlayers = (roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 10;
         if (maxPlayers - memberUids.length <= 0) {
           this.renderer.showErrorAlert("ห้องเต็ม", "จำนวนผู้เข้าร่วมในห้องนี้เต็มขีดจำกัดแล้ว");
           return;
@@ -114,20 +119,30 @@ export class LobbyController {
         const hasMaster = memberUids.some(uid => members[uid] && members[uid].role === 'game_master');
         role = (memberUids.length === 0 || !hasMaster) ? 'game_master' : 'player';
 
-        // Save to Firebase member list with default portfolio
+        if (role === 'game_master') {
+          displayName = 'GM';
+        } else {
+          // Count existing players in room to determine sequence
+          const existingPlayersCount = memberUids.filter(uid => members[uid] && members[uid].role === 'player').length;
+          displayName = `Player_${existingPlayersCount + 1}`;
+        }
+
+        // Save to Firebase member list with default portfolio and displayName
         await this.firebaseService.updateRoom(code, {
           lastJoinedAt: now,
           [`members/${user.uid}`]: {
             role: role,
+            displayName: displayName,
             joinedAt: now,
             portfolio: {
-              cash: 1000000
+              cash: 20000
             }
           }
         });
       }
 
       this.state.setRole(role);
+      this.state.setPlayerName(displayName);
     }
 
     // Configure player cleanup on disconnect
@@ -147,10 +162,10 @@ export class LobbyController {
     this.renderer.updateSpectatorButtonUI(false);
     
     this.renderer.updateControlsVisibility(this.state.role);
+    this.renderer.updateRoomCodeDisplay(code);
 
-    this.renderer.showSuccessAlert(
-      "เข้าร่วมห้องสำเร็จ",
-      `ยินดีต้อนรับสู่ห้อง ${code} ในฐานะ ${this.state.role === 'game_master' ? 'Game Master' : 'Player'}`
-    );
+    // Perform initial portfolio rendering with user UID
+    const stats = this.state.getPortfolioStats();
+    this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, user.uid);
   }
 }

@@ -21,16 +21,6 @@
   </script>
 </head>
 <body>
-  <!-- User Role Indicator & GM Spectator Controller (มุมบนซ้ายของหน้าจอ) -->
-  <div id="roleController" class="fixed top-4 left-4 z-50 flex flex-col gap-2 items-start" style="display: none;">
-    <div id="userRoleBadge" class="px-3 py-1 rounded-full text-[10px] md:text-xs font-black tracking-widest uppercase bg-gray-800 text-gray-300 border border-gray-700 shadow-md">
-      Loading...
-    </div>
-    <button id="spectatorToggleBtn" class="px-2.5 py-1 rounded-lg text-[9px] md:text-xs font-bold uppercase tracking-wider bg-blue-950 text-blue-400 border border-blue-800 hover:bg-blue-900 transition-all shadow-md" style="display: none;">
-      👁️ View as Player
-    </button>
-  </div>
-
   <!-- Lobby / Code Entrance Screen -->
   <div id="lobbyScreen" class="bg-black flex flex-col justify-start items-center w-full min-h-screen min-h-[100dvh]" style="display: none;">
     <!-- แถบขาวด้านบนสุดสำหรับแสดงโลโก้ตรงกลาง -->
@@ -71,60 +61,80 @@
       <div class="logo">FINDICE</div>
     </header>
 
-    <!-- Navigation Tab Bar -->
-    <nav id="mainNavTabs" class="flex border-b border-gray-800 bg-black sticky top-0 z-30">
-      <button id="tabMarketBtn" class="flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider">
-        📈 Market
+    <!-- Navigation Tab Bar (ซ่อนเป็นค่าเริ่มต้น และแสดงเฉพาะฝั่ง Player เท่านั้น) -->
+    <nav id="mainNavTabs" class="flex w-full border-b border-gray-800 bg-black sticky top-0 z-30" style="display: none;">
+      <button id="tabMarketBtn" class="w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider">
+        Market
       </button>
-      <button id="tabPortBtn" class="flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider">
-        💼 Portfolio
+      <button id="tabPortBtn" class="w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider">
+        Portfolio
       </button>
     </nav>
 
     <div id="marketTabContent">
       <div class="filter-container">
-      <div class="filter-section">
-        <span class="filter-title">Sector</span>
-        <div class="sector-pills" id="sectorPills">
-          <button class="pill active" data-value="ALL">All</button>
-          <button class="pill" data-value="FINCIAL">FINCIAL</button>
-          <button class="pill" data-value="CONSUMP">CONSUMP</button>
-          <button class="pill" data-value="RESOURCE">RESOURCE</button>
-          <button class="pill" data-value="INDUS">INDUS</button>
-          <button class="pill" data-value="TECH">TECH</button>
-          <button class="pill" data-value="PROPCON">PROPCON</button>
-          <button class="pill" data-value="AGRO">AGRO</button>
-          <button class="pill" data-value="SERVICE">SERVICE</button>
+        <!-- User Status & Room Code Indicator (มุมบนซ้ายของกล่อง Filter - ตัวอักษรเพียวๆ) -->
+        <div id="roleController" class="flex items-center gap-2 mb-3" style="display: flex;">
+          <span class="user-status-label text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Status:</span>
+          <span id="userRoleBadge" class="text-[10px] md:text-xs font-black tracking-widest uppercase text-emerald-400">
+            Loading...
+          </span>
+          <span class="text-gray-600 font-bold mx-1">|</span>
+          <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Room:</span>
+          <span id="userRoomCodeBadge" class="text-[10px] md:text-xs font-black tracking-widest uppercase text-blue-400">
+            -
+          </span>
         </div>
-      </div>
+
+        <div class="filter-section">
+          <span class="filter-title">Sector</span>
+          <div class="sector-pills-wrapper">
+            <div class="sector-pills" id="sectorPills">
+              <button class="pill active" data-value="ALL">All</button>
+              <button class="pill" data-value="FINCIAL">FINCIAL</button>
+              <button class="pill" data-value="CONSUMP">CONSUMP</button>
+              <button class="pill" data-value="RESOURCE">RESOURCE</button>
+              <button class="pill" data-value="INDUS">INDUS</button>
+              <button class="pill" data-value="TECH">TECH</button>
+              <button class="pill" data-value="PROPCON">PROPCON</button>
+              <button class="pill" data-value="AGRO">AGRO</button>
+              <button class="pill" data-value="SERVICE">SERVICE</button>
+            </div>
+          </div>
+        </div>
 
       <div class="filter-section">
         <span class="filter-title">Sort By</span>
-        <div class="sort-toggles">
-          <button id="sortPriceBtn" class="sort-toggle-btn">
-            <span class="sort-label">Price</span>
-            <span class="sort-icon">↕</span>
-          </button>
-          <button id="sortBetaBtn" class="sort-toggle-btn">
-            <span class="sort-label">Beta</span>
-            <span class="sort-icon">↕</span>
-          </button>
-          <button id="sortSectorBtn" class="sort-toggle-btn">
-            <span class="sort-label" style="justify-content: center; width: 100%;">Sector</span>
-          </button>
-          <button id="resetBtn" class="sort-toggle-btn reset-btn">
-            <span class="sort-label" style="justify-content: center; width: 100%;">Reset ↺</span>
-          </button>
+        <div class="sort-toggles-wrapper">
+          <div class="sort-toggles" id="sortToggles">
+            <button id="sortPriceBtn" class="sort-toggle-btn">
+              <span class="sort-label">Price</span>
+              <span class="sort-icon">↕</span>
+            </button>
+            <button id="sortBetaBtn" class="sort-toggle-btn">
+              <span class="sort-label">Beta</span>
+              <span class="sort-icon">↕</span>
+            </button>
+            <button id="sortSectorBtn" class="sort-toggle-btn">
+              <span class="sort-label" style="justify-content: center; width: 100%;">Sector</span>
+            </button>
+            <button id="resetBtn" class="sort-toggle-btn reset-btn">
+              <span class="sort-label" style="justify-content: center; width: 100%;">Reset ↺</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- GM Pending Orders Panel -->
     <section id="gmPendingOrdersSection" class="w-full mb-6 max-w-5xl mx-auto px-4" style="display: none;">
-      <div class="bg-gray-900 border border-yellow-600/30 rounded-xl p-4 shadow-lg">
-        <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider mb-3">🔔 Pending Player Orders (Requires GM Approval)</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-gray-300">
+      <div class="p-2 sm:p-4">
+        <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-4">
+          <h3 class="text-xs font-black text-yellow-500 uppercase tracking-widest">PENDING PLAYER ORDERS</h3>
+          <span id="gmPendingBadge" class="gm-pending-dot-badge" style="display: none;" title="Pending orders waiting for approval"></span>
+        </div>
+        <div class="table-container overflow-x-auto" id="gmPendingOrdersTableContainer">
+          <table class="gm-pending-orders-table w-full text-left text-xs text-gray-300 min-w-[580px]">
             <thead>
               <tr class="border-b border-gray-800 bg-gray-950 text-gray-500">
                 <th class="p-3">Player</th>
@@ -359,6 +369,31 @@
       </div>
     </section>
 
+    <!-- GM Player Salary Management Panel -->
+    <section id="gmPlayerSalarySection" class="w-full mb-10 max-w-5xl mx-auto px-4" style="display: none;">
+      <div class="p-2 sm:p-4">
+        <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
+          <h3 class="text-xs font-black text-emerald-400 uppercase tracking-widest">PLAYER SALARY MANAGEMENT</h3>
+        </div>
+        <div class="table-container overflow-x-auto" id="gmPlayerSalaryTableContainer">
+          <table class="gm-pending-orders-table w-full text-left text-xs text-gray-300 min-w-[480px]">
+            <thead>
+              <tr class="border-b border-gray-800 bg-gray-950 text-gray-500">
+                <th class="p-3">Player Name</th>
+                <th class="p-3">Current Cash</th>
+                <th class="p-3 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="gmPlayerSalaryBody">
+              <tr>
+                <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- Danger Zone for Board Game Restart -->
     <section class="danger-zone-section">
       <div class="danger-zone-card">
@@ -374,17 +409,17 @@
     <!-- PORTFOLIO TAB CONTENT -->
     <div id="portTabContent" class="portfolio-content px-4 py-6 max-w-5xl mx-auto w-full" style="display: none;">
       <!-- Portfolio Overview Stats -->
-      <section class="port-summary-section mb-6">
+      <section class="port-summary-section mb-10">
         <div class="port-summary-grid">
           <div class="summary-card">
             <span class="summary-label">TOTAL ASSETS VALUE</span>
-            <span id="portTotalAssets" class="summary-value text-white">1,000,000</span>
+            <span id="portTotalAssets" class="summary-value text-white">0</span>
           </div>
           <div class="summary-card">
             <span class="summary-label">AVAILABLE CASH</span>
-            <span id="portCash" class="summary-value text-white">1,000,000</span>
+            <span id="portCash" class="summary-value text-white">20,000</span>
           </div>
-          <div class="summary-card">
+          <div class="summary-card summary-card-pnl">
             <span class="summary-label">TOTAL UNREALIZED P&L</span>
             <span id="portTotalPnL" class="summary-value text-neutral">0.00 (0.00%)</span>
           </div>
@@ -392,14 +427,15 @@
       </section>
 
       <!-- Holdings Table -->
-      <section class="holdings-section mb-6">
-        <h3 class="holdings-title">PORTFOLIO HOLDINGS</h3>
-        <div class="table-container">
+      <section class="holdings-section mb-10">
+        <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
+          <h3 class="text-xs font-black text-emerald-400 uppercase tracking-widest">PORTFOLIO HOLDINGS</h3>
+        </div>
+        <div class="table-container" id="holdingsTableContainer">
           <table class="holdings-table">
             <thead>
               <tr>
                 <th>Symbol</th>
-                <th>Volume</th>
                 <th>Avg Price</th>
                 <th>Market Price</th>
                 <th>Amount</th>
@@ -408,7 +444,7 @@
             </thead>
             <tbody id="holdingsTableBody">
               <tr>
-                <td colspan="6" class="text-center py-4 text-gray-500">No assets in portfolio</td>
+                <td colspan="5" class="text-center py-4 text-gray-500">No assets in portfolio</td>
               </tr>
             </tbody>
           </table>
@@ -416,15 +452,16 @@
       </section>
 
       <!-- Player Pending Orders Table -->
-      <section class="pending-orders-section mb-6">
-        <h3 class="holdings-title">PENDING APPROVAL ORDERS</h3>
-        <div class="table-container">
-          <table class="holdings-table">
+      <section class="pending-orders-section mb-10">
+        <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
+          <h3 class="text-xs font-black text-emerald-400 uppercase tracking-widest">PENDING APPROVAL ORDERS</h3>
+        </div>
+        <div class="table-container" id="pendingOrdersTableContainer">
+          <table class="holdings-table min-w-[580px]">
             <thead>
               <tr>
                 <th>Type</th>
                 <th>Symbol</th>
-                <th>Volume</th>
                 <th>Proposed Price</th>
                 <th>Estimated Amount</th>
                 <th>Status</th>
@@ -432,7 +469,7 @@
             </thead>
             <tbody id="playerPendingOrdersBody">
               <tr>
-                <td colspan="6" class="text-center py-4 text-gray-500">No pending orders</td>
+                <td colspan="5" class="text-center py-4 text-gray-500">No pending orders</td>
               </tr>
             </tbody>
           </table>
@@ -440,13 +477,19 @@
       </section>
 
       <!-- Trade Order Widget -->
-      <section class="trade-widget-section mb-6">
+      <section class="trade-widget-section mb-10">
         <div class="trade-card">
           <h3 class="trade-title">PLACE ORDER</h3>
           
-          <div class="trade-tabs mb-4">
-            <button id="tradeTabBuy" class="trade-tab-btn buy active">BUY</button>
-            <button id="tradeTabSell" class="trade-tab-btn sell">SELL</button>
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div class="trade-tabs flex-1 flex gap-2 m-0">
+              <button id="tradeTabBuy" class="trade-tab-btn buy active">BUY</button>
+              <button id="tradeTabSell" class="trade-tab-btn sell">SELL</button>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">BUYING POWER:</span>
+              <span id="buyingPowerValue" class="text-sm font-extrabold text-emerald-400">20,000</span>
+            </div>
           </div>
           
           <form id="tradeForm" class="trade-form">
@@ -468,67 +511,67 @@
                   <!-- Dropdown Options List -->
                   <div id="dropdownOptions" class="custom-dropdown-options absolute left-0 right-0 bg-gray-950 border border-gray-800 rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto hidden">
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="KTF">
-                      <img src="Assets/Fincial_KTFFSF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="KTF">
+                      <img src="Assets/Fincial_KTFFSF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="KTF">
                       <span>KTF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="ABF">
-                      <img src="Assets/ABFSUFDPF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="ABF">
+                      <img src="Assets/ABFSUFDPF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="ABF">
                       <span>ABF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="ZIF">
-                      <img src="Assets/Indus_ZIFDTF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="ZIF">
+                      <img src="Assets/Indus_ZIFDTF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="ZIF">
                       <span>ZIF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="FSF">
-                      <img src="Assets/Fincial_KTFFSF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="FSF">
+                      <img src="Assets/Fincial_KTFFSF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="FSF">
                       <span>FSF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="SICF">
-                      <img src="Assets/Tech_SICFVCOFDTSF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="SICF">
+                      <img src="Assets/Tech_SICFVCOFDTSF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="SICF">
                       <span>SICF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="SUF">
-                      <img src="Assets/ABFSUFDPF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="SUF">
+                      <img src="Assets/ABFSUFDPF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="SUF">
                       <span>SUF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="SAAF">
-                      <img src="Assets/Resource_SAAFPTF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="SAAF">
+                      <img src="Assets/Resource_SAAFPTF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="SAAF">
                       <span>SAAF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="VCOF">
-                      <img src="Assets/Tech_SICFVCOFDTSF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="VCOF">
+                      <img src="Assets/Tech_SICFVCOFDTSF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="VCOF">
                       <span>VCOF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="ARROF">
-                      <img src="Assets/Propcon_ARROF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="ARROF">
+                      <img src="Assets/Propcon_ARROF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="ARROF">
                       <span>ARROF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="KISF">
-                      <img src="Assets/KISFCUF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="KISF">
+                      <img src="Assets/KISFCUF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="KISF">
                       <span>KISF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="TNF">
-                      <img src="Assets/Service_TNF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="TNF">
+                      <img src="Assets/Service_TNF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="TNF">
                       <span>TNF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="DTSF">
-                      <img src="Assets/Tech_SICFVCOFDTSF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="DTSF">
+                      <img src="Assets/Tech_SICFVCOFDTSF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="DTSF">
                       <span>DTSF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="DPF">
-                      <img src="Assets/ABFSUFDPF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="DPF">
+                      <img src="Assets/ABFSUFDPF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="DPF">
                       <span>DPF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="DTF">
-                      <img src="Assets/Indus_ZIFDTF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="DTF">
+                      <img src="Assets/Indus_ZIFDTF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="DTF">
                       <span>DTF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="PTF">
-                      <img src="Assets/Resource_SAAFPTF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="PTF">
+                      <img src="Assets/Resource_SAAFPTF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="PTF">
                       <span>PTF</span>
                     </div>
                     <div class="dropdown-item flex items-center gap-2 p-2 hover:bg-gray-800 cursor-pointer transition-colors text-white text-xs" data-value="CUF">
-                      <img src="Assets/KISFCUF.png" class="w-5 h-5 rounded-full border border-gray-800 bg-gray-950 p-0.5 flex-shrink-0" alt="CUF">
+                      <img src="Assets/KISFCUF.png" class="w-5 h-5 object-contain flex-shrink-0" alt="CUF">
                       <span>CUF</span>
                     </div>
                   </div>

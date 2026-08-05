@@ -38,8 +38,13 @@ export class TradeController {
     if (dropdownSelected && dropdownOptions) {
       dropdownSelected.addEventListener('click', (e) => {
         e.stopPropagation();
+        updateDropdownOptions();
         const isHidden = dropdownOptions.style.display === 'none' || dropdownOptions.style.display === '';
-        dropdownOptions.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+          dropdownOptions.style.setProperty('display', 'block', 'important');
+        } else {
+          dropdownOptions.style.setProperty('display', 'none', 'important');
+        }
       });
       
       const items = dropdownOptions.querySelectorAll('.dropdown-item');
@@ -50,7 +55,7 @@ export class TradeController {
           
           // Sync HTML inside display area
           dropdownSelectedContent.innerHTML = item.innerHTML;
-          dropdownOptions.style.display = 'none';
+          dropdownOptions.style.setProperty('display', 'none', 'important');
           
           updateEstimatedCost();
         });
@@ -58,10 +63,94 @@ export class TradeController {
       
       // Close list when clicking elsewhere
       document.addEventListener('click', () => {
-        dropdownOptions.style.display = 'none';
+        dropdownOptions.style.setProperty('display', 'none', 'important');
       });
     }
     
+    const updateDropdownOptions = () => {
+      if (!dropdownOptions) return;
+      const allItems = Array.from(dropdownOptions.querySelectorAll('.dropdown-item:not(.empty-state-item)'));
+
+      // Always clean up any old quantity badges to keep the UI clean
+      allItems.forEach(item => {
+        const qtyBadge = item.querySelector('.dropdown-owned-badge');
+        if (qtyBadge) qtyBadge.remove();
+      });
+
+      if (orderType === 'BUY') {
+        const emptyState = dropdownOptions.querySelector('.empty-state-item');
+        if (emptyState) emptyState.remove();
+
+        allItems.forEach(item => {
+          item.style.setProperty('display', 'flex', 'important');
+        });
+
+        // Ensure a valid stock is selected for BUY
+        const currentVal = tradeStockSelect.value;
+        const currentItem = allItems.find(i => i.getAttribute('data-value') === currentVal);
+        if (!currentVal || !currentItem) {
+          const first = allItems[0];
+          if (first) {
+            tradeStockSelect.value = first.getAttribute('data-value');
+            dropdownSelectedContent.innerHTML = first.innerHTML;
+          }
+        } else {
+          dropdownSelectedContent.innerHTML = currentItem.innerHTML;
+        }
+      } else if (orderType === 'SELL') {
+        const userPortfolio = this.state.portfolio ? (this.state.portfolio.stocks || {}) : {};
+        const ownedSymbols = Object.keys(userPortfolio).filter(sym => userPortfolio[sym] && (Number(userPortfolio[sym].volume) > 0));
+
+        let ownedCount = 0;
+        let firstOwnedItem = null;
+
+        allItems.forEach(item => {
+          const val = item.getAttribute('data-value');
+          if (ownedSymbols.includes(val)) {
+            item.style.setProperty('display', 'flex', 'important');
+            ownedCount++;
+            if (!firstOwnedItem) firstOwnedItem = item;
+          } else {
+            item.style.setProperty('display', 'none', 'important');
+          }
+        });
+
+        if (ownedCount === 0) {
+          let emptyState = dropdownOptions.querySelector('.empty-state-item');
+          if (!emptyState) {
+            emptyState = document.createElement('div');
+            emptyState.className = 'empty-state-item p-3 text-center text-xs text-gray-400 italic cursor-not-allowed';
+            emptyState.textContent = 'No stocks owned';
+            dropdownOptions.appendChild(emptyState);
+          }
+          tradeStockSelect.value = '';
+          dropdownSelectedContent.innerHTML = `<span class="text-gray-400 italic">No stocks owned</span>`;
+        } else {
+          const emptyState = dropdownOptions.querySelector('.empty-state-item');
+          if (emptyState) emptyState.remove();
+
+          // Auto-select first owned item or update current selection HTML cleanly
+          const currentVal = tradeStockSelect.value;
+          if (ownedSymbols.includes(currentVal)) {
+            const currentItem = allItems.find(i => i.getAttribute('data-value') === currentVal);
+            if (currentItem) {
+              dropdownSelectedContent.innerHTML = currentItem.innerHTML;
+            } else if (firstOwnedItem) {
+              tradeStockSelect.value = firstOwnedItem.getAttribute('data-value');
+              dropdownSelectedContent.innerHTML = firstOwnedItem.innerHTML;
+            }
+          } else if (firstOwnedItem) {
+            tradeStockSelect.value = firstOwnedItem.getAttribute('data-value');
+            dropdownSelectedContent.innerHTML = firstOwnedItem.innerHTML;
+          }
+        }
+      }
+
+      updateEstimatedCost();
+    };
+
+    this.refreshDropdownOptions = updateDropdownOptions;
+
     // Buy / Sell tab switching
     tradeTabBuy.addEventListener('click', (e) => {
       e.preventDefault();
@@ -70,7 +159,7 @@ export class TradeController {
       tradeTabSell.classList.remove('active');
       submitOrderBtn.className = "submit-order-btn buy-theme mt-4";
       submitOrderBtn.textContent = "SUBMIT BUY ORDER";
-      updateEstimatedCost();
+      updateDropdownOptions();
     });
     
     tradeTabSell.addEventListener('click', (e) => {
@@ -80,7 +169,7 @@ export class TradeController {
       tradeTabBuy.classList.remove('active');
       submitOrderBtn.className = "submit-order-btn sell-theme mt-4";
       submitOrderBtn.textContent = "SUBMIT SELL ORDER";
-      updateEstimatedCost();
+      updateDropdownOptions();
     });
     
     // Form submission handler
@@ -90,6 +179,15 @@ export class TradeController {
       const symbol = tradeStockSelect.value;
       const vol = 1; // Volume locked to 1 share per trade
       
+      if (orderType === 'SELL') {
+        const userPortfolio = this.state.portfolio ? (this.state.portfolio.stocks || {}) : {};
+        const ownedCount = Object.keys(userPortfolio).filter(sym => userPortfolio[sym] && userPortfolio[sym].volume > 0).length;
+        if (ownedCount === 0 || !symbol) {
+          this.renderer.showErrorAlert("No stocks owned", "You do not have any stocks to sell.");
+          return;
+        }
+      }
+
       if (!symbol) {
         this.renderer.showErrorAlert("ข้อมูลไม่ถูกต้อง", "กรุณาเลือกหุ้นที่จะทำรายการ");
         return;
@@ -108,10 +206,31 @@ export class TradeController {
       
       let currentCash = this.state.portfolio.cash;
       let currentStocks = { ...this.state.portfolio.stocks };
+
+      // Calculate total cash tied up in user's pending BUY orders
+      const targetUidStr = String(user.uid || '').trim().toLowerCase();
+      const userPendingBuyOrders = Object.values(this.state.pendingOrders || {}).filter(
+        o => o && o.uid && String(o.uid).trim().toLowerCase() === targetUidStr && o.type === 'BUY'
+      );
+      const pendingBuyTotal = userPendingBuyOrders.reduce((sum, o) => sum + (Number(o.volume || 1) * Number(o.price || 0)), 0);
+      const effectiveAvailableCash = currentCash - pendingBuyTotal;
+      
+      console.log('🚀 [DEBUG TradeController Order Submit Check]', {
+        userUid: user.uid,
+        orderType,
+        symbol,
+        currentPrice,
+        currentCash,
+        pendingBuyTotal,
+        effectiveAvailableCash
+      });
       
       if (orderType === 'BUY') {
-        if (currentCash < totalCost) {
-          this.renderer.showErrorAlert("เงินไม่พอ", `เงินสดของคุณไม่เพียงพอสำหรับการส่งคำสั่งซื้อหุ้นนี้ (ต้องการ: ${totalCost.toLocaleString()} THB, คุณมี: ${currentCash.toLocaleString()} THB)`);
+        if (effectiveAvailableCash < totalCost) {
+          this.renderer.showErrorAlert(
+            "เงินไม่พอ", 
+            `เงินสดของคุณไม่เพียงพอสำหรับการส่งคำสั่งซื้อ (Available Cash ที่เหลือ: ${effectiveAvailableCash.toLocaleString()} THB, ต้องการ: ${totalCost.toLocaleString()} THB)`
+          );
           return;
         }
       } else {
@@ -128,20 +247,32 @@ export class TradeController {
       try {
         const orderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         const orderPath = `pendingOrders/${orderId}`;
-        const username = user.displayName || user.email || 'Player';
+        const username = this.state.playerName || 'Player_1';
         
+        const newOrder = {
+          id: orderId,
+          uid: user.uid,
+          username: username,
+          type: orderType,
+          symbol: symbol,
+          volume: vol,
+          price: currentPrice,
+          createdAt: Date.now()
+        };
+
+        console.log('📤 [DEBUG TradeController Submitting Order]', newOrder);
+
         await this.firebaseService.updateRoom(this.state.roomCode, {
-          [orderPath]: {
-            id: orderId,
-            uid: user.uid,
-            username: username,
-            type: orderType,
-            symbol: symbol,
-            volume: vol,
-            price: currentPrice,
-            createdAt: Date.now()
-          }
+          [orderPath]: newOrder
         });
+
+        // Immediately sync local state and update UI
+        if (!this.state.pendingOrders) this.state.pendingOrders = {};
+        this.state.pendingOrders[orderId] = newOrder;
+        
+        const stats = this.state.getPortfolioStats();
+        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, user.uid);
+        this.renderer.updatePlayerPendingOrdersUI(this.state.pendingOrders, user.uid);
         
         this.renderer.showSuccessAlert(
           "ส่งคำสั่งซื้อขายสำเร็จ",
@@ -178,7 +309,7 @@ export class TradeController {
         return;
       }
       
-      let cash = memberData.portfolio?.cash ?? 1000000;
+      let cash = memberData.portfolio?.cash ?? 20000;
       let stocks = { ...(memberData.portfolio?.stocks ?? {}) };
       
       const tradePrice = order.price;
@@ -243,8 +374,6 @@ export class TradeController {
         }
       }
       
-      this.renderer.showSuccessAlert("อนุมัติสำเร็จ", `อนุมัติคำสั่งซื้อขายของ ${order.username} เรียบร้อยแล้วที่ราคาตลาด ${tradePrice.toLocaleString()} THB และปรับราคาตลาดอัตโนมัติแล้ว`);
-      
     } catch (error) {
       console.error("Failed to approve order:", error);
       this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถอนุมัติคำสั่งซื้อขายได้");
@@ -256,10 +385,33 @@ export class TradeController {
       await this.firebaseService.updateRoom(this.state.roomCode, {
         [`pendingOrders/${orderId}`]: null
       });
-      this.renderer.showSuccessAlert("ปฏิเสธสำเร็จ", "คำสั่งซื้อขายได้รับการยกเลิกและลบออกจากระบบแล้ว");
     } catch (error) {
       console.error("Failed to reject order:", error);
       this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถยกเลิกคำสั่งซื้อขายได้");
+    }
+  }
+
+  async payPlayerSalary(playerUid) {
+    try {
+      const roomSnapshot = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
+      const roomData = roomSnapshot ? roomSnapshot.val() : null;
+      if (!roomData || !roomData.members || !roomData.members[playerUid]) {
+        this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่พบข้อมูลผู้เล่นในระบบ");
+        return;
+      }
+
+      const player = roomData.members[playerUid];
+      const currentCash = player.portfolio?.cash ?? 20000;
+      const newCash = currentCash + 10000;
+
+      await this.firebaseService.updateRoom(this.state.roomCode, {
+        [`members/${playerUid}/portfolio/cash`]: newCash
+      });
+
+      this.renderer.showSuccessAlert("โอนเงินเดือนสำเร็จ", `จ่ายเงินเดือนให้ ${player.displayName || 'Player'} จำนวน 10,000 บาท เรียบร้อยแล้ว`);
+    } catch (error) {
+      console.error("Failed to pay salary to player:", error);
+      this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถจ่ายเงินเดือนให้ผู้เล่นได้");
     }
   }
 }

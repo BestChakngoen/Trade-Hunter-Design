@@ -307,20 +307,23 @@ export class ChartRenderer {
     const chartContainer = card.querySelector('.chart-container');
     if (!chartContainer) return;
     
-    const isShowing = chartContainer.style.display === 'block';
     const viewGraphBtn = card.querySelector('.view-graph-btn');
+    const isShowing = chartContainer.style.display === 'flex' || chartContainer.style.display === 'block';
     
     if (isShowing) {
-      chartContainer.style.height = '0';
-      setTimeout(() => {
-        chartContainer.style.display = 'none';
-      }, 300);
+      chartContainer.classList.remove('expanded');
       if (viewGraphBtn) {
         viewGraphBtn.classList.remove('active');
         viewGraphBtn.textContent = 'View Graph';
       }
+      setTimeout(() => {
+        chartContainer.style.display = 'none';
+      }, 350);
     } else {
-      chartContainer.style.display = 'block';
+      chartContainer.style.display = 'flex';
+      void chartContainer.offsetWidth; // Force reflow to trigger CSS transition
+      chartContainer.classList.add('expanded');
+      
       if (viewGraphBtn) {
         viewGraphBtn.classList.add('active');
         viewGraphBtn.textContent = 'Hide Graph';
@@ -354,14 +357,11 @@ export class ChartRenderer {
                             'stat-change-pct text-xs font-bold text-gray-400';
       }
       
-      setTimeout(() => {
-        chartContainer.style.height = 'auto';
-        const canvas = chartContainer.querySelector('.stock-chart-canvas');
-        if (canvas) {
-          this.drawCardChart(canvas, history);
-          this.bindTimelineEvents(canvas, chartContainer, startPrice, beta);
-        }
-      }, 10);
+      const canvas = chartContainer.querySelector('.stock-chart-canvas');
+      if (canvas) {
+        this.drawCardChart(canvas, history);
+        this.bindTimelineEvents(canvas, chartContainer, startPrice, beta);
+      }
     }
   }
 }

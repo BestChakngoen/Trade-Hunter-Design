@@ -9,6 +9,9 @@ export class MarketBoardController {
   }
 
   bindSectorFilter() {
+    if (!this.renderer.sectorPills) return;
+    this.initOneTimeScrollbars();
+
     this.renderer.sectorPills.addEventListener('click', (e) => {
       const pill = e.target.closest('.pill');
       if (!pill) return;
@@ -16,39 +19,60 @@ export class MarketBoardController {
       const value = pill.getAttribute('data-value');
       const selected = this.state.selectedSectors;
       
-      if (value === 'ALL') {
-        selected.clear();
+      // Single-select logic: Only one sector active at a time
+      const isAlreadyActive = selected.has(value) && value !== 'ALL';
+      selected.clear();
+
+      if (value === 'ALL' || isAlreadyActive) {
         selected.add('ALL');
-        this.renderer.sectorPills.querySelectorAll('.pill').forEach(p => {
-          if (p.getAttribute('data-value') === 'ALL') {
-            p.classList.add('active');
-          } else {
-            p.classList.remove('active');
-          }
-        });
       } else {
-        if (selected.has('ALL')) {
-          selected.delete('ALL');
-          const allPill = this.renderer.sectorPills.querySelector('[data-value="ALL"]');
-          if (allPill) allPill.classList.remove('active');
-        }
-        
-        if (selected.has(value)) {
-          selected.delete(value);
-          pill.classList.remove('active');
-        } else {
-          selected.add(value);
-          pill.classList.add('active');
-        }
-        
-        if (selected.size === 0) {
-          selected.add('ALL');
-          const allPill = this.renderer.sectorPills.querySelector('[data-value="ALL"]');
-          if (allPill) allPill.classList.add('active');
-        }
+        selected.add(value);
       }
       
+      this.renderer.updateSectorPillsUI(selected);
       this.updateViewGrid();
+    });
+  }
+
+  initOneTimeScrollbars() {
+    const scrollConfigs = [
+      { id: 'sectorPills', key: 'scrolled_sectorPills' },
+      { id: 'sortToggles', key: 'scrolled_sortToggles' },
+      { id: 'holdingsTableContainer', key: 'scrolled_holdingsTable' },
+      { id: 'pendingOrdersTableContainer', key: 'scrolled_pendingOrdersTable' },
+      { id: 'gmPendingOrdersTableContainer', key: 'scrolled_gmPendingOrdersTable' }
+    ];
+
+    scrollConfigs.forEach(cfg => {
+      const el = document.getElementById(cfg.id);
+      if (!el) return;
+
+      // Check if this specific element was already scrolled and finished previously
+      const isScrolled = sessionStorage.getItem(cfg.key) === 'true';
+      if (isScrolled) {
+        el.classList.add('scrolled-hidden');
+        return;
+      }
+
+      let scrollDebounceTimer = null;
+
+      const onScroll = () => {
+        if (el.scrollLeft > 0) {
+          // Keep scrollbar active while user is swiping/scrolling
+          if (scrollDebounceTimer) {
+            clearTimeout(scrollDebounceTimer);
+          }
+
+          // Wait 800ms after scrolling stops before smoothly hiding
+          scrollDebounceTimer = setTimeout(() => {
+            sessionStorage.setItem(cfg.key, 'true');
+            el.classList.add('scrolled-hidden');
+            el.removeEventListener('scroll', onScroll);
+          }, 800);
+        }
+      };
+
+      el.addEventListener('scroll', onScroll, { passive: true });
     });
   }
 

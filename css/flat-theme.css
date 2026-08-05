@@ -1,43 +1,55 @@
 /* ==========================================================================
-   FLAT DESIGN SYSTEM - PROFESSIONAL FINANCIAL TERMINAL THEME
+   60-30-10 COLOR SYSTEM - PROFESSIONAL FINANCIAL TERMINAL DESIGN
    (css/flat-theme.css)
-   ดีไซน์แบบ Flat Design ระดับมืออาชีพ ปราศจากเอฟเฟกต์ AI โกลว์เรืองแสง
-   และคงพฤติกรรมของระบบเดิม 100% พร้อมล็อคเลย์เอาต์การ์ดหุ้นเดิมไว้คงที่
+   
+   🎨 60-30-10 Rule Implementation:
+   - 60% Dominant (Off-Black Slate Navy): #0b0f19 / #111827 (ไม่ใช้ #000000 สนิท)
+   - 30% Secondary (Off-White Slate Light): #f8fafc / #cbd5e1 (ไม่ใช้ #ffffff สนิท)
+   - 10% Accent (Financial Royal Blue): #2563eb / #1d4ed8 (สำหรับ CTA / Active States)
+
+   🔒 Stock Card Policy:
+   - ห้ามยุ่งเกี่ยวกับการ์ดหุ้น สไตล์และการจัดวางล็อคคงเดิมจาก market.css 100%
    ========================================================================== */
 
 :root {
-  --bg-dark-root: #090c15;
-  --bg-dark-surface: #111625;
-  --bg-dark-card: #161c2e;
-  --bg-dark-hover: #1e263d;
-  --border-flat: #232d42;
-  --border-flat-subtle: rgba(255, 255, 255, 0.08);
-  --text-main: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  --accent-primary: #3b82f6;
-  --accent-success: #10b981;
-  --accent-danger: #ef4444;
+  /* 60% Dominant Backgrounds (Off-black, Deep Charcoal Navy - ไม่ใช่ #000000 สนิท) */
+  --bg-dominant-root: #0b0f19;
+  --bg-dominant-surface: #111827;
+  --bg-dominant-card: #1f2937;
+  --bg-dominant-hover: #2d3748;
+
+  /* 30% Secondary Elements & Text (Off-white / Slate Light - ไม่ใช่ #ffffff สนิท) */
+  --text-secondary-bright: #f8fafc;
+  --text-secondary-muted: #cbd5e1;
+  --text-secondary-dim: #94a3b8;
+  --border-secondary: #1f2937;
+  --border-secondary-subtle: #374151;
+
+  /* 10% Accent Color (Professional Financial Royal Blue) */
+  --accent-blue-primary: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+  --accent-blue-subtle: rgba(37, 99, 235, 0.15);
+  --accent-blue-border: rgba(37, 99, 235, 0.4);
 }
 
-/* 1. 🏢 Body & Global Background (Flat Dark Navy Slate) */
+/* 1. 🏢 Body & Global Background (60% Dominant - Off-Black Navy) */
 body {
-  background-color: var(--bg-dark-root) !important;
-  background: var(--bg-dark-root) !important;
-  color: var(--text-main) !important;
+  background-color: var(--bg-dominant-root) !important;
+  background: var(--bg-dominant-root) !important;
+  color: var(--text-secondary-bright) !important;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 html, body, #lobbyScreen, .lobby-wrapper {
-  background-color: var(--bg-dark-root) !important;
-  background: var(--bg-dark-root) !important;
+  background-color: var(--bg-dominant-root) !important;
+  background: var(--bg-dominant-root) !important;
 }
 
-/* 2. 🏛️ Flat Hero Header & Logo */
+/* 2. 🏛️ Flat Hero Header & Logo (60% Surface / 30% Off-White Text) */
 .hero {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-surface) !important;
+  border: 1px solid var(--border-secondary) !important;
   border-radius: 16px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
   backdrop-filter: none !important;
@@ -45,38 +57,53 @@ html, body, #lobbyScreen, .lobby-wrapper {
 }
 
 .logo {
-  color: #f8fafc !important;
+  color: var(--text-secondary-bright) !important;
   letter-spacing: 0.15em !important;
   font-weight: 900 !important;
 }
 
-/* 3. 🔖 Flat Navigation Tab Bar */
+/* 3. 🔖 Flat Navigation Tab Bar (10% Accent Blue for Active / 30% Off-White for Inactive) */
 #mainNavTabs {
-  background: var(--bg-dark-root) !important;
-  border-bottom: 1px solid var(--border-flat) !important;
+  width: 100% !important;
+  background: var(--bg-dominant-surface) !important;
+  border: 1px solid var(--border-secondary) !important;
+  border-radius: 16px !important;
+  margin-bottom: 24px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+#mainNavTabs button {
+  width: 50% !important;
+  flex: 1 1 50% !important;
+  padding: 12px 16px !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
 }
 
 .tab-active {
-  color: var(--accent-primary) !important;
-  border-bottom: 2px solid var(--accent-primary) !important;
-  background: rgba(59, 130, 246, 0.06) !important;
-  font-weight: 700 !important;
+  color: var(--text-secondary-bright) !important;
+  background: var(--accent-blue-primary) !important;
+  border: none !important;
+  font-weight: 800 !important;
 }
 
 .tab-inactive {
-  color: var(--text-muted) !important;
-  border-bottom: 2px solid transparent !important;
+  color: var(--text-secondary-muted) !important;
+  background: transparent !important;
+  border: none !important;
+  font-weight: 700 !important;
 }
 
 .tab-inactive:hover {
-  color: var(--text-main) !important;
-  background: rgba(255, 255, 255, 0.02) !important;
+  color: var(--text-secondary-bright) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }
 
-/* 4. 🎛️ Flat Filter & Sort Container */
+/* 4. 🎛️ Flat Filter & Sort Container (60% Surface / 30% Off-White / 10% Blue Accent) */
 .filter-container {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-surface) !important;
+  border: 1px solid var(--border-secondary) !important;
   border-radius: 16px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
   backdrop-filter: none !important;
@@ -84,184 +111,124 @@ html, body, #lobbyScreen, .lobby-wrapper {
 }
 
 .filter-title {
-  color: var(--text-muted) !important;
+  color: var(--text-secondary-muted) !important;
   letter-spacing: 0.1em !important;
   font-weight: 700 !important;
 }
 
 .pill {
-  background: var(--bg-dark-card) !important;
-  border: 1px solid var(--border-flat) !important;
-  color: var(--text-muted) !important;
+  background: var(--bg-dominant-card) !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
+  color: var(--text-secondary-muted) !important;
   border-radius: 10px !important;
   padding: 8px 16px !important;
 }
 
 .pill:hover {
-  background: var(--bg-dark-hover) !important;
-  color: var(--text-main) !important;
-  border-color: var(--accent-primary) !important;
+  background: var(--bg-dominant-hover) !important;
+  color: var(--text-secondary-bright) !important;
+  border-color: var(--accent-blue-primary) !important;
   transform: none !important;
 }
 
 .pill.active {
-  background: rgba(59, 130, 246, 0.15) !important;
-  border-color: var(--accent-primary) !important;
-  color: var(--accent-primary) !important;
+  background: var(--accent-blue-primary) !important;
+  border-color: var(--accent-blue-primary) !important;
+  color: var(--text-secondary-bright) !important;
   box-shadow: none !important;
 }
 
 .sort-toggle-btn {
-  background: var(--bg-dark-card) !important;
-  border: 1px solid var(--border-flat) !important;
-  color: var(--text-muted) !important;
+  background: var(--bg-dominant-card) !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
+  color: var(--text-secondary-muted) !important;
   border-radius: 10px !important;
 }
 
 .sort-toggle-btn:hover {
-  border-color: var(--accent-primary) !important;
-  color: var(--text-main) !important;
+  border-color: var(--accent-blue-primary) !important;
+  color: var(--text-secondary-bright) !important;
   transform: none !important;
 }
 
 .sort-toggle-btn.active {
-  background: rgba(59, 130, 246, 0.15) !important;
-  border-color: var(--accent-primary) !important;
-  color: var(--accent-primary) !important;
+  background: var(--accent-blue-primary) !important;
+  border-color: var(--accent-blue-primary) !important;
+  color: var(--text-secondary-bright) !important;
   box-shadow: none !important;
 }
 
 .sort-toggle-btn.reset-btn {
   background: rgba(239, 68, 68, 0.08) !important;
   border-color: rgba(239, 68, 68, 0.25) !important;
-  color: var(--accent-danger) !important;
+  color: #ef4444 !important;
 }
 
 .sort-toggle-btn.reset-btn:hover {
   background: rgba(239, 68, 68, 0.18) !important;
-  border-color: var(--accent-danger) !important;
+  border-color: #ef4444 !important;
 }
 
-/* 5. 📈 Flat Stock Cards (คงทับสิทธิ์ตามกฎ LOCKED 4-Section Layout 22% 26% 40% 12%) */
-.price-card {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid var(--border-flat) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
-  transition: border-color 0.2s ease, background-color 0.2s ease !important;
-}
-
-.price-card:hover {
-  border-color: rgba(59, 130, 246, 0.4) !important;
-  background: var(--bg-dark-card) !important;
-}
-
-.price-card .view-graph-btn {
-  background: rgba(59, 130, 246, 0.12) !important;
-  border: 1px solid rgba(59, 130, 246, 0.3) !important;
-  color: #60a5fa !important;
-  border-radius: 8px !important;
-  padding: 6px 14px !important;
-  font-weight: 600 !important;
-  box-shadow: none !important;
-  transition: all 0.15s ease !important;
-}
-
-.price-card .view-graph-btn:hover {
-  background: rgba(59, 130, 246, 0.25) !important;
-  border-color: #3b82f6 !important;
-  color: #ffffff !important;
-  transform: none !important;
-}
-
-.price-card .view-graph-btn.active {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  color: #f87171 !important;
-}
-
-/* กล่องราคาแบบ Flat Slate Terminal */
-.price-box {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
-  border-radius: 10px !important;
-  box-shadow: none !important;
-}
-
-.price-box .card-value {
-  color: #ffffff !important;
-  font-weight: 800 !important;
-}
-
-/* ปุ่ม Caret Up/Down */
-.control-btn {
-  opacity: 0.9 !important;
-  transition: transform 0.15s ease !important;
-}
-
-.control-btn:hover {
-  transform: scale(1.15) !important;
-  opacity: 1 !important;
-}
+/* 5. 🔒 [RESTORED & FROZEN] Stock Card Styles are 100% untouched & left to original market.css */
 
 /* 6. 📊 Flat Inline Expandable Chart & Stats Grid */
 .chart-container {
-  border-top: 1px solid var(--border-flat) !important;
+  border-top: 1px solid var(--border-secondary) !important;
 }
 
 .stock-chart-canvas {
-  background: #0f172a !important;
-  border: 1px solid #1e293b !important;
+  background: var(--bg-dominant-root) !important;
+  border: 1px solid var(--border-secondary-subtle) !important;
   border-radius: 8px !important;
 }
 
 .chart-stats-grid {
-  border-top: 1px solid var(--border-flat) !important;
+  border-top: 1px solid var(--border-secondary) !important;
 }
 
 /* 7. 🔔 Flat GM Pending Orders & Portfolio Panels */
-#gmPendingOrdersSection > div {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid rgba(234, 179, 8, 0.3) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+#gmPendingOrdersSection > div,
+#gmPlayerSalarySection > div {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .summary-card {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-surface) !important;
+  border: 1px solid var(--border-secondary) !important;
   border-radius: 12px !important;
 }
 
 .summary-label {
-  color: var(--text-muted) !important;
+  color: var(--text-secondary-muted) !important;
 }
 
 .table-container, .holdings-table {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-surface) !important;
+  border: 1px solid var(--border-secondary) !important;
   border-radius: 12px !important;
 }
 
 .holdings-table th {
-  background: var(--bg-dark-card) !important;
-  color: var(--text-muted) !important;
-  border-bottom: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-card) !important;
+  color: var(--text-secondary-muted) !important;
+  border-bottom: 1px solid var(--border-secondary) !important;
 }
 
 .holdings-table td {
-  border-bottom: 1px solid var(--border-flat-subtle) !important;
+  border-bottom: 1px solid var(--border-secondary-subtle) !important;
 }
 
 .trade-card {
-  background: var(--bg-dark-surface) !important;
-  border: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-surface) !important;
+  border: 1px solid var(--border-secondary) !important;
   border-radius: 14px !important;
 }
 
 .trade-tabs {
-  background: var(--bg-dark-card) !important;
-  border: 1px solid var(--border-flat) !important;
+  background: var(--bg-dominant-card) !important;
+  border: 1px solid var(--border-secondary) !important;
 }
 
 /* 8. ⚠️ Flat Danger Zone Section */
@@ -274,7 +241,7 @@ html, body, #lobbyScreen, .lobby-wrapper {
 
 .danger-btn {
   background: #dc2626 !important;
-  color: #ffffff !important;
+  color: var(--text-secondary-bright) !important;
   border-radius: 10px !important;
   font-weight: 700 !important;
   box-shadow: none !important;
@@ -294,7 +261,7 @@ html, body, #lobbyScreen, .lobby-wrapper {
     transform: scale(1.05);
   }
   100% {
-    color: #ffffff !important;
+    color: var(--text-secondary-bright) !important;
     transform: scale(1);
   }
 }
@@ -305,7 +272,7 @@ html, body, #lobbyScreen, .lobby-wrapper {
     transform: scale(1.05);
   }
   100% {
-    color: #ffffff !important;
+    color: var(--text-secondary-bright) !important;
     transform: scale(1);
   }
 }

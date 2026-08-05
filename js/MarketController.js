@@ -47,9 +47,11 @@ export class MarketController {
     this.renderer.bindTabEvents((tab) => {
       if (tab === 'portfolio') {
         const stats = this.state.getPortfolioStats();
-        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks);
-        if (this.tradeController.updateTradeFormPrice) {
-          this.tradeController.updateTradeFormPrice();
+        const user = this.firebaseService.getCurrentUser();
+        const uid = user ? user.uid : null;
+        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, uid);
+        if (this.tradeController.refreshDropdownOptions) {
+          this.tradeController.refreshDropdownOptions();
         }
       }
     });
@@ -131,7 +133,8 @@ export class MarketController {
 
       if (this.state.portfolio) {
         const stats = this.state.getPortfolioStats();
-        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks);
+        const uid = user ? user.uid : null;
+        this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, uid);
       }
 
       if (this.tradeController.updateTradeFormPrice) {
@@ -143,22 +146,33 @@ export class MarketController {
       this.roomListenerUnsubscribe = this.firebaseService.listenToRoom(code, (roomData) => {
         if (!roomData) return;
 
-        if (roomData.members && roomData.members[user.uid]) {
-          const memberData = roomData.members[user.uid];
-          this.state.updatePortfolioFromMemberData(memberData);
-
-          const stats = this.state.getPortfolioStats();
-          this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks);
-        }
+        const currentUser = this.firebaseService.getCurrentUser();
+        const currentUid = currentUser ? currentUser.uid : user.uid;
 
         const orders = roomData.pendingOrders || {};
         this.state.updatePendingOrders(orders);
 
-        this.renderer.updatePlayerPendingOrdersUI(orders, user.uid);
+        if (roomData.members && roomData.members[currentUid]) {
+          const memberData = roomData.members[currentUid];
+          this.state.updatePortfolioFromMemberData(memberData);
+
+          this.renderer.updateControlsVisibility(this.state.role, this.state.playerName);
+
+          const stats = this.state.getPortfolioStats();
+          this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, orders, currentUid);
+          if (this.tradeController.refreshDropdownOptions) {
+            this.tradeController.refreshDropdownOptions();
+          }
+        }
+
+        this.renderer.updatePlayerPendingOrdersUI(orders, currentUid);
 
         if (this.state.role === 'game_master' && !this.state.isSpectating) {
           if (this.renderer.gmPendingOrdersSection) {
             this.renderer.gmPendingOrdersSection.style.display = 'block';
+          }
+          if (this.renderer.gmPlayerSalarySection) {
+            this.renderer.gmPlayerSalarySection.style.display = 'block';
           }
           this.renderer.updateGMPendingOrdersUI(
             orders,
@@ -169,9 +183,18 @@ export class MarketController {
               await this.tradeController.rejectPlayerOrder(orderId);
             }
           );
+          this.renderer.updateGMPlayerSalaryUI(
+            roomData.members,
+            async (playerUid) => {
+              await this.tradeController.payPlayerSalary(playerUid);
+            }
+          );
         } else {
           if (this.renderer.gmPendingOrdersSection) {
             this.renderer.gmPendingOrdersSection.style.display = 'none';
+          }
+          if (this.renderer.gmPlayerSalarySection) {
+            this.renderer.gmPlayerSalarySection.style.display = 'none';
           }
         }
       });

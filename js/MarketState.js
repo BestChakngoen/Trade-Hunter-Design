@@ -23,12 +23,14 @@ export class MarketState {
     
     // Player portfolio state
     this.portfolio = {
-      cash: 1000000,
+      cash: 20000,
       stocks: {}
     };
     
     // Pending orders queue
     this.pendingOrders = {};
+    // Player info
+    this.playerName = 'Player_1';
   }
 
   setRoomCode(code) {
@@ -37,6 +39,10 @@ export class MarketState {
 
   setRole(role) {
     this.role = role;
+  }
+
+  setPlayerName(name) {
+    this.playerName = name;
   }
 
   // Populate master settings from Firestore
@@ -244,14 +250,19 @@ export class MarketState {
   }
 
   updatePortfolioFromMemberData(memberData) {
-    if (memberData && memberData.portfolio) {
-      this.portfolio = {
-        cash: memberData.portfolio.cash ?? 1000000,
-        stocks: memberData.portfolio.stocks ?? {}
-      };
+    if (memberData) {
+      if (memberData.displayName) {
+        this.playerName = memberData.displayName;
+      }
+      if (memberData.portfolio) {
+        this.portfolio = {
+          cash: memberData.portfolio.cash ?? 20000,
+          stocks: memberData.portfolio.stocks ?? {}
+        };
+      }
     } else {
       this.portfolio = {
-        cash: 1000000,
+        cash: 20000,
         stocks: {}
       };
     }

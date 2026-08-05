@@ -11,7 +11,7 @@
 .filter-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;                        /* 👈 ระยะห่างระหว่างโซน Sector กับโซน Sort By */
+  gap: 20px;                        /* 👈 ระยะห่างระหว่างส่วนในกล่องตัวกรอง */
   margin-bottom: 32px;              /* 👈 ระยะห่างใต้กล่องตัวกรอง ก่อนถึงตารางหุ้น */
   background: rgba(16, 18, 30, 0.92); /* 👈 สีพื้นหลังกล่องตัวกรอง (สีเข้มใส) */
   border: 1px solid rgba(255, 255, 255, 0.1); /* 👈 เส้นขอบกระจกใส */
@@ -19,6 +19,18 @@
   border-radius: 28px;              /* 👈 ความมนของมุมกล่องตัวกรอง */
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); /* 👈 เงาสมจริง */
   backdrop-filter: blur(12px);       /* 👈 เอฟเฟกต์เบลอฉากหลัง (Glassmorphism) */
+}
+
+/* แถบแสดงสถานะ User (Role Indicator) มุมบนซ้ายของกล่อง Filter */
+.filter-container #roleController {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-bottom: 4px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1) !important;
 }
 
 .filter-section {
@@ -37,21 +49,66 @@
   letter-spacing: 0.08em;           /* 👈 ระยะห่างตัวอักษรหัวข้อ */
 }
 
-/* === ปุ่มเลือกกลุ่มอุตสาหกรรม (Sector Pills) === */
-.sector-pills {
-  display: flex;
-  gap: 8px;                         /* 👈 ระยะห่างระหว่างแต่ละปุ่มกลุ่มหุ้น */
-  overflow-x: auto;                 /* เลื่อนแนวนอนได้บนหน้าจอมือถือ */
-  scrollbar-width: none;            /* ซ่อนแถบ Scrollbar ใน Firefox */
-  padding: 2px 0;
+/* === กรอบครอบและแถบเลื่อนสไลด์บาร์ (Sector Pills & Sort Toggles Scrollbars) === */
+.sector-pills-wrapper,
+.sort-toggles-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
 }
 
-.sector-pills::-webkit-scrollbar {
-  display: none;                    /* ซ่อนแถบ Scrollbar ใน Chrome/Safari */
+.sector-pills,
+.sort-toggles {
+  display: flex;
+  gap: 8px;                         /* 👈 ระยะห่างระหว่างแต่ละปุ่ม */
+  overflow-x: auto;                 /* เลื่อนแนวนอนได้บนหน้าจอมือถือ */
+  padding-bottom: 8px;              /* เผื่อพื้นที่ให้สไลด์บาร์ด้านล่าง */
+  -webkit-overflow-scrolling: touch; /* เลื่อนได้อย่างลื่นไหลบน iOS/Android */
+  scrollbar-width: thin;            /* กำหนดขนาดแถบเลื่อนบน Firefox */
+  scrollbar-color: #334155 #0f172a; /* 👈 สีหัวเลื่อนและรางสไตล์เดียวกับ Portfolio Holdings */
+}
+
+/* ตกแต่งสไลด์บาร์ (Scrollbar) สไตล์เดียวกับ Portfolio Holdings */
+.sector-pills::-webkit-scrollbar,
+.sort-toggles::-webkit-scrollbar {
+  height: 6px !important;           /* 👈 ความสูงสไลด์บาร์แนวนอน (6px) */
+  display: block !important;
+}
+
+.sector-pills::-webkit-scrollbar-track,
+.sort-toggles::-webkit-scrollbar-track {
+  background: #0f172a !important;   /* 👈 รางเลื่อนสีเข้มสไตล์เดียวกับ Portfolio Holdings */
+  border-radius: 4px;
+}
+
+.sector-pills::-webkit-scrollbar-thumb,
+.sort-toggles::-webkit-scrollbar-thumb {
+  background: #334155 !important;   /* 👈 ปุ่มสไลด์บาร์สี Slate Gray สไตล์เดียวกับ Portfolio Holdings */
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sector-pills::-webkit-scrollbar-thumb:hover,
+.sort-toggles::-webkit-scrollbar-thumb:hover {
+  background: #475569 !important;
+}
+
+/* เมื่อ User ลองสไลด์เลื่อนแล้ว ให้ซ่อนสไลด์บาร์ถาวร */
+.sector-pills.scrolled-hidden,
+.sort-toggles.scrolled-hidden {
+  padding-bottom: 0px !important;
+  scrollbar-width: none !important;
+}
+
+.sector-pills.scrolled-hidden::-webkit-scrollbar,
+.sort-toggles.scrolled-hidden::-webkit-scrollbar {
+  display: none !important;
+  height: 0px !important;
 }
 
 /* เม็ดปุ่ม Sector ปกติ (เช่น ALL, FINCIAL, TECH) */
 .pill {
+  flex-shrink: 0 !important;        /* 👈 ป้องกันปุ่มหดเพื่อให้สไลด์บาร์ทำงานเมื่อล้นแถว */
   background: rgba(255, 255, 255, 0.03); /* 👈 สีพื้นหลังปุ่มปกติ */
   border: 1px solid rgba(255, 255, 255, 0.1);  /* 👈 สีเส้นขอบปุ่มปกติ */
   color: #b3b6c1;                    /* 👈 สีข้อความบนปุ่ม */
@@ -85,6 +142,8 @@
 }
 
 .sort-toggle-btn {
+  flex-shrink: 0 !important;        /* 👈 ห้ามหดปุ่ม เพื่อขยายล้นแนวนอนเปิดสไลด์บาร์เลื่อนได้ */
+  white-space: nowrap !important;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #b3b6c1;
@@ -198,13 +257,13 @@
   gap: 6px;
   font-size: 0.75rem;               /* 👈 ขนาดตัวอักษรบนปุ่ม View Graph */
   font-weight: 700;
-  color: #3730a3;                   /* 👈 สีตัวอักษร View Graph */
+  color: #a5b4fc;                   /* 👈 สีตัวอักษร View Graph สว่างอ่านง่าย */
   cursor: pointer;
   padding: 8px 18px;                /* 👈 ขนาดความใหญ่ของปุ่ม View Graph */
   border-radius: 20px;              /* 👈 ความมนของปุ่ม View Graph */
-  background: rgba(79, 70, 229, 0.12); /* 👈 สีพื้นหลังปุ่ม View Graph */
-  border: 1px solid rgba(79, 70, 229, 0.3); /* 👈 เส้นขอบปุ่ม View Graph */
-  transition: all 0.2s ease;
+  background: rgba(79, 70, 229, 0.16); /* 👈 สีพื้นหลังปุ่ม View Graph */
+  border: 1px solid rgba(129, 140, 248, 0.4); /* 👈 เส้นขอบปุ่ม View Graph */
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   white-space: nowrap;
   letter-spacing: 0.03em;
@@ -212,18 +271,24 @@
 }
 
 .view-graph-btn:hover {
-  color: #1e1b4b;
-  background: rgba(79, 70, 229, 0.25);
-  border-color: rgba(79, 70, 229, 0.6);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.35);
+  border-color: rgba(165, 180, 252, 0.8);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
   transform: translateY(-1px);
 }
 
 .view-graph-btn.active {
-  color: #9f1239;                   /* 👈 สีตัวอักษรเมื่อกำลังเปิดกราฟอยู่ (สีแดงเข้ม) */
-  background: rgba(225, 29, 72, 0.15);
-  border-color: rgba(225, 29, 72, 0.4);
-  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.2);
+  color: #fb7185;                   /* 👈 สีตัวอักษรเมื่อกำลังเปิดกราฟอยู่ (สีโรสพิ้งค์สว่าง) */
+  background: rgba(225, 29, 72, 0.2);
+  border-color: rgba(244, 63, 94, 0.6);
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.3);
+}
+
+.view-graph-btn.active:hover {
+  color: #ffffff;
+  background: rgba(225, 29, 72, 0.35);
+  border-color: rgba(244, 63, 94, 0.9);
 }
 
 /* --------------------------------------------------------------------------
@@ -347,18 +412,26 @@
    -------------------------------------------------------------------------- */
 .chart-container {
   border-top: 1px dashed rgba(255, 255, 255, 0.1); /* 👈 เส้นปรุกระจายกั้นระหว่างการ์ดกับกราฟ */
-  margin-top: 16px;                 /* 👈 ระยะห่างขอบบนกราฟ */
-  padding-top: 16px;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; /* 👈 แอนิเมชันคลี่กราฟลง */
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  padding-top: 0;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease-out,
+              margin-top 0.35s ease,
+              padding-top 0.35s ease;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+.chart-container.expanded {
+  max-height: 400px;
+  opacity: 1;
+  margin-top: 16px;
+  padding-top: 16px;
 }
 
 .stock-chart-canvas {

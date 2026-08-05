@@ -2,14 +2,42 @@
  * PortfolioRenderer - Manages Portfolio Assets Table, PnL Summaries, and Orders Approval Queue Tables.
  */
 export class PortfolioRenderer {
-  updatePortfolioUI(stats, portfolio, boardStocks) {
+  updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders = {}, userUid = null) {
     const portCash = document.getElementById('portCash');
+    const buyingPowerValue = document.getElementById('buyingPowerValue');
     const portTotalAssets = document.getElementById('portTotalAssets');
     const portTotalPnL = document.getElementById('portTotalPnL');
     const holdingsTableBody = document.getElementById('holdingsTableBody');
     
-    if (portCash) portCash.textContent = stats.cash.toLocaleString('en-US') + ' THB';
-    if (portTotalAssets) portTotalAssets.textContent = stats.totalAssets.toLocaleString('en-US') + ' THB';
+    // Calculate pending BUY amount reserved by this player
+    let pendingBuyTotal = 0;
+    if (userUid && pendingOrders) {
+      const targetUidStr = String(userUid).trim().toLowerCase();
+      const allOrders = Object.values(pendingOrders);
+      const userBuyOrders = allOrders.filter(o => o && o.uid && String(o.uid).trim().toLowerCase() === targetUidStr && o.type === 'BUY');
+      
+      pendingBuyTotal = userBuyOrders.reduce((sum, o) => sum + (Number(o.volume || 1) * Number(o.price || 0)), 0);
+      
+      console.log('🔍 [DEBUG PortfolioRenderer]', {
+        userUid,
+        targetUidStr,
+        allPendingOrdersCount: allOrders.length,
+        userBuyOrdersCount: userBuyOrders.length,
+        userBuyOrders,
+        cash: stats.cash,
+        pendingBuyTotal,
+        effectiveCash: Math.max(0, stats.cash - pendingBuyTotal)
+      });
+    } else {
+      console.log('⚠️ [DEBUG PortfolioRenderer] Missing userUid or pendingOrders', { userUid, pendingOrders });
+    }
+    const effectiveCash = Math.max(0, stats.cash - pendingBuyTotal);
+
+    // CASH is real cash (only deducted when GM approves)
+    if (portCash) portCash.textContent = stats.cash.toLocaleString('en-US');
+    // BUYING POWER is effective cash (reserved immediately on pending order)
+    if (buyingPowerValue) buyingPowerValue.textContent = effectiveCash.toLocaleString('en-US');
+    if (portTotalAssets) portTotalAssets.textContent = stats.totalAssets.toLocaleString('en-US');
     
     if (portTotalPnL) {
       const sign = stats.totalPnL >= 0 ? '+' : '';
@@ -25,7 +53,7 @@ export class PortfolioRenderer {
       if (symbols.length === 0) {
         holdingsTableBody.innerHTML = `
           <tr>
-            <td colspan="6" class="text-center py-6 text-gray-500 font-medium">No assets in portfolio</td>
+            <td colspan="5" class="text-center py-6 text-gray-500 font-medium">No assets in portfolio</td>
           </tr>
         `;
         return;
@@ -68,14 +96,10 @@ export class PortfolioRenderer {
           <tr class="hover:bg-gray-900 transition-colors">
             <td class="p-3">
               <div class="flex items-center gap-2">
-                <img src="${details.icon}" class="w-8 h-8 rounded-full border border-gray-800 bg-gray-950 p-1" alt="${symbol}">
-                <div>
-                  <div class="font-bold text-white text-sm sm:text-base">${symbol}</div>
-                  <div class="text-[9px] text-gray-500 font-bold uppercase tracking-wider">${details.sector}</div>
-                </div>
+                <img src="${details.icon}" class="w-5 h-5 object-contain flex-shrink-0" alt="${symbol}">
+                <div class="font-bold text-white text-sm sm:text-base">${symbol}</div>
               </div>
             </td>
-            <td>${holding.volume.toLocaleString('en-US')}</td>
             <td>${holding.avgPrice.toLocaleString('en-US')}</td>
             <td>${marketPrice.toLocaleString('en-US')}</td>
             <td class="font-semibold text-white">${amount.toLocaleString('en-US')}</td>
@@ -91,6 +115,16 @@ export class PortfolioRenderer {
     if (!gmPendingOrdersBody) return;
     
     const orderList = Object.values(orders);
+    const badgeEl = document.getElementById('gmPendingBadge');
+    
+    if (badgeEl) {
+      if (orderList.length > 0) {
+        badgeEl.style.setProperty('display', 'inline-block', 'important');
+      } else {
+        badgeEl.style.setProperty('display', 'none', 'important');
+      }
+    }
+
     if (orderList.length === 0) {
       gmPendingOrdersBody.innerHTML = `
         <tr>
@@ -113,8 +147,8 @@ export class PortfolioRenderer {
           <td class="p-3">${order.volume.toLocaleString('en-US')}</td>
           <td class="p-3 text-gray-400">${formattedProposedPrice}</td>
           <td class="p-3 text-center flex justify-center gap-2">
-            <button class="gm-approve-btn bg-green-700 hover:bg-green-600 text-white font-bold px-3 py-1 rounded text-xs transition-colors">✔️ Approve</button>
-            <button class="gm-reject-btn bg-red-700 hover:bg-red-600 text-white font-bold px-3 py-1 rounded text-xs transition-colors">❌ Reject</button>
+            <button class="gm-approve-btn">✔️ Approve</button>
+            <button class="gm-reject-btn">❌ Reject</button>
           </td>
         </tr>
       `;
@@ -145,11 +179,12 @@ export class PortfolioRenderer {
     const playerPendingOrdersBody = document.getElementById('playerPendingOrdersBody');
     if (!playerPendingOrdersBody) return;
     
-    const myOrders = Object.values(orders).filter(order => order.uid === uid);
+    const targetUidStr = String(uid || '').trim().toLowerCase();
+    const myOrders = Object.values(orders || {}).filter(order => order && order.uid && String(order.uid).trim().toLowerCase() === targetUidStr);
     if (myOrders.length === 0) {
       playerPendingOrdersBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-center py-4 text-gray-500 font-medium">No pending orders</td>
+          <td colspan="5" class="text-center py-4 text-gray-500 font-medium">No pending orders</td>
         </tr>
       `;
       return;
@@ -164,11 +199,10 @@ export class PortfolioRenderer {
         <tr class="hover:bg-gray-900 transition-colors">
           <td class="${actionColor}">${order.type}</td>
           <td class="font-bold text-white">${order.symbol}</td>
-          <td>${order.volume.toLocaleString('en-US')}</td>
           <td>${order.price.toLocaleString('en-US')}</td>
           <td class="font-semibold text-white">${totalAmount.toLocaleString('en-US')}</td>
           <td>
-            <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-yellow-950 text-yellow-400 border border-yellow-800">
+            <span class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
               PENDING GM APPROVAL
             </span>
           </td>
@@ -176,5 +210,55 @@ export class PortfolioRenderer {
       `;
     });
     playerPendingOrdersBody.innerHTML = html;
+  }
+
+  updateGMPlayerSalaryUI(gmPlayerSalaryBody, members, onPaySalary) {
+    if (!gmPlayerSalaryBody) return;
+
+    // Filter out GM members (check both role and displayName)
+    const memberList = Object.entries(members || {}).filter(([uid, member]) => {
+      const role = (member.role || '').toLowerCase();
+      const name = (member.displayName || '').toUpperCase();
+      return role !== 'game_master' && name !== 'GM';
+    });
+
+    if (memberList.length === 0) {
+      gmPlayerSalaryBody.innerHTML = `
+        <tr>
+          <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = '';
+    memberList.forEach(([uid, member]) => {
+      const cash = member.portfolio?.cash ?? 20000;
+      const formattedCash = cash.toLocaleString('en-US');
+      
+      html += `
+        <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
+          <td class="p-3 font-semibold text-white">${member.displayName || 'Player'}</td>
+          <td class="p-3 text-emerald-400 font-semibold">${formattedCash}</td>
+          <td class="p-3 text-center flex justify-center">
+            <button type="button" class="gm-salary-btn" data-uid="${uid}">pay 10,000</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    gmPlayerSalaryBody.innerHTML = html;
+
+    const salaryBtns = gmPlayerSalaryBody.querySelectorAll('.gm-salary-btn');
+    salaryBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const playerUid = btn.getAttribute('data-uid');
+        if (onPaySalary && playerUid) {
+          onPaySalary(playerUid);
+        }
+      });
+    });
   }
 }
