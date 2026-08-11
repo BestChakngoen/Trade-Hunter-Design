@@ -15,6 +15,9 @@ export class MarketState {
     // Master settings from Firestore (key: Stock Name)
     this.masterStocks = {}; 
     
+    // Baseline starting prices for stock comparison (key: Stock Name)
+    this.initialPrices = {};
+
     // Current board state from Realtime Database (key: Stock Name)
     this.boardStocks = {};
     
@@ -31,6 +34,55 @@ export class MarketState {
     this.pendingOrders = {};
     // Player info
     this.playerName = 'Player_1';
+    
+    // Continuous Undo & Redo Action Stacks (Full Room State Snapshot)
+    this.undoStack = [];
+    this.redoStack = [];
+  }
+
+  // Push room state snapshot (stocks, members portfolio/cash, pendingOrders) to Undo stack
+  pushUndoSnapshot(roomData) {
+    if (!roomData) return;
+    const snapshot = {
+      stocks: JSON.parse(JSON.stringify(roomData.stocks || {})),
+      members: JSON.parse(JSON.stringify(roomData.members || {})),
+      pendingOrders: JSON.parse(JSON.stringify(roomData.pendingOrders || {}))
+    };
+    this.undoStack.push(snapshot);
+    // Limit stack size to 50 items
+    if (this.undoStack.length > 50) {
+      this.undoStack.shift();
+    }
+    // Clear Redo stack when a new action is performed
+    this.redoStack = [];
+  }
+
+  popUndoSnapshot() {
+    if (this.undoStack.length === 0) return null;
+    return this.undoStack.pop();
+  }
+
+  pushRedoSnapshot(roomData) {
+    if (!roomData) return;
+    const snapshot = {
+      stocks: JSON.parse(JSON.stringify(roomData.stocks || {})),
+      members: JSON.parse(JSON.stringify(roomData.members || {})),
+      pendingOrders: JSON.parse(JSON.stringify(roomData.pendingOrders || {}))
+    };
+    this.redoStack.push(snapshot);
+  }
+
+  popRedoSnapshot() {
+    if (this.redoStack.length === 0) return null;
+    return this.redoStack.pop();
+  }
+
+  canUndo() {
+    return this.undoStack.length > 0;
+  }
+
+  canRedo() {
+    return this.redoStack.length > 0;
   }
 
   setRoomCode(code) {
@@ -45,15 +97,45 @@ export class MarketState {
     this.playerName = name;
   }
 
+  // Get or calculate starting price for stock comparison
+  getStartPrice(symbol, currentValue) {
+    if (!this.initialPrices) this.initialPrices = {};
+    if (this.initialPrices[symbol] !== undefined) {
+      return this.initialPrices[symbol];
+    }
+    const master = this.masterStocks ? this.masterStocks[symbol] : null;
+    if (master && Array.isArray(master.steps) && master.startStep > 0) {
+      const startVal = master.steps[master.startStep - 1];
+      if (startVal !== undefined) {
+        this.initialPrices[symbol] = startVal;
+        return startVal;
+      }
+    }
+    if (currentValue !== undefined) {
+      this.initialPrices[symbol] = currentValue;
+      return currentValue;
+    }
+    return 0;
+  }
+
   // Populate master settings from Firestore
   setMasterStocks(firestoreStocks) {
     this.masterStocks = {};
+    if (!this.initialPrices) this.initialPrices = {};
+    if (!Array.isArray(firestoreStocks)) return;
     firestoreStocks.forEach(stock => {
+      if (!stock || !stock.name) return;
       this.masterStocks[stock.name] = {
         name: stock.name,
         steps: stock.steps,
         startStep: stock.startStep
       };
+      if (Array.isArray(stock.steps) && stock.startStep > 0) {
+        const startVal = stock.steps[stock.startStep - 1];
+        if (startVal !== undefined) {
+          this.initialPrices[stock.name] = startVal;
+        }
+      }
     });
   }
 
@@ -65,24 +147,63 @@ export class MarketState {
       const symbol = stock.name;
       this.boardStocks[symbol] = stock;
 
-      // Find the corresponding HTML card element and sync its attribute
-      const card = this.originalCards.find(c => c.querySelector('.card-icon').textContent.trim() === symbol);
-      if (card) {
-        card.setAttribute('data-price', stock.value);
-      }
+      const startPrice = this.getStartPrice(symbol, stock.value);
 
-      // Record price history for chart rendering
-      if (!this.priceHistory[symbol]) {
-        // Initialize history with starting price if available
-        const master = this.masterStocks[symbol];
-        const startPrice = master ? master.steps[master.startStep - 1] : stock.value;
-        this.priceHistory[symbol] = [startPrice];
-      }
+      const card = this.originalCards.find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol);
+      const activeGridCard = document.getElementById('priceGrid')
+        ? Array.from(document.getElementById('priceGrid').querySelectorAll('.price-card')).find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol)
+        : null;
 
-      // Push latest value if it differs from the last recorded one
-      const history = this.priceHistory[symbol];
-      if (history[history.length - 1] !== stock.value) {
-        history.push(stock.value);
+      [card, activeGridCard].forEach(targetCard => {
+        if (!targetCard) return;
+        targetCard.setAttribute('data-price', stock.value);
+        const valueText = targetCard.querySelector('.card-value');
+        const priceBox = targetCard.querySelector('.price-box');
+        if (valueText) {
+          valueText.textContent = stock.value.toLocaleString('en-US');
+        }
+        if (priceBox) {
+          priceBox.classList.remove('price-up', 'price-down', 'price-neutral');
+          if (stock.value > startPrice) {
+            priceBox.classList.add('price-up');
+            priceBox.style.setProperty('background-color', 'rgba(16, 185, 129, 0.18)', 'important');
+            priceBox.style.setProperty('border', '1.5px solid rgba(16, 185, 129, 0.5)', 'important');
+            priceBox.style.setProperty('box-shadow', '0 0 14px rgba(16, 185, 129, 0.25)', 'important');
+            if (valueText) {
+              valueText.style.setProperty('color', '#34d399', 'important');
+              valueText.style.setProperty('text-shadow', '0 0 10px rgba(52, 211, 153, 0.5)', 'important');
+            }
+          } else if (stock.value < startPrice) {
+            priceBox.classList.add('price-down');
+            priceBox.style.setProperty('background-color', 'rgba(239, 68, 68, 0.18)', 'important');
+            priceBox.style.setProperty('border', '1.5px solid rgba(239, 68, 68, 0.5)', 'important');
+            priceBox.style.setProperty('box-shadow', '0 0 14px rgba(239, 68, 68, 0.25)', 'important');
+            if (valueText) {
+              valueText.style.setProperty('color', '#f87171', 'important');
+              valueText.style.setProperty('text-shadow', '0 0 10px rgba(248, 113, 113, 0.5)', 'important');
+            }
+          } else {
+            priceBox.classList.add('price-neutral');
+            priceBox.style.setProperty('background-color', '#e5e7eb', 'important');
+            priceBox.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.1)', 'important');
+            priceBox.style.setProperty('box-shadow', 'none', 'important');
+            if (valueText) {
+              valueText.style.setProperty('color', '#111827', 'important');
+              valueText.style.setProperty('text-shadow', 'none', 'important');
+            }
+          }
+        }
+      });
+
+      if (Array.isArray(stock.history) && stock.history.length > 0) {
+        this.priceHistory[symbol] = [...stock.history];
+      } else {
+        if (!this.priceHistory[symbol]) {
+          this.priceHistory[symbol] = [startPrice];
+        }
+        if (this.priceHistory[symbol][this.priceHistory[symbol].length - 1] !== stock.value) {
+          this.priceHistory[symbol].push(stock.value);
+        }
       }
     });
   }
@@ -98,18 +219,32 @@ export class MarketState {
     if (!master) return null;
 
     const nextStep = currentStock.step + 1;
-    if (nextStep >= master.steps.length) return null; // Already at max step
-    
-    const nextValue = master.steps[nextStep];
-    if (nextValue < 0) return null; // Prevent value dropping below 0
+    let nextValue = 0;
+    if (nextStep < master.steps.length) {
+      nextValue = master.steps[nextStep];
+    } else {
+      // Extrapolate step price dynamically for infinite price increases
+      const lastStepVal = master.steps[master.steps.length - 1] || currentStock.value;
+      const prevStepVal = master.steps.length >= 2 ? master.steps[master.steps.length - 2] : (lastStepVal * 0.9);
+      const stepDelta = Math.max(100, lastStepVal - prevStepVal);
+      const extraSteps = nextStep - (master.steps.length - 1);
+      nextValue = lastStepVal + (stepDelta * extraSteps);
+    }
+    if (nextValue < 0) return null;
 
     const updatedStocks = boardStocksArray.map(s => {
       if (s.name === symbol) {
+        const startPrice = master ? master.steps[master.startStep - 1] : s.value;
+        const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
+        const newHistory = [...currentHistory, nextValue];
+        this.priceHistory[symbol] = newHistory;
+
         return {
           ...s,
           step: nextStep,
           value: nextValue,
           oldValue: currentStock.value,
+          history: newHistory,
           updatedAt: Date.now()
         };
       }
@@ -139,11 +274,17 @@ export class MarketState {
 
     const updatedStocks = boardStocksArray.map(s => {
       if (s.name === symbol) {
+        const startPrice = master ? master.steps[master.startStep - 1] : s.value;
+        const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
+        const newHistory = [...currentHistory, nextValue];
+        this.priceHistory[symbol] = newHistory;
+
         return {
           ...s,
           step: prevStep,
           value: nextValue,
           oldValue: currentStock.value,
+          history: newHistory,
           updatedAt: Date.now()
         };
       }
@@ -159,11 +300,14 @@ export class MarketState {
       const master = this.masterStocks[s.name];
       if (!master) return s;
       const startIdx = master.startStep - 1;
+      const startPrice = master.steps[startIdx];
+      this.priceHistory[s.name] = [startPrice];
       return {
         ...s,
         step: startIdx,
-        value: master.steps[startIdx],
+        value: startPrice,
         oldValue: null,
+        history: [startPrice],
         updatedAt: Date.now()
       };
     });

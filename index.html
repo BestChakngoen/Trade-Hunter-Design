@@ -73,17 +73,33 @@
 
     <div id="marketTabContent">
       <div class="filter-container">
-        <!-- User Status & Room Code Indicator (มุมบนซ้ายของกล่อง Filter - ตัวอักษรเพียวๆ) -->
-        <div id="roleController" class="flex items-center gap-2 mb-3" style="display: flex;">
-          <span class="user-status-label text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Status:</span>
-          <span id="userRoleBadge" class="text-[10px] md:text-xs font-black tracking-widest uppercase text-emerald-400">
-            Loading...
-          </span>
-          <span class="text-gray-600 font-bold mx-1">|</span>
-          <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Room:</span>
-          <span id="userRoomCodeBadge" class="text-[10px] md:text-xs font-black tracking-widest uppercase text-blue-400">
-            -
-          </span>
+        <!-- User Status & Room Code Indicator (มุมบนซ้ายของกล่อง Filter - แถบแสดงสถานะและปุ่มย้อนกลับ/ถัดไป) -->
+        <div id="roleController" class="flex items-center justify-between gap-2 mb-3 w-full" style="display: flex;">
+          <div class="flex items-center gap-2">
+            <span class="user-status-label text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Status:</span>
+            <span id="userRoleBadge" class="text-[10px] md:text-xs font-black tracking-widest uppercase text-emerald-400">
+              Loading...
+            </span>
+            <span class="text-gray-600 font-bold mx-1">|</span>
+            <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Room:</span>
+            <span id="userRoomCodeBadge" class="text-[10px] md:text-xs font-black tracking-widest uppercase text-blue-400">
+              -
+            </span>
+          </div>
+
+          <!-- History Controls (Undo & Redo Buttons) ชิดขวา เปลือยไร้ขอบ (Frameless, Gap 12px) -->
+          <div id="historyControls" class="flex items-center gap-3 ml-auto" style="display: none;">
+            <button id="undoActionBtn" class="undo-action-btn" title="ย้อนกลับการกระทำล่าสุด (Undo)" style="display: none;">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+            </button>
+            <button id="redoActionBtn" class="redo-action-btn" title="ถัดไป/ทำซ้ำขั้นตอนถัดไป (Redo)" style="display: none;">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div class="filter-section">
@@ -315,7 +331,7 @@
           <div style="display: none;"><span class="card-sector">TECH</span><span class="card-beta">Beta 1.27</span></div>
         </article>
         <!-- 13. DPF -->
-        <article class="price-card p-2 sm:p-6 w-full bg-black border border-gray-200 rounded-lg shadow" data-sector="AGRO" data-price="8200" data-beta="0.80">
+        <article class="price-card p-2 sm:p-6 w-full bg-black border border-gray-200 rounded-lg shadow" data-sector="AGRO" data-price="8200" data-beta="0.90">
           <div class="flex items-center justify-between gap-3 sm:gap-6 w-full">
             <div class="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <div class="flex items-center gap-2 sm:gap-3 shrink-0"><div class="flex justify-center"><img src="Assets/ABFSUFDPF.png" class="w-10 h-10 sm:w-14 sm:h-14 object-contain" alt="DPF Icon"></div><p class="card-icon text-xl sm:text-3xl font-extrabold text-white text-center">DPF</p></div>
@@ -325,7 +341,7 @@
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
           <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Price</span><span class="stat-current-price text-xs font-bold text-white">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
-          <div style="display: none;"><span class="card-sector">AGRO</span><span class="card-beta">Beta 0.80</span></div>
+          <div style="display: none;"><span class="card-sector">AGRO</span><span class="card-beta">Beta 0.90</span></div>
         </article>
         <!-- 14. DTF -->
         <article class="price-card p-2 sm:p-6 w-full bg-black border border-gray-200 rounded-lg shadow" data-sector="INDUS" data-price="4100" data-beta="0.33">
@@ -436,6 +452,7 @@
             <thead>
               <tr>
                 <th>Symbol</th>
+                <th>Volume</th>
                 <th>Avg Price</th>
                 <th>Market Price</th>
                 <th>Amount</th>
@@ -444,7 +461,7 @@
             </thead>
             <tbody id="holdingsTableBody">
               <tr>
-                <td colspan="5" class="text-center py-4 text-gray-500">No assets in portfolio</td>
+                <td colspan="6" class="text-center py-4 text-gray-500">No assets in portfolio</td>
               </tr>
             </tbody>
           </table>
@@ -481,14 +498,22 @@
         <div class="trade-card">
           <h3 class="trade-title">PLACE ORDER</h3>
           
-          <div class="flex items-center justify-between gap-4 mb-4">
+          <div class="flex items-center justify-between gap-4 mb-4 flex-wrap sm:flex-nowrap">
             <div class="trade-tabs flex-1 flex gap-2 m-0">
               <button id="tradeTabBuy" class="trade-tab-btn buy active">BUY</button>
               <button id="tradeTabSell" class="trade-tab-btn sell">SELL</button>
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">BUYING POWER:</span>
-              <span id="buyingPowerValue" class="text-sm font-extrabold text-emerald-400">20,000</span>
+            <div class="buying-power-container" title="วงเงินสดคงเหลือสำหรับส่งคำสั่งซื้อ (Available Cash)">
+              <svg xmlns="http://www.w3.org/2000/svg" class="buying-power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+              </svg>
+              <span class="buying-power-label">BUYING POWER:</span>
+              <div class="buying-power-val-group">
+                <span id="buyingPowerValue">20,000</span>
+                <span class="buying-power-unit">THB</span>
+              </div>
             </div>
           </div>
           

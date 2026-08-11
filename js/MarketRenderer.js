@@ -52,13 +52,25 @@ export class MarketRenderer {
   }
 
   showLobby() {
-    if (this.lobbyScreen) this.lobbyScreen.style.display = 'flex';
-    if (this.pageShell) this.pageShell.style.display = 'none';
+    if (this.lobbyScreen) {
+      this.lobbyScreen.style.display = 'flex';
+      this.lobbyScreen.removeAttribute('aria-hidden');
+    }
+    if (this.pageShell) {
+      this.pageShell.style.display = 'none';
+      this.pageShell.setAttribute('aria-hidden', 'true');
+    }
   }
 
   showDashboard() {
-    if (this.lobbyScreen) this.lobbyScreen.style.display = 'none';
-    if (this.pageShell) this.pageShell.style.display = 'block';
+    if (this.lobbyScreen) {
+      this.lobbyScreen.style.display = 'none';
+      this.lobbyScreen.setAttribute('aria-hidden', 'true');
+    }
+    if (this.pageShell) {
+      this.pageShell.style.display = 'block';
+      this.pageShell.removeAttribute('aria-hidden');
+    }
   }
 
   updateRoomCodeDisplay(roomCode) {
@@ -92,6 +104,8 @@ export class MarketRenderer {
       dangerZone.style.display = isMaster ? 'block' : 'none';
     }
 
+    this.updateHistoryControlsUI(isMaster);
+
     const mainNavTabs = document.getElementById('mainNavTabs');
     const marketTabContent = document.getElementById('marketTabContent');
     const portTabContent = document.getElementById('portTabContent');
@@ -112,6 +126,25 @@ export class MarketRenderer {
         this.userRoleBadge.textContent = 'Game Master';
         this.userRoleBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-red-400';
       }
+    }
+  }
+
+  updateHistoryControlsUI(isMaster, canUndo = null, canRedo = null) {
+    const historyControls = document.getElementById('historyControls');
+    const undoBtn = document.getElementById('undoActionBtn');
+    const redoBtn = document.getElementById('redoActionBtn');
+
+    const showUndo = (canUndo !== null) ? canUndo : (this.state ? this.state.canUndo() : false);
+    const showRedo = (canRedo !== null) ? canRedo : (this.state ? this.state.canRedo() : false);
+
+    if (historyControls) {
+      historyControls.style.display = (isMaster && (showUndo || showRedo)) ? 'flex' : 'none';
+    }
+    if (undoBtn) {
+      undoBtn.style.display = (isMaster && showUndo) ? 'inline-flex' : 'none';
+    }
+    if (redoBtn) {
+      redoBtn.style.display = (isMaster && showRedo) ? 'inline-flex' : 'none';
     }
   }
 
@@ -142,9 +175,10 @@ export class MarketRenderer {
 
   // Card Grid Delegations
   renderGrid(cards) { this.cardGridRenderer.renderGrid(cards); }
-  updateCardValue(card, price, direction) { this.cardGridRenderer.updateCardValue(card, price, direction); }
+  updateCardValue(card, price, direction, startPrice) { this.cardGridRenderer.updateCardValue(card, price, direction, startPrice); }
   clearAllCardAnimations(cards) { this.cardGridRenderer.clearAllCardAnimations(cards); }
   applyBetaColors(cards) { this.cardGridRenderer.applyBetaColors(cards); }
+  applyPriceColors(cards, boardStocks, masterStocks, initialPrices) { this.cardGridRenderer.applyPriceColors(cards, boardStocks, masterStocks, initialPrices); }
   calculateBetaColor(beta) { return this.cardGridRenderer.calculateBetaColor(beta); }
   updateSortButtonsUI(sortStates) { this.cardGridRenderer.updateSortButtonsUI(sortStates); }
   updateSectorPillsUI(selectedSectors) { this.cardGridRenderer.updateSectorPillsUI(selectedSectors); }
@@ -153,6 +187,7 @@ export class MarketRenderer {
   closeConfirmModal() { this.cardGridRenderer.closeConfirmModal(); }
   showErrorAlert(title, text) { this.cardGridRenderer.showErrorAlert(title, text); }
   showSuccessAlert(title, text) { this.cardGridRenderer.showSuccessAlert(title, text); }
+  showConfirmAlert(title, text, confirmText, cancelText) { return this.cardGridRenderer.showConfirmAlert(title, text, confirmText, cancelText); }
 
   // Chart Rendering Delegations
   drawCardChart(canvas, history, activeIndex = -1) { this.chartRenderer.drawCardChart(canvas, history, activeIndex); }
@@ -160,7 +195,9 @@ export class MarketRenderer {
   toggleCardChart(card, history, startPrice, beta) { this.chartRenderer.toggleCardChart(card, history, startPrice, beta); }
 
   // Portfolio & Orders Delegations
-  updatePortfolioUI(stats, portfolio, boardStocks) { this.portfolioRenderer.updatePortfolioUI(stats, portfolio, boardStocks); }
+  updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders = {}, userUid = null) { 
+    this.portfolioRenderer.updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders, userUid); 
+  }
   updateGMPendingOrdersUI(orders, onApprove, onReject) { this.portfolioRenderer.updateGMPendingOrdersUI(this.gmPendingOrdersBody, orders, onApprove, onReject); }
   updateGMPlayerSalaryUI(members, onPaySalary) { this.portfolioRenderer.updateGMPlayerSalaryUI(this.gmPlayerSalaryBody, members, onPaySalary); }
   updatePlayerPendingOrdersUI(orders, uid) { this.portfolioRenderer.updatePlayerPendingOrdersUI(orders, uid); }

@@ -33,6 +33,39 @@
   border-bottom: 1px dashed rgba(255, 255, 255, 0.1) !important;
 }
 
+/* ปุ่มย้อนกลับและถัดไป (Undo & Redo Action Buttons) ชิดขวา เปลือยไร้ขอบ (Frameless) */
+.undo-action-btn,
+.redo-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.undo-action-btn:hover,
+.redo-action-btn:hover {
+  background: transparent !important;
+  color: #38bdf8 !important;
+  transform: scale(1.2);
+  box-shadow: none !important;
+}
+
+.undo-action-btn:active,
+.redo-action-btn:active {
+  transform: scale(0.9);
+}
+
 .filter-section {
   display: flex;
   flex-direction: column;
@@ -93,17 +126,20 @@
   background: #475569 !important;
 }
 
-/* เมื่อ User ลองสไลด์เลื่อนแล้ว ให้ซ่อนสไลด์บาร์ถาวร */
+/* ซ่อนสไลด์บาร์เมื่อไม่ได้เลื่อน โดยคงความสูงและ padding-bottom เท่าเดิมเพื่อป้องกันอาการขยาย-หด (Layout Shift) */
 .sector-pills.scrolled-hidden,
 .sort-toggles.scrolled-hidden {
-  padding-bottom: 0px !important;
-  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
 }
 
-.sector-pills.scrolled-hidden::-webkit-scrollbar,
-.sort-toggles.scrolled-hidden::-webkit-scrollbar {
-  display: none !important;
-  height: 0px !important;
+.sector-pills.scrolled-hidden::-webkit-scrollbar-track,
+.sort-toggles.scrolled-hidden::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.sector-pills.scrolled-hidden::-webkit-scrollbar-thumb,
+.sort-toggles.scrolled-hidden::-webkit-scrollbar-thumb {
+  background: transparent !important;
 }
 
 /* เม็ดปุ่ม Sector ปกติ (เช่น ALL, FINCIAL, TECH) */
@@ -339,6 +375,44 @@
   border-radius: 0.5rem;            /* 👈 ความมนของมุมกล่องราคา */
   flex-shrink: 0;
   margin: 0 auto;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  border: 1px solid transparent;
+}
+
+/* 🟢 หุ้นขึ้น (Price Up Theme) */
+.price-box.price-up {
+  background-color: rgba(16, 185, 129, 0.16) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.2) !important;
+}
+
+.price-box.price-up .card-value {
+  color: #34d399 !important;
+  text-shadow: 0 0 10px rgba(52, 211, 153, 0.4) !important;
+}
+
+/* 🔴 หุ้นลง (Price Down Theme) */
+.price-box.price-down {
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.45) !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.2) !important;
+}
+
+.price-box.price-down .card-value {
+  color: #f87171 !important;
+  text-shadow: 0 0 10px rgba(248, 113, 113, 0.4) !important;
+}
+
+/* ⚪ หุ้นราคาเท่าเดิม (Neutral Theme) */
+.price-box.price-neutral {
+  background-color: #e5e7eb !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.price-box.price-neutral .card-value {
+  color: #111827 !important;
+  text-shadow: none !important;
 }
 
 @media (min-width: 640px) {
@@ -348,7 +422,7 @@
   }
 }
 
-/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) ชิดขวาที่ตำแหน่ง 90% */
+/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) ชิดขวาที่ตำแหน่ง 90% หด-ขยายตามขนาดหน้าจอมือถือ */
 .card-controls {
   grid-column: 4;
   justify-self: end;                /* 👈 ดันให้ชิดขวาที่ตำแหน่ง 90%-100% */
@@ -356,16 +430,16 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 48px;
-  min-height: 44px;
+  max-width: clamp(24px, 7vw, 48px);
+  min-height: clamp(34px, 8vw, 44px);
 }
 
 .control-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;                      /* 👈 ความกว้างปุ่มลูกศรบนมือถือ */
-  height: 22px;                     /* 👈 ความสูงปุ่มลูกศรบนมือถือ */
+  width: clamp(20px, 5.5vw, 28px);  /* 👈 ความกว้างปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
+  height: clamp(15px, 4.5vw, 22px); /* 👈 ความสูงปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
   padding: 0;
   margin: 0;
   border: none;
@@ -385,10 +459,23 @@
 }
 
 .control-btn img {
-  width: 20px;                      /* 👈 ขนาดไอคอนลูกศรบนมือถือ */
+  width: clamp(13px, 4vw, 20px);    /* 👈 ขนาดไอคอนลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
   height: auto;
   object-fit: contain;
   display: block;
+}
+
+@media (max-width: 380px) {
+  .card-controls {
+    max-width: 22px;
+  }
+  .control-btn {
+    width: 18px;
+    height: 15px;
+  }
+  .control-btn img {
+    width: 12px;
+  }
 }
 
 @media (min-width: 640px) {
@@ -563,8 +650,70 @@
     font-size: 1.05rem !important;
   }
 
+  .card-controls {
+    max-width: clamp(20px, 6vw, 36px) !important;
+  }
+
   .control-btn {
-    width: 22px !important;
-    height: 22px !important;
+    width: clamp(16px, 5.5vw, 24px) !important;
+    height: clamp(14px, 4.5vw, 20px) !important;
+  }
+
+  .control-btn img {
+    width: clamp(11px, 4vw, 16px) !important;
+    height: auto !important;
+  }
+
+  /* ⚠️ Danger Zone Responsive Styles บนจอมือถือ */
+  .danger-zone-section {
+    margin-top: 32px !important;
+    margin-bottom: 32px !important;
+  }
+
+  .danger-zone-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 20px 18px !important;
+    gap: 16px !important;
+    border-radius: 20px !important;
+  }
+
+  .danger-zone-info {
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  .danger-zone-title {
+    font-size: 1rem !important;
+  }
+
+  .danger-zone-desc {
+    font-size: 0.8rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .danger-btn {
+    width: 100% !important;
+    text-align: center !important;
+    padding: 12px 20px !important;
+    font-size: 0.88rem !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .price-card > div:first-child {
+    grid-template-columns: 40% 16% 32% 12% !important;
+    gap: 2px !important;
+  }
+  .card-controls {
+    max-width: 20px !important;
+  }
+  .control-btn {
+    width: 16px !important;
+    height: 14px !important;
+  }
+  .control-btn img {
+    width: 10px !important;
   }
 }

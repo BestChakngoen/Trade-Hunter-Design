@@ -9,6 +9,7 @@ export class MarketController {
   constructor(state, renderer, firebaseService) {
     this.state = state;
     this.renderer = renderer;
+    this.renderer.state = state;
     this.firebaseService = firebaseService;
 
     // Sub-controllers following Single Responsibility Principle
@@ -39,6 +40,7 @@ export class MarketController {
     this.marketBoardController.bindSortButtons();
     this.marketBoardController.bindResetBtn();
     this.marketBoardController.bindPriceControls();
+    this.marketBoardController.bindHistoryButtons();
     this.marketBoardController.bindStockModals();
     this.marketBoardController.bindDangerZone();
     this.marketBoardController.bindSpectatorEvents();
@@ -80,52 +82,64 @@ export class MarketController {
 
       this.state.updateFromFirebaseBoard(firebaseBoard);
 
+      this.renderer.applyPriceColors(this.state.originalCards, this.state.boardStocks, this.state.masterStocks, this.state.initialPrices);
+      if (this.renderer.priceGrid) {
+        const liveCards = Array.from(this.renderer.priceGrid.querySelectorAll('.price-card'));
+        this.renderer.applyPriceColors(liveCards, this.state.boardStocks, this.state.masterStocks, this.state.initialPrices);
+      }
+
       firebaseBoard.stocks.forEach(stock => {
         const symbol = stock.name;
         const currentVal = stock.value;
         const prevVal = oldPrices[symbol];
 
-        const card = this.state.originalCards.find(c => c.querySelector('.card-icon').textContent.trim() === symbol);
+        const card = this.state.originalCards.find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol);
+        const liveCard = this.renderer.priceGrid 
+          ? Array.from(this.renderer.priceGrid.querySelectorAll('.price-card')).find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol) 
+          : null;
+
+        const startPrice = this.state.getStartPrice(symbol, currentVal);
+        const direction = (prevVal !== undefined && prevVal !== currentVal) ? (currentVal > prevVal ? 'up' : 'down') : null;
+
         if (card) {
           card.setAttribute('data-price', currentVal);
+          this.renderer.updateCardValue(card, currentVal, direction, startPrice);
+        }
 
-          const valueText = card.querySelector('.card-value');
-          if (valueText) {
-            valueText.textContent = currentVal.toLocaleString('en-US');
-          }
+        if (liveCard && liveCard !== card) {
+          liveCard.setAttribute('data-price', currentVal);
+          this.renderer.updateCardValue(liveCard, currentVal, direction, startPrice);
+        }
 
-          if (prevVal !== undefined && prevVal !== currentVal) {
-            const direction = currentVal > prevVal ? 'up' : 'down';
-            this.renderer.updateCardValue(card, currentVal, direction);
+        const targetCard = liveCard || card;
+        if (targetCard) {
+          const chartContainer = targetCard.querySelector('.chart-container');
+          if (chartContainer && (chartContainer.style.display === 'block' || chartContainer.style.display === 'flex')) {
+            const master = this.state.masterStocks[symbol];
+            const history = this.state.priceHistory[symbol] || [currentVal];
+            const startPrice = master ? master.steps[master.startStep - 1] : (history[0] || currentVal);
 
-            const chartContainer = card.querySelector('.chart-container');
-            if (chartContainer && chartContainer.style.display === 'block') {
-              const master = this.state.masterStocks[symbol];
-              const history = this.state.priceHistory[symbol] || [currentVal];
-              const startPrice = master ? master.steps[master.startStep - 1] : currentVal;
+            const changePct = startPrice === 0 ? 0 : ((currentVal - startPrice) / startPrice) * 100;
 
-              const changePct = startPrice === 0 ? 0 : ((currentVal - startPrice) / startPrice) * 100;
+            const currentEl = chartContainer.querySelector('.stat-current-price');
+            const changeEl = chartContainer.querySelector('.stat-change-pct');
 
-              const currentEl = chartContainer.querySelector('.stat-current-price');
-              const changeEl = chartContainer.querySelector('.stat-change-pct');
+            if (currentEl) {
+              currentEl.textContent = currentVal.toLocaleString('en-US');
+              currentEl.className = currentVal > startPrice ? 'stat-current-price text-xs font-bold text-positive' :
+                                   currentVal < startPrice ? 'stat-current-price text-xs font-bold text-negative' :
+                                   'stat-current-price text-xs font-bold text-neutral';
+            }
+            if (changeEl) {
+              changeEl.textContent = `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`;
+              changeEl.className = changePct > 0 ? 'stat-change-pct text-xs font-bold text-positive' :
+                                  changePct < 0 ? 'stat-change-pct text-xs font-bold text-negative' :
+                                  'stat-change-pct text-xs font-bold text-gray-400';
+            }
 
-              if (currentEl) {
-                currentEl.textContent = currentVal.toLocaleString('en-US');
-                currentEl.className = currentVal > startPrice ? 'stat-current-price text-xs font-bold text-positive' :
-                                     currentVal < startPrice ? 'stat-current-price text-xs font-bold text-negative' :
-                                     'stat-current-price text-xs font-bold text-neutral';
-              }
-              if (changeEl) {
-                changeEl.textContent = `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`;
-                changeEl.className = changePct > 0 ? 'stat-change-pct text-xs font-bold text-positive' :
-                                    changePct < 0 ? 'stat-change-pct text-xs font-bold text-negative' :
-                                    'stat-change-pct text-xs font-bold text-gray-400';
-              }
-
-              const canvas = chartContainer.querySelector('.stock-chart-canvas');
-              if (canvas) {
-                this.renderer.drawCardChart(canvas, history);
-              }
+            const canvas = chartContainer.querySelector('.stock-chart-canvas');
+            if (canvas) {
+              this.renderer.drawCardChart(canvas, history);
             }
           }
         }
@@ -145,6 +159,13 @@ export class MarketController {
     if (user) {
       this.roomListenerUnsubscribe = this.firebaseService.listenToRoom(code, (roomData) => {
         if (!roomData) return;
+
+        const membersCount = roomData.members ? Object.keys(roomData.members).length : 0;
+        if (membersCount === 0) {
+          console.log("No members remaining in room. Purging room data...");
+          this.firebaseService.deleteRoomData(code);
+          return;
+        }
 
         const currentUser = this.firebaseService.getCurrentUser();
         const currentUid = currentUser ? currentUser.uid : user.uid;

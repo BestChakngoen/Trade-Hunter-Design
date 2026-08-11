@@ -320,6 +320,26 @@ export class ChartRenderer {
         chartContainer.style.display = 'none';
       }, 350);
     } else {
+      // Auto-hide any currently opened stock chart in the grid
+      const priceGrid = card.closest('#priceGrid') || document.getElementById('priceGrid');
+      if (priceGrid) {
+        const otherCards = priceGrid.querySelectorAll('.price-card');
+        otherCards.forEach(otherCard => {
+          if (otherCard !== card) {
+            const otherChart = otherCard.querySelector('.chart-container');
+            const otherBtn = otherCard.querySelector('.view-graph-btn');
+            if (otherChart && (otherChart.style.display === 'flex' || otherChart.style.display === 'block')) {
+              otherChart.classList.remove('expanded');
+              if (otherBtn) {
+                otherBtn.classList.remove('active');
+                otherBtn.textContent = 'View Graph';
+              }
+              otherChart.style.display = 'none';
+            }
+          }
+        });
+      }
+
       chartContainer.style.display = 'flex';
       void chartContainer.offsetWidth; // Force reflow to trigger CSS transition
       chartContainer.classList.add('expanded');

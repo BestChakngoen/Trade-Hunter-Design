@@ -45,8 +45,19 @@ export class LobbyController {
 
     const roomSnapshot = await this.firebaseService.getRoomStateSnapshot(code);
     if (roomSnapshot && roomSnapshot.exists()) {
-      roomExists = true;
-      isEnd = roomSnapshot.val().isEnd || false;
+      const roomData = roomSnapshot.val();
+      const members = roomData.members || {};
+      const memberUids = Object.keys(members);
+
+      // If room exists but has 0 active members, treat as abandoned and purge old data!
+      if (memberUids.length === 0) {
+        console.log(`🧹 Abandoned room detected for code ${code} (0 active members). Purging old data...`);
+        await this.firebaseService.deleteRoomData(code);
+        roomExists = false;
+      } else {
+        roomExists = true;
+        isEnd = roomData.isEnd || false;
+      }
     }
 
     const user = this.firebaseService.getCurrentUser();
@@ -65,15 +76,19 @@ export class LobbyController {
       this.state.setRole('game_master');
 
       // Build initial board configuration from master steps
-      const initialBoardStocks = gameSetting.stocks.map(s => ({
-        name: s.name,
-        value: s.steps[s.startStep - 1],
-        step: s.startStep - 1,
-        maxStep: s.steps.length,
-        startStep: s.startStep - 1,
-        oldValue: null,
-        updatedAt: null
-      }));
+      const initialBoardStocks = gameSetting.stocks.map(s => {
+        const startValue = s.steps[s.startStep - 1];
+        return {
+          name: s.name,
+          value: startValue,
+          step: s.startStep - 1,
+          maxStep: s.steps.length,
+          startStep: s.startStep - 1,
+          oldValue: null,
+          history: [startValue],
+          updatedAt: null
+        };
+      });
 
       // Create board state
       await this.firebaseService.createBoard(code, initialBoardStocks);
@@ -147,6 +162,16 @@ export class LobbyController {
 
     // Configure player cleanup on disconnect
     this.firebaseService.configureDisconnectCleanup(code, user.uid);
+
+    // Sync latest board snapshot immediately for late-joining players
+    try {
+      const boardSnap = await this.firebaseService.getBoardSnapshot(code);
+      if (boardSnap && boardSnap.exists()) {
+        this.state.updateFromFirebaseBoard(boardSnap.val());
+      }
+    } catch (e) {
+      console.warn("Could not sync initial board snapshot for late joiner:", e);
+    }
 
     // 5. Transition screens and activate UI state
     this.renderer.showDashboard();

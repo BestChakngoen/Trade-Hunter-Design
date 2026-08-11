@@ -19,12 +19,41 @@ export class CardGridRenderer {
     });
   }
 
-  updateCardValue(card, price, direction) {
+  updateCardValue(card, price, direction, startPrice) {
     const valueEl = card.querySelector('.card-value');
+    const priceBox = card.querySelector('.price-box');
     if (!valueEl) return;
     
     valueEl.textContent = price.toLocaleString('en-US');
     
+    if (priceBox) {
+      priceBox.classList.remove('price-up', 'price-down', 'price-neutral');
+      const basePrice = (startPrice !== undefined && startPrice !== null) ? startPrice : price;
+      
+      if (price > basePrice) {
+        priceBox.classList.add('price-up');
+        priceBox.style.setProperty('background-color', 'rgba(16, 185, 129, 0.18)', 'important');
+        priceBox.style.setProperty('border', '1.5px solid rgba(16, 185, 129, 0.5)', 'important');
+        priceBox.style.setProperty('box-shadow', '0 0 14px rgba(16, 185, 129, 0.25)', 'important');
+        valueEl.style.setProperty('color', '#34d399', 'important');
+        valueEl.style.setProperty('text-shadow', '0 0 10px rgba(52, 211, 153, 0.5)', 'important');
+      } else if (price < basePrice) {
+        priceBox.classList.add('price-down');
+        priceBox.style.setProperty('background-color', 'rgba(239, 68, 68, 0.18)', 'important');
+        priceBox.style.setProperty('border', '1.5px solid rgba(239, 68, 68, 0.5)', 'important');
+        priceBox.style.setProperty('box-shadow', '0 0 14px rgba(239, 68, 68, 0.25)', 'important');
+        valueEl.style.setProperty('color', '#f87171', 'important');
+        valueEl.style.setProperty('text-shadow', '0 0 10px rgba(248, 113, 113, 0.5)', 'important');
+      } else {
+        priceBox.classList.add('price-neutral');
+        priceBox.style.setProperty('background-color', '#e5e7eb', 'important');
+        priceBox.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.1)', 'important');
+        priceBox.style.setProperty('box-shadow', 'none', 'important');
+        valueEl.style.setProperty('color', '#111827', 'important');
+        valueEl.style.setProperty('text-shadow', 'none', 'important');
+      }
+    }
+
     valueEl.classList.remove('flash-up', 'flash-down');
     void valueEl.offsetWidth; // Reflow to restart keyframe animation
     if (direction === 'up') {
@@ -42,6 +71,64 @@ export class CardGridRenderer {
     cards.forEach(card => {
       const valueEl = card.querySelector('.card-value');
       if (valueEl) valueEl.classList.remove('flash-up', 'flash-down');
+    });
+  }
+
+  applyPriceColors(cards, boardStocks, masterStocks, initialPrices) {
+    if (!cards || !Array.isArray(cards)) return;
+
+    cards.forEach(card => {
+      const iconEl = card.querySelector('.card-icon');
+      if (!iconEl) return;
+      const symbol = iconEl.textContent.trim();
+      const valueEl = card.querySelector('.card-value');
+      const priceBox = card.querySelector('.price-box');
+      if (!valueEl || !priceBox) return;
+
+      const stock = boardStocks ? boardStocks[symbol] : null;
+      const currentPrice = stock ? stock.value : parseFloat(card.getAttribute('data-price') || 0);
+
+      // Resolve baseline starting price
+      let startPrice = initialPrices ? initialPrices[symbol] : undefined;
+      if (startPrice === undefined && stock) {
+        startPrice = stock.startValue !== undefined ? stock.startValue : (stock.history ? stock.history[0] : undefined);
+      }
+      if (startPrice === undefined && masterStocks && masterStocks[symbol]) {
+        const master = masterStocks[symbol];
+        if (Array.isArray(master.steps) && master.startStep > 0) {
+          startPrice = master.steps[master.startStep - 1];
+        }
+      }
+      if (startPrice === undefined) {
+        startPrice = currentPrice;
+      }
+
+      const prevPrice = stock ? (stock.oldValue !== null && stock.oldValue !== undefined ? stock.oldValue : startPrice) : startPrice;
+
+      priceBox.classList.remove('price-up', 'price-down', 'price-neutral');
+
+      if (currentPrice > startPrice || (currentPrice === startPrice && currentPrice > prevPrice)) {
+        priceBox.classList.add('price-up');
+        priceBox.style.setProperty('background-color', 'rgba(16, 185, 129, 0.18)', 'important');
+        priceBox.style.setProperty('border', '1.5px solid rgba(16, 185, 129, 0.5)', 'important');
+        priceBox.style.setProperty('box-shadow', '0 0 14px rgba(16, 185, 129, 0.25)', 'important');
+        valueEl.style.setProperty('color', '#34d399', 'important');
+        valueEl.style.setProperty('text-shadow', '0 0 10px rgba(52, 211, 153, 0.5)', 'important');
+      } else if (currentPrice < startPrice || (currentPrice === startPrice && currentPrice < prevPrice)) {
+        priceBox.classList.add('price-down');
+        priceBox.style.setProperty('background-color', 'rgba(239, 68, 68, 0.18)', 'important');
+        priceBox.style.setProperty('border', '1.5px solid rgba(239, 68, 68, 0.5)', 'important');
+        priceBox.style.setProperty('box-shadow', '0 0 14px rgba(239, 68, 68, 0.25)', 'important');
+        valueEl.style.setProperty('color', '#f87171', 'important');
+        valueEl.style.setProperty('text-shadow', '0 0 10px rgba(248, 113, 113, 0.5)', 'important');
+      } else {
+        priceBox.classList.add('price-neutral');
+        priceBox.style.setProperty('background-color', '#e5e7eb', 'important');
+        priceBox.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.1)', 'important');
+        priceBox.style.setProperty('box-shadow', 'none', 'important');
+        valueEl.style.setProperty('color', '#111827', 'important');
+        valueEl.style.setProperty('text-shadow', 'none', 'important');
+      }
     });
   }
 
@@ -190,6 +277,34 @@ export class CardGridRenderer {
       });
     } else {
       alert(`${title}\n${text}`);
+    }
+  }
+
+  showConfirmAlert(title, text, confirmText = 'YES', cancelText = 'NO') {
+    if (window.Swal) {
+      return window.Swal.fire({
+        icon: 'question',
+        title: title,
+        text: text,
+        background: '#0b0f19',
+        color: '#f8fafc',
+        iconColor: '#10b981',
+        showCancelButton: true,
+        confirmButtonText: confirmText,
+        cancelButtonText: cancelText,
+        customClass: {
+          popup: 'trade-alert-popup',
+          title: 'trade-alert-title',
+          htmlContainer: 'trade-alert-text',
+          confirmButton: 'trade-alert-ok-btn',
+          cancelButton: 'trade-alert-cancel-btn',
+          actions: 'trade-alert-actions'
+        },
+        buttonsStyling: false
+      });
+    } else {
+      const confirmed = confirm(`${title}\n${text}`);
+      return Promise.resolve({ isConfirmed: confirmed });
     }
   }
 }

@@ -96,6 +96,12 @@ export class FirebaseService {
     return await get(roomRef);
   }
 
+  // Realtime Database: Get a one-time snapshot of the board state
+  async getBoardSnapshot(roomCode) {
+    const boardRef = this.getBoardRef(roomCode);
+    return await get(boardRef);
+  }
+
   // Realtime Database: Get Reference to member inside a Room (traderHunter/gameRooms/{roomCode}/members/{userId})
   getUserInBoardRef(roomCode, userId) {
     return ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/members/${userId}`);
@@ -148,6 +154,24 @@ export class FirebaseService {
     await update(boardRef, { stocks });
   }
 
+  // Realtime Database: Overwrite stocks board state for Undo/Redo
+  async setStocksBoard(roomCode, stocks) {
+    const boardRef = this.getBoardRef(roomCode);
+    await set(boardRef, { stocks: stocks || {} });
+  }
+
+  // Realtime Database: Overwrite room members state for Undo/Redo
+  async setRoomMembers(roomCode, members) {
+    const membersRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/members`);
+    await set(membersRef, members || {});
+  }
+
+  // Realtime Database: Overwrite room pending orders state for Undo/Redo
+  async setPendingOrders(roomCode, pendingOrders) {
+    const ordersRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/pendingOrders`);
+    await set(ordersRef, pendingOrders || {});
+  }
+
   // Realtime Database: Set trigger to clean up player node upon closing tab / disconnecting
   configureDisconnectCleanup(roomCode, userId) {
     const userRef = this.getUserInBoardRef(roomCode, userId);
@@ -156,5 +180,19 @@ export class FirebaseService {
     }).catch(err => {
       console.error("Failed to configure onDisconnect:", err);
     });
+  }
+
+  // Realtime Database: Delete room and board data when empty
+  async deleteRoomData(roomCode) {
+    if (!roomCode) return;
+    try {
+      const roomRef = this.getRoomRef(roomCode);
+      const boardRef = this.getBoardRef(roomCode);
+      await set(roomRef, null);
+      await set(boardRef, null);
+      console.log(`🧹 Purged empty room data for code: ${roomCode}`);
+    } catch (e) {
+      console.error("Failed to purge empty room data:", e);
+    }
   }
 }

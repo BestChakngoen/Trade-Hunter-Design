@@ -45,31 +45,30 @@ export class MarketBoardController {
 
     scrollConfigs.forEach(cfg => {
       const el = document.getElementById(cfg.id);
-      if (!el) return;
+      if (!el || el.dataset.scrollInitialized === 'true') return;
+      el.dataset.scrollInitialized = 'true';
 
-      // Check if this specific element was already scrolled and finished previously
+      // If user previously scrolled in this session, start hidden while idle
       const isScrolled = sessionStorage.getItem(cfg.key) === 'true';
       if (isScrolled) {
         el.classList.add('scrolled-hidden');
-        return;
       }
 
       let scrollDebounceTimer = null;
 
       const onScroll = () => {
-        if (el.scrollLeft > 0) {
-          // Keep scrollbar active while user is swiping/scrolling
-          if (scrollDebounceTimer) {
-            clearTimeout(scrollDebounceTimer);
-          }
+        // Show scrollbar while scrolling
+        el.classList.remove('scrolled-hidden');
 
-          // Wait 800ms after scrolling stops before smoothly hiding
-          scrollDebounceTimer = setTimeout(() => {
-            sessionStorage.setItem(cfg.key, 'true');
-            el.classList.add('scrolled-hidden');
-            el.removeEventListener('scroll', onScroll);
-          }, 800);
+        if (scrollDebounceTimer) {
+          clearTimeout(scrollDebounceTimer);
         }
+
+        // Wait 800ms after scrolling stops before smoothly hiding
+        scrollDebounceTimer = setTimeout(() => {
+          sessionStorage.setItem(cfg.key, 'true');
+          el.classList.add('scrolled-hidden');
+        }, 800);
       };
 
       el.addEventListener('scroll', onScroll, { passive: true });
@@ -79,28 +78,27 @@ export class MarketBoardController {
   bindSortButtons() {
     const handleSortClick = (type, e) => {
       const sortStates = this.state.sortStates;
-      
+      const isAlreadyEnabled = sortStates[type].enabled;
+
+      // Single-select: Disable all other sort options first
+      Object.keys(sortStates).forEach(key => {
+        if (key !== type) {
+          sortStates[key].enabled = false;
+        }
+      });
+
       if (type === 'SECTOR') {
-        sortStates.SECTOR.enabled = !sortStates.SECTOR.enabled;
+        sortStates.SECTOR.enabled = !isAlreadyEnabled;
       } else {
         const sort = sortStates[type];
-        const isIconClick = e.target.closest('.sort-icon') !== null;
-        
-        if (isIconClick) {
-          if (sort.enabled) {
-            sort.dir = sort.dir === 'DESC' ? 'ASC' : 'DESC';
-          } else {
-            sort.enabled = true;
-            sort.dir = 'DESC';
-          }
+        if (!isAlreadyEnabled) {
+          sort.enabled = true;
+          sort.dir = 'DESC';
         } else {
-          sort.enabled = !sort.enabled;
-          if (sort.enabled) {
-            sort.dir = 'DESC';
-          }
+          sort.dir = sort.dir === 'DESC' ? 'ASC' : 'DESC';
         }
       }
-      
+
       this.renderer.updateSortButtonsUI(sortStates);
       this.updateViewGrid();
     };
@@ -134,6 +132,24 @@ export class MarketBoardController {
       const symbol = card.querySelector('.card-icon').textContent.trim();
       const isUp = btn.classList.contains('up');
       
+      // Save full room + board snapshot before changing stock price step
+      const [boardSnap, roomSnap] = await Promise.all([
+        this.firebaseService.getBoardSnapshot(this.state.roomCode),
+        this.firebaseService.getRoomStateSnapshot(this.state.roomCode)
+      ]);
+      const boardData = boardSnap ? boardSnap.val() : null;
+      const roomData = roomSnap ? roomSnap.val() : null;
+
+      if (boardData || roomData) {
+        this.state.pushUndoSnapshot({
+          stocks: boardData ? boardData.stocks : this.state.boardStocks,
+          members: roomData ? roomData.members : null,
+          pendingOrders: roomData ? roomData.pendingOrders : null
+        });
+        const isGM = (this.state.role === 'game_master');
+        this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
+      }
+
       const updatedStocks = isUp 
         ? this.state.getUpdatedStocksForUp(symbol)
         : this.state.getUpdatedStocksForDown(symbol);
@@ -146,6 +162,91 @@ export class MarketBoardController {
         }
       }
     });
+  }
+
+  bindHistoryButtons() {
+    const undoBtn = document.getElementById('undoActionBtn');
+    const redoBtn = document.getElementById('redoActionBtn');
+
+    if (undoBtn) {
+      undoBtn.addEventListener('click', async () => {
+        if (!this.state.canUndo()) return;
+
+        try {
+          // Fetch current state to save into Redo stack before applying Undo
+          const [curBoardSnap, curRoomSnap] = await Promise.all([
+            this.firebaseService.getBoardSnapshot(this.state.roomCode),
+            this.firebaseService.getRoomStateSnapshot(this.state.roomCode)
+          ]);
+          const curBoardData = curBoardSnap ? curBoardSnap.val() : null;
+          const curRoomData = curRoomSnap ? curRoomSnap.val() : null;
+
+          this.state.pushRedoSnapshot({
+            stocks: curBoardData ? curBoardData.stocks : this.state.boardStocks,
+            members: curRoomData ? curRoomData.members : null,
+            pendingOrders: curRoomData ? curRoomData.pendingOrders : null
+          });
+
+          const previousState = this.state.popUndoSnapshot();
+          if (previousState) {
+            if (previousState.stocks) {
+              await this.firebaseService.setStocksBoard(this.state.roomCode, previousState.stocks);
+            }
+            if (previousState.members) {
+              await this.firebaseService.setRoomMembers(this.state.roomCode, previousState.members);
+            }
+            if (previousState.pendingOrders !== undefined) {
+              await this.firebaseService.setPendingOrders(this.state.roomCode, previousState.pendingOrders);
+            }
+
+            const isGM = (this.state.role === 'game_master');
+            this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
+          }
+        } catch (error) {
+          console.error("Failed to undo room action:", error);
+        }
+      });
+    }
+
+    if (redoBtn) {
+      redoBtn.addEventListener('click', async () => {
+        if (!this.state.canRedo()) return;
+
+        try {
+          // Fetch current state to save into Undo stack before applying Redo
+          const [curBoardSnap, curRoomSnap] = await Promise.all([
+            this.firebaseService.getBoardSnapshot(this.state.roomCode),
+            this.firebaseService.getRoomStateSnapshot(this.state.roomCode)
+          ]);
+          const curBoardData = curBoardSnap ? curBoardSnap.val() : null;
+          const curRoomData = curRoomSnap ? curRoomSnap.val() : null;
+
+          this.state.undoStack.push({
+            stocks: curBoardData ? curBoardData.stocks : this.state.boardStocks,
+            members: curRoomData ? curRoomData.members : null,
+            pendingOrders: curRoomData ? curRoomData.pendingOrders : null
+          });
+
+          const nextState = this.state.popRedoSnapshot();
+          if (nextState) {
+            if (nextState.stocks) {
+              await this.firebaseService.setStocksBoard(this.state.roomCode, nextState.stocks);
+            }
+            if (nextState.members) {
+              await this.firebaseService.setRoomMembers(this.state.roomCode, nextState.members);
+            }
+            if (nextState.pendingOrders !== undefined) {
+              await this.firebaseService.setPendingOrders(this.state.roomCode, nextState.pendingOrders);
+            }
+
+            const isGM = (this.state.role === 'game_master');
+            this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
+          }
+        } catch (error) {
+          console.error("Failed to redo room action:", error);
+        }
+      });
+    }
   }
 
   bindStockModals() {
@@ -228,9 +329,27 @@ export class MarketBoardController {
     }
   }
 
+  hideAllOpenCharts() {
+    const cards = this.state.originalCards || [];
+    cards.forEach(card => {
+      const chartContainer = card.querySelector('.chart-container');
+      const viewGraphBtn = card.querySelector('.view-graph-btn');
+      if (chartContainer && (chartContainer.style.display === 'flex' || chartContainer.style.display === 'block')) {
+        chartContainer.classList.remove('expanded');
+        if (viewGraphBtn) {
+          viewGraphBtn.classList.remove('active');
+          viewGraphBtn.textContent = 'View Graph';
+        }
+        chartContainer.style.display = 'none';
+      }
+    });
+  }
+
   updateViewGrid() {
+    this.hideAllOpenCharts();
     const sortedFiltered = this.state.getFilteredAndSortedCards();
     this.renderer.renderGrid(sortedFiltered);
     this.renderer.applyBetaColors(sortedFiltered);
+    this.renderer.applyPriceColors(sortedFiltered, this.state.boardStocks, this.state.masterStocks, this.state.initialPrices);
   }
 }

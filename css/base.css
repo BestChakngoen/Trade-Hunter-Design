@@ -7,17 +7,15 @@
    1. 🎨 Theme & Body Background Setup (ธีมพื้นหลังและแบบอักษรหลัก)
    -------------------------------------------------------------------------- */
 :root {
-  background-color: #090b12;        /* 👈 สีพื้นหลังสาดสีเริ่มต้นของระบบ */
+  background-color: #f8fafc;
 }
 
 body {
-  color: #f7f8fb;                   /* 👈 สีตัวอักษรหลักของทั้งหน้าจอ (สีขาวสว่าง) */
-  /* 👈 การไล่ระดับสีพื้นหลังแบบกราเดียนต์เรืองแสง (Radial Gradient Body Background) */
-  background: radial-gradient(circle at top, rgba(81, 130, 255, 0.12), transparent 35%),
-              radial-gradient(circle at bottom right, rgba(88, 215, 255, 0.08), transparent 30%),
-              linear-gradient(180deg, #090b12 0%, #0f1320 100%);
+  color: #0f172a;
+  background-color: #f8fafc;
+  background: #f8fafc;
   min-height: 100vh;
-  font-family: Inter, system-ui, -apple-system, sans-serif; /* 👈 ฟอนต์อักษรหลัก */
+  font-family: Inter, system-ui, -apple-system, sans-serif;
   margin: 0;
 }
 

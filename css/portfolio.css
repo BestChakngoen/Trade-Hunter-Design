@@ -95,27 +95,36 @@
   background: #475569 !important;
 }
 
-/* เมื่อลองเลื่อนสไลด์ตารางใน Portfolio แล้ว ให้ซ่อนเฉพาะสไลด์บาร์ของตารางนั้น */
+/* ซ่อนสไลด์บาร์ของตารางเมื่อไม่ได้เลื่อน โดยไม่ทำให้เกิดอาการขยาย-หด */
 .table-container.scrolled-hidden {
-  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
 }
 
-.table-container.scrolled-hidden::-webkit-scrollbar {
-  display: none !important;
-  height: 0px !important;
+.table-container.scrolled-hidden::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
-.holdings-table {
+.table-container.scrolled-hidden::-webkit-scrollbar-thumb {
+  background: transparent !important;
+}
+
+.holdings-table,
+.gm-pending-orders-table,
+.player-pending-orders-table,
+.gm-salary-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: left;
+  text-align: center !important;
   font-size: 13px;                  /* 👈 ขนาดตัวอักษรข้อมูลในตาราง */
 }
 
 .holdings-table th, .holdings-table td,
-.gm-pending-orders-table th, .gm-pending-orders-table td {
+.gm-pending-orders-table th, .gm-pending-orders-table td,
+.player-pending-orders-table th, .player-pending-orders-table td,
+.gm-salary-table th, .gm-salary-table td {
   padding: 14px 20px !important;       /* 👈 ความห่างช่องตารางสบายตาไม่ชิดขอบ [บน-ล่าง] [ซ้าย-ขวา] */
   vertical-align: middle !important;  /* 👈 จัดแนวกึ่งกลางแนวตั้ง */
+  text-align: center !important;      /* 👈 จัดเรียงข้อมูลในตารางไว้ตรงกลาง */
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -128,13 +137,17 @@
   flex-shrink: 0 !important;
 }
 
-.holdings-table th {
+.holdings-table th,
+.gm-pending-orders-table th,
+.player-pending-orders-table th,
+.gm-salary-table th {
   background: rgba(255, 255, 255, 0.02); /* 👈 สีพื้นหลังแถบหัวตาราง */
   font-size: 11px;                  /* 👈 ขนาดตัวอักษรแถบหัวตาราง */
   color: #6b7280;                   /* 👈 สีตัวอักษรแถบหัวตาราง */
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-align: center !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -147,6 +160,68 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;               /* 👈 ความมนมุมกล่องส่งคำสั่ง */
   padding: 24px;                     /* 👈 ระยะห่างขอบในกล่องส่งคำสั่ง */
+}
+
+/* Buying Power Badge - Professional Financial UI */
+.buying-power-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.buying-power-container:hover {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.18);
+  transform: translateY(-1px);
+}
+
+.buying-power-icon {
+  width: 14px;
+  height: 14px;
+  color: #34d399;
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.6));
+  flex-shrink: 0;
+}
+
+.buying-power-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(167, 243, 208, 0.85);
+  user-select: none;
+}
+
+.buying-power-val-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+#buyingPowerValue {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  font-weight: 900;
+  color: #34d399;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+
+.buying-power-unit {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(52, 211, 153, 0.7);
+  letter-spacing: 0.04em;
 }
 
 /* ปุ่มแท็บสลับโหมด BUY / SELL */
@@ -217,6 +292,91 @@
 
 .form-input:focus {
   border-color: #4b5563 !important; /* สีเส้นขอบเมื่อกดกรอกข้อมูล */
+}
+
+/* Custom Stock Dropdown Modern Micro-Animations */
+.custom-dropdown-selected {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  user-select: none;
+}
+
+.custom-dropdown-selected:hover {
+  border-color: rgba(52, 211, 153, 0.4) !important;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.15) !important;
+}
+
+.custom-dropdown.open .custom-dropdown-selected {
+  border-color: #34d399 !important;
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.25) !important;
+}
+
+/* Caret rotation animation */
+.dropdown-caret {
+  display: inline-block !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease !important;
+}
+
+.custom-dropdown.open .dropdown-caret {
+  transform: rotate(180deg) !important;
+  color: #34d399 !important;
+}
+
+/* Dropdown Options Popup Animation */
+.custom-dropdown-options {
+  display: block !important;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top center;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none;
+  margin-top: 6px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(52, 211, 153, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(52, 211, 153, 0.1) !important;
+}
+
+.custom-dropdown.open .custom-dropdown-options {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) scale(1) !important;
+  pointer-events: auto !important;
+}
+
+/* Option Items Hover & Active Micro-animations */
+.custom-dropdown-options .dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding: 10px 12px !important;
+  transition: background-color 0.18s ease, transform 0.18s ease !important;
+}
+
+.custom-dropdown-options .dropdown-item:hover {
+  background: rgba(52, 211, 153, 0.12) !important;
+}
+
+.custom-dropdown-options .dropdown-item:active {
+  transform: scale(0.98) !important;
+}
+
+.dropdown-price-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: 0.02em;
+  margin-left: auto;
+  padding-left: 8px;
+  flex-shrink: 0;
+  text-shadow: 0 0 6px rgba(52, 211, 153, 0.3);
 }
 
 /* ปุ่มกดส่งคำสั่ง SUBMIT ORDER */
@@ -371,19 +531,27 @@
   line-height: 1.5 !important;
 }
 
+.trade-alert-actions {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-top: 16px !important;
+}
+
 .trade-alert-ok-btn {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 0.88rem !important;
-  padding: 10px 32px !important;
+  padding: 10px 28px !important;
   border-radius: 12px !important;
   border: 1px solid rgba(96, 165, 250, 0.4) !important;
   cursor: pointer !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   outline: none !important;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
-  margin-top: 16px !important;
+  margin: 0 !important;
 }
 
 .trade-alert-ok-btn:hover {
@@ -403,14 +571,14 @@
   color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 0.88rem !important;
-  padding: 10px 32px !important;
+  padding: 10px 28px !important;
   border-radius: 12px !important;
   border: 1px solid rgba(248, 113, 113, 0.4) !important;
   cursor: pointer !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   outline: none !important;
   box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3) !important;
-  margin-top: 16px !important;
+  margin: 0 !important;
 }
 
 .trade-alert-error-btn:hover {
@@ -418,6 +586,27 @@
   border-color: #fca5a5 !important;
   transform: translateY(-2px) scale(1.03) !important;
   box-shadow: 0 8px 24px rgba(220, 38, 38, 0.55) !important;
+}
+
+.trade-alert-cancel-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+  padding: 10px 28px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  outline: none !important;
+  margin: 0 !important;
+}
+
+.trade-alert-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-2px) scale(1.03) !important;
 }
 
 /* จุดแจ้งเตือนมีคำสั่งซื้อขายรอ GM อนุมัติแบบมินิมอล (Minimal Glowing Alert Dot) */

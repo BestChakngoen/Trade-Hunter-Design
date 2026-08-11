@@ -53,7 +53,7 @@ export class PortfolioRenderer {
       if (symbols.length === 0) {
         holdingsTableBody.innerHTML = `
           <tr>
-            <td colspan="5" class="text-center py-6 text-gray-500 font-medium">No assets in portfolio</td>
+            <td colspan="6" class="text-center py-6 text-gray-500 font-medium">No assets in portfolio</td>
           </tr>
         `;
         return;
@@ -94,16 +94,17 @@ export class PortfolioRenderer {
         
         html += `
           <tr class="hover:bg-gray-900 transition-colors">
-            <td class="p-3">
-              <div class="flex items-center gap-2">
+            <td class="p-3 text-center">
+              <div class="flex items-center justify-center gap-2">
                 <img src="${details.icon}" class="w-5 h-5 object-contain flex-shrink-0" alt="${symbol}">
                 <div class="font-bold text-white text-sm sm:text-base">${symbol}</div>
               </div>
             </td>
-            <td>${holding.avgPrice.toLocaleString('en-US')}</td>
-            <td>${marketPrice.toLocaleString('en-US')}</td>
-            <td class="font-semibold text-white">${amount.toLocaleString('en-US')}</td>
-            <td class="font-bold ${pnlColorClass}">${sign}${pnl.toLocaleString('en-US')} (${sign}${pnlPct.toFixed(2)}%)</td>
+            <td class="font-extrabold text-blue-400 font-mono text-sm sm:text-base text-center">${holding.volume.toLocaleString('en-US')}</td>
+            <td class="text-center">${holding.avgPrice.toLocaleString('en-US')}</td>
+            <td class="text-center">${marketPrice.toLocaleString('en-US')}</td>
+            <td class="font-semibold text-white text-center">${amount.toLocaleString('en-US')}</td>
+            <td class="font-bold ${pnlColorClass} text-center">${sign}${pnl.toLocaleString('en-US')} (${sign}${pnlPct.toFixed(2)}%)</td>
           </tr>
         `;
       });
