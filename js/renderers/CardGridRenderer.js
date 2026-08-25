@@ -2,11 +2,12 @@
  * CardGridRenderer - Manages Stock Card Grid Rendering, Value Flashing Animations, Beta Colors, Filter UIs, and Dialog Modals.
  */
 export class CardGridRenderer {
-  constructor(priceGrid, sectorPills, sortPriceBtn, sortBetaBtn, sortSectorBtn, confirmModal) {
+  constructor(priceGrid, sectorPills, sortPriceBtn, sortBetaBtn, sortSizeBtn, sortSectorBtn, confirmModal) {
     this.priceGrid = priceGrid;
     this.sectorPills = sectorPills;
     this.sortPriceBtn = sortPriceBtn;
     this.sortBetaBtn = sortBetaBtn;
+    this.sortSizeBtn = sortSizeBtn;
     this.sortSectorBtn = sortSectorBtn;
     this.confirmModal = confirmModal;
   }
@@ -164,7 +165,8 @@ export class CardGridRenderer {
   updateSortButtonsUI(sortStates) {
     const buttons = [
       { btn: this.sortPriceBtn, type: 'PRICE', label: 'Price' },
-      { btn: this.sortBetaBtn, type: 'BETA', label: 'Beta' }
+      { btn: this.sortBetaBtn, type: 'BETA', label: 'Beta' },
+      { btn: this.sortSizeBtn, type: 'SIZE', label: 'Size' }
     ];
 
     buttons.forEach(({ btn, type, label }) => {
@@ -235,6 +237,9 @@ export class CardGridRenderer {
   }
 
   showErrorAlert(title, text) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     if (window.Swal) {
       window.Swal.fire({
         icon: 'error',
@@ -258,6 +263,9 @@ export class CardGridRenderer {
   }
 
   showSuccessAlert(title, text) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     if (window.Swal) {
       window.Swal.fire({
         icon: 'success',
@@ -281,6 +289,9 @@ export class CardGridRenderer {
   }
 
   showConfirmAlert(title, text, confirmText = 'YES', cancelText = 'NO') {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     if (window.Swal) {
       return window.Swal.fire({
         icon: 'question',
@@ -305,6 +316,32 @@ export class CardGridRenderer {
     } else {
       const confirmed = confirm(`${title}\n${text}`);
       return Promise.resolve({ isConfirmed: confirmed });
+    }
+  }
+
+  showAutoDismissModal(title, text, duration = 3500) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    if (window.Swal) {
+      return window.Swal.fire({
+        icon: 'warning',
+        title: title,
+        text: text,
+        background: '#0b0f19',
+        color: '#f8fafc',
+        iconColor: '#f59e0b',
+        showConfirmButton: false,
+        timer: duration,
+        timerProgressBar: true,
+        customClass: {
+          popup: 'trade-alert-popup',
+          title: 'trade-alert-title',
+          htmlContainer: 'trade-alert-text'
+        }
+      });
+    } else {
+      alert(`${title}\n${text}`);
     }
   }
 }

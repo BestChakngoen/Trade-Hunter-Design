@@ -40,7 +40,7 @@ export class TradeController {
             priceBadge.className = 'dropdown-price-badge text-emerald-400 font-mono font-bold text-xs ml-auto shrink-0 pl-2';
             item.appendChild(priceBadge);
           }
-          priceBadge.textContent = `${itemPrice.toLocaleString('en-US')} THB`;
+          priceBadge.textContent = `${itemPrice.toLocaleString('en-US')}`;
         });
 
         // Sync selected option display content (Clean icon + symbol without price badge)
@@ -153,7 +153,7 @@ export class TradeController {
         priceBadge.className = 'dropdown-price-badge text-emerald-400 font-mono font-bold text-xs ml-auto shrink-0 pl-2';
         item.appendChild(priceBadge);
       }
-      priceBadge.textContent = `${itemPrice.toLocaleString('en-US')} THB`;
+      priceBadge.textContent = `${itemPrice.toLocaleString('en-US')}`;
     });
 
     if (orderType === 'BUY') {
@@ -175,11 +175,8 @@ export class TradeController {
     const currentVal = tradeStockSelect.value;
     const currentItem = allItems.find(i => i.getAttribute('data-value') === currentVal);
     if (!currentVal || !currentItem) {
-      const first = allItems[0];
-      if (first) {
-        tradeStockSelect.value = first.getAttribute('data-value');
-        this.setDropdownSelectedDisplay(dropdownSelectedContent, first);
-      }
+      tradeStockSelect.value = '';
+      this.setDropdownSelectedDisplay(dropdownSelectedContent, null);
     } else {
       this.setDropdownSelectedDisplay(dropdownSelectedContent, currentItem);
     }
@@ -221,10 +218,10 @@ export class TradeController {
       const currentVal = tradeStockSelect.value;
       if (ownedSymbols.includes(currentVal)) {
         const currentItem = allItems.find(i => i.getAttribute('data-value') === currentVal);
-        this.setDropdownSelectedDisplay(dropdownSelectedContent, currentItem || firstOwnedItem);
-      } else if (firstOwnedItem) {
-        tradeStockSelect.value = firstOwnedItem.getAttribute('data-value');
-        this.setDropdownSelectedDisplay(dropdownSelectedContent, firstOwnedItem);
+        this.setDropdownSelectedDisplay(dropdownSelectedContent, currentItem);
+      } else {
+        tradeStockSelect.value = '';
+        this.setDropdownSelectedDisplay(dropdownSelectedContent, null);
       }
     }
   }
@@ -284,8 +281,8 @@ export class TradeController {
 
       if (orderType === 'BUY' && effectiveAvailableCash < currentPrice) {
         this.renderer.showErrorAlert(
-          "เงินไม่พอ", 
-          `เงินสดของคุณไม่เพียงพอสำหรับการส่งคำสั่งซื้อ (Available Cash ที่เหลือ: ${effectiveAvailableCash.toLocaleString()} THB, ต้องการ: ${currentPrice.toLocaleString()} THB)`
+          "Insufficient Funds", 
+          `Your available cash is insufficient for this BUY order.\nAvailable Cash: ${effectiveAvailableCash.toLocaleString()} THB\nRequired: ${currentPrice.toLocaleString()} THB`
         );
         return;
       }
@@ -294,7 +291,10 @@ export class TradeController {
         const holding = currentStocks[symbol];
         if (!holding || holding.volume < vol) {
           const userVol = holding ? holding.volume : 0;
-          this.renderer.showErrorAlert("หุ้นไม่พอ", `คุณมีหุ้น ${symbol} ไม่เพียงพอสำหรับการส่งคำสั่งขาย (ต้องการขาย: 1 หุ้น, คุณมี: ${userVol.toLocaleString()} หุ้น)`);
+          this.renderer.showErrorAlert(
+            "Insufficient Shares", 
+            `You do not have enough shares of ${symbol} to sell.\nOwned: ${userVol.toLocaleString()} shares | Required: 1 share`
+          );
           return;
         }
       }
@@ -308,12 +308,12 @@ export class TradeController {
       const userPortfolio = this.state.portfolio ? (this.state.portfolio.stocks || {}) : {};
       const ownedCount = Object.keys(userPortfolio).filter(sym => userPortfolio[sym] && userPortfolio[sym].volume > 0).length;
       if (ownedCount === 0 || !symbol) {
-        this.renderer.showErrorAlert("No stocks owned", "You do not have any stocks to sell.");
+        this.renderer.showErrorAlert("No Stocks Owned", "You do not have any stocks in your portfolio to sell.");
         return false;
       }
     }
     if (!symbol) {
-      this.renderer.showErrorAlert("ข้อมูลไม่ถูกต้อง", "กรุณาเลือกหุ้นที่จะทำรายการ");
+      this.renderer.showErrorAlert("Invalid Selection", "Please select a stock before submitting your order.");
       return false;
     }
     return true;
@@ -347,9 +347,10 @@ export class TradeController {
       this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, user.uid);
       this.renderer.updatePlayerPendingOrdersUI(this.state.pendingOrders, user.uid);
 
-      this.renderer.showSuccessAlert(
-        "ส่งคำสั่งซื้อขายสำเร็จ",
-        `คำสั่ง ${orderType} หุ้น ${symbol} จำนวน 1 หุ้น ถูกส่งไปรอ GM อนุมัติเรียบร้อยแล้ว`
+      this.renderer.showTopToast(
+        "ORDER SUBMITTED",
+        `${orderType} order for ${symbol} (1 share) submitted successfully.`,
+        "success"
       );
 
       elements.tradeStockSelect.value = '';
@@ -399,7 +400,7 @@ export class TradeController {
       const roomData = roomSnapshot.val();
       const memberData = roomData.members[order.uid];
       if (!memberData) {
-        this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่พบข้อมูลผู้เล่นในห้องเกมนี้");
+        this.renderer.showErrorAlert("Error", "Player data not found in this room.");
         return;
       }
 
@@ -411,7 +412,7 @@ export class TradeController {
 
       if (order.type === 'BUY') {
         if (cash < totalCost) {
-          this.renderer.showErrorAlert("อนุมัติไม่สำเร็จ", `ผู้เล่น ${order.username} มีเงินสดไม่เพียงพอสำหรับสั่งซื้อ (ต้องการ: ${totalCost.toLocaleString()} THB, ผู้เล่นมี: ${cash.toLocaleString()} THB)`);
+          this.renderer.showErrorAlert("Approval Failed", `Player ${order.username} has insufficient cash for BUY order. (Required: ${totalCost.toLocaleString()} THB, Available: ${cash.toLocaleString()} THB)`);
           return;
         }
         newPortfolio = TradeService.calculateBuyPortfolio(cash, currentStocks, order.symbol, order.volume, tradePrice);
@@ -419,7 +420,7 @@ export class TradeController {
         const holding = currentStocks[order.symbol];
         if (!holding || holding.volume < order.volume) {
           const userVol = holding ? holding.volume : 0;
-          this.renderer.showErrorAlert("อนุมัติไม่สำเร็จ", `ผู้เล่น ${order.username} มีหุ้น ${order.symbol} ไม่เพียงพอสำหรับการขาย (ต้องการขาย: ${order.volume.toLocaleString()} หุ้น, ผู้เล่นมี: ${userVol.toLocaleString()} หุ้น)`);
+          this.renderer.showErrorAlert("Approval Failed", `Player ${order.username} has insufficient shares of ${order.symbol} for SELL order. (Required: ${order.volume.toLocaleString()}, Available: ${userVol.toLocaleString()})`);
           return;
         }
         newPortfolio = TradeService.calculateSellPortfolio(cash, currentStocks, order.symbol, order.volume, tradePrice);
@@ -429,7 +430,15 @@ export class TradeController {
 
       await this.firebaseService.updateRoom(this.state.roomCode, {
         [`members/${order.uid}/portfolio`]: newPortfolio,
-        [`pendingOrders/${orderId}`]: null
+        [`pendingOrders/${orderId}`]: null,
+        [`lastProcessedOrder/${order.uid}`]: {
+          id: orderId,
+          type: order.type,
+          symbol: order.symbol,
+          volume: order.volume,
+          status: 'APPROVED',
+          timestamp: Date.now()
+        }
       });
 
       const updatedStocks = order.type === 'BUY'
@@ -444,9 +453,15 @@ export class TradeController {
         }
       }
 
+      this.renderer.showTopToast(
+        "ORDER APPROVED",
+        `Approved ${order.type} ${order.symbol} for ${order.displayName || order.username || 'Player'}`,
+        "success"
+      );
+
     } catch (error) {
       console.error("Failed to approve order:", error);
-      this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถอนุมัติคำสั่งซื้อขายได้");
+      this.renderer.showErrorAlert("Error", "Failed to approve trade order.");
     }
   }
 
@@ -454,14 +469,35 @@ export class TradeController {
    * GM Order Rejection handler.
    */
   async rejectPlayerOrder(orderId) {
+    const order = this.state.pendingOrders ? this.state.pendingOrders[orderId] : null;
     try {
       await this.captureUndoSnapshot();
-      await this.firebaseService.updateRoom(this.state.roomCode, {
+      
+      const updateData = {
         [`pendingOrders/${orderId}`]: null
-      });
+      };
+
+      if (order && order.uid) {
+        updateData[`lastProcessedOrder/${order.uid}`] = {
+          id: orderId,
+          type: order.type,
+          symbol: order.symbol,
+          volume: order.volume,
+          status: 'REJECTED',
+          timestamp: Date.now()
+        };
+      }
+
+      await this.firebaseService.updateRoom(this.state.roomCode, updateData);
+
+      this.renderer.showTopToast(
+        "ORDER REJECTED",
+        `Rejected ${order ? order.type : ''} ${order ? order.symbol : ''} for ${order ? (order.displayName || order.username || 'Player') : 'Player'}`,
+        "rejected"
+      );
     } catch (error) {
       console.error("Failed to reject order:", error);
-      this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถยกเลิกคำสั่งซื้อขายได้");
+      this.renderer.showErrorAlert("Error", "Failed to reject trade order.");
     }
   }
 
@@ -474,7 +510,7 @@ export class TradeController {
       const roomData = roomSnapshot ? roomSnapshot.val() : null;
 
       if (!roomData || !roomData.members || !roomData.members[playerUid]) {
-        this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่พบข้อมูลผู้เล่นในระบบ");
+        this.renderer.showErrorAlert("Error", "Player data not found in room.");
         return;
       }
 
@@ -482,8 +518,8 @@ export class TradeController {
       const playerName = player.displayName || 'Player';
 
       const confirmResult = await this.renderer.showConfirmAlert(
-        "ยืนยันการจ่ายเงินเดือน",
-        `ต้องการจ่ายเงินเดือนจำนวน 10,000 บาท ให้ผู้เล่น "${playerName}" ใช่หรือไม่?`,
+        "Confirm Salary Payment",
+        `Do you want to pay a salary of 10,000 THB to player "${playerName}"?`,
         "YES",
         "NO"
       );
@@ -496,13 +532,21 @@ export class TradeController {
       const newCash = currentCash + 10000;
 
       await this.firebaseService.updateRoom(this.state.roomCode, {
-        [`members/${playerUid}/portfolio/cash`]: newCash
+        [`members/${playerUid}/portfolio/cash`]: newCash,
+        [`lastSalaryReceived/${playerUid}`]: {
+          amount: 10000,
+          timestamp: Date.now()
+        }
       });
 
-      this.renderer.showSuccessAlert("โอนเงินเดือนสำเร็จ", `จ่ายเงินเดือนให้ ${playerName} จำนวน 10,000 บาท เรียบร้อยแล้ว`);
+      this.renderer.showTopToast(
+        "SALARY PAID", 
+        `Successfully transferred 10,000 THB salary to "${playerName}".`,
+        "success"
+      );
     } catch (error) {
       console.error("Failed to pay salary to player:", error);
-      this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถจ่ายเงินเดือนให้ผู้เล่นได้");
+      this.renderer.showErrorAlert("Error", "Failed to pay salary to player.");
     }
   }
 }

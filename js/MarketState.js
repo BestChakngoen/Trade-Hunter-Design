@@ -1,3 +1,25 @@
+/**
+ * Normalizes stock price to full hundreds (e.g. 5238 -> 5200, 5265 -> 5300)
+ */
+export function normalizePriceToHundreds(price) {
+  if (typeof price !== 'number' || isNaN(price)) return price;
+  return Math.max(100, Math.round(price / 100) * 100);
+}
+
+/**
+ * Calculates next price using exponential movement scaled by Beta volatility.
+ * @param {number} currentPrice - Current price S_t
+ * @param {number} beta - Stock Beta factor
+ * @param {number} direction - Direction: +1 for Up, -1 for Down
+ * @param {number} baseReturn - Base step return rate (default 0.05 = 5%)
+ */
+export function calculateExponentialBetaPrice(currentPrice, beta = 1.0, direction = 1, baseReturn = 0.05) {
+  const effectiveBeta = Number(beta) || 1.0;
+  const logReturn = direction * effectiveBeta * baseReturn;
+  const rawNextPrice = currentPrice * Math.exp(logReturn);
+  return normalizePriceToHundreds(rawNextPrice);
+}
+
 export class MarketState {
   constructor(cardElements) {
     this.originalCards = cardElements;
@@ -5,7 +27,8 @@ export class MarketState {
     this.sortStates = {
       SECTOR: { enabled: false, dir: 'ASC' },
       BETA: { enabled: false, dir: 'DESC' },
-      PRICE: { enabled: false, dir: 'DESC' }
+      PRICE: { enabled: false, dir: 'DESC' },
+      SIZE: { enabled: false, dir: 'DESC' }
     };
     
     this.roomCode = null;
@@ -118,6 +141,24 @@ export class MarketState {
     return 0;
   }
 
+  // Get Beta value for a stock symbol from card dataset or default 1.0
+  getStockBeta(symbol) {
+    if (this.boardStocks[symbol] && this.boardStocks[symbol].beta !== undefined) {
+      return parseFloat(this.boardStocks[symbol].beta) || 1.0;
+    }
+    const card = this.originalCards.find(c => {
+      const titleEl = c.querySelector('.card-title');
+      const iconEl = c.querySelector('.card-icon');
+      const name = (titleEl ? titleEl.textContent : (iconEl ? iconEl.textContent : '')).trim();
+      return name === symbol;
+    });
+    if (card) {
+      const betaAttr = card.getAttribute('data-beta');
+      if (betaAttr) return parseFloat(betaAttr) || 1.0;
+    }
+    return 1.0;
+  }
+
   // Populate master settings from Firestore
   setMasterStocks(firestoreStocks) {
     this.masterStocks = {};
@@ -125,15 +166,18 @@ export class MarketState {
     if (!Array.isArray(firestoreStocks)) return;
     firestoreStocks.forEach(stock => {
       if (!stock || !stock.name) return;
+      const normalizedSteps = Array.isArray(stock.steps)
+        ? stock.steps.map(val => normalizePriceToHundreds(val))
+        : stock.steps;
       this.masterStocks[stock.name] = {
         name: stock.name,
-        steps: stock.steps,
+        steps: normalizedSteps,
         startStep: stock.startStep
       };
-      if (Array.isArray(stock.steps) && stock.startStep > 0) {
-        const startVal = stock.steps[stock.startStep - 1];
+      if (Array.isArray(normalizedSteps) && stock.startStep > 0) {
+        const startVal = normalizedSteps[stock.startStep - 1];
         if (startVal !== undefined) {
-          this.initialPrices[stock.name] = startVal;
+          this.initialPrices[stock.name] = normalizePriceToHundreds(startVal);
         }
       }
     });
@@ -145,6 +189,7 @@ export class MarketState {
 
     firebaseBoard.stocks.forEach(stock => {
       const symbol = stock.name;
+      stock.value = normalizePriceToHundreds(stock.value);
       this.boardStocks[symbol] = stock;
 
       const startPrice = this.getStartPrice(symbol, stock.value);
@@ -196,7 +241,7 @@ export class MarketState {
       });
 
       if (Array.isArray(stock.history) && stock.history.length > 0) {
-        this.priceHistory[symbol] = [...stock.history];
+        this.priceHistory[symbol] = stock.history.map(val => normalizePriceToHundreds(val));
       } else {
         if (!this.priceHistory[symbol]) {
           this.priceHistory[symbol] = [startPrice];
@@ -208,7 +253,7 @@ export class MarketState {
     });
   }
 
-  // Generate updated stocks list for saving to Firebase when upgrading price step
+  // Generate updated stocks list for saving to Firebase when upgrading price step (Exponential Beta Model)
   getUpdatedStocksForUp(symbol) {
     const boardStocksArray = Object.values(this.boardStocks);
     const stockIndex = boardStocksArray.findIndex(s => s.name === symbol);
@@ -219,22 +264,15 @@ export class MarketState {
     if (!master) return null;
 
     const nextStep = currentStock.step + 1;
-    let nextValue = 0;
-    if (nextStep < master.steps.length) {
-      nextValue = master.steps[nextStep];
-    } else {
-      // Extrapolate step price dynamically for infinite price increases
-      const lastStepVal = master.steps[master.steps.length - 1] || currentStock.value;
-      const prevStepVal = master.steps.length >= 2 ? master.steps[master.steps.length - 2] : (lastStepVal * 0.9);
-      const stepDelta = Math.max(100, lastStepVal - prevStepVal);
-      const extraSteps = nextStep - (master.steps.length - 1);
-      nextValue = lastStepVal + (stepDelta * extraSteps);
-    }
+    const beta = this.getStockBeta(symbol);
+    
+    // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
+    const nextValue = calculateExponentialBetaPrice(currentStock.value, beta, 1, 0.16);
     if (nextValue < 0) return null;
 
     const updatedStocks = boardStocksArray.map(s => {
       if (s.name === symbol) {
-        const startPrice = master ? master.steps[master.startStep - 1] : s.value;
+        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
         const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
         const newHistory = [...currentHistory, nextValue];
         this.priceHistory[symbol] = newHistory;
@@ -254,7 +292,7 @@ export class MarketState {
     return updatedStocks;
   }
 
-  // Generate updated stocks list for saving to Firebase when downgrading price step
+  // Generate updated stocks list for saving to Firebase when downgrading price step (Exponential Beta Model)
   getUpdatedStocksForDown(symbol) {
     const boardStocksArray = Object.values(this.boardStocks);
     const stockIndex = boardStocksArray.findIndex(s => s.name === symbol);
@@ -269,12 +307,15 @@ export class MarketState {
       prevStep = 0; // Clamp to lowest step 0 instead of wrapping
     }
 
-    const nextValue = master.steps[prevStep];
+    const beta = this.getStockBeta(symbol);
+    
+    // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
+    const nextValue = Math.max(100, calculateExponentialBetaPrice(currentStock.value, beta, -1, 0.16));
     if (nextValue < 0) return null; // Prevent value dropping below 0
 
     const updatedStocks = boardStocksArray.map(s => {
       if (s.name === symbol) {
-        const startPrice = master ? master.steps[master.startStep - 1] : s.value;
+        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
         const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
         const newHistory = [...currentHistory, nextValue];
         this.priceHistory[symbol] = newHistory;
@@ -300,7 +341,7 @@ export class MarketState {
       const master = this.masterStocks[s.name];
       if (!master) return s;
       const startIdx = master.startStep - 1;
-      const startPrice = master.steps[startIdx];
+      const startPrice = normalizePriceToHundreds(master.steps[startIdx]);
       this.priceHistory[s.name] = [startPrice];
       return {
         ...s,
@@ -317,7 +358,8 @@ export class MarketState {
     this.sortStates = {
       SECTOR: { enabled: false, dir: 'ASC' },
       BETA: { enabled: false, dir: 'DESC' },
-      PRICE: { enabled: false, dir: 'DESC' }
+      PRICE: { enabled: false, dir: 'DESC' },
+      SIZE: { enabled: false, dir: 'DESC' }
     };
     this.selectedSectors.clear();
     this.selectedSectors.add('ALL');
@@ -332,10 +374,12 @@ export class MarketState {
     const isSectorActive = this.sortStates.SECTOR.enabled;
     const isBetaActive = this.sortStates.BETA.enabled;
     const isPriceActive = this.sortStates.PRICE.enabled;
+    const isSizeActive = this.sortStates.SIZE ? this.sortStates.SIZE.enabled : false;
 
-    if (isSectorActive || isBetaActive || isPriceActive) {
+    if (isSectorActive || isBetaActive || isPriceActive || isSizeActive) {
+      const sizeWeight = { 'L': 3, 'M': 2, 'S': 1 };
       filtered.sort((a, b) => {
-        // 1. Sort by Sector (if enabled) - always ASC (A-Z)
+        // Priority 1: Sort by Sector (if enabled) - always ASC (A-Z)
         if (isSectorActive) {
           const valA = a.getAttribute('data-sector') || '';
           const valB = b.getAttribute('data-sector') || '';
@@ -343,7 +387,15 @@ export class MarketState {
           if (comparison !== 0) return comparison;
         }
 
-        // 2. Sort by Beta (if enabled)
+        // Priority 2: Sort by Price (if enabled)
+        if (isPriceActive) {
+          const valA = parseFloat(a.getAttribute('data-price'));
+          const valB = parseFloat(b.getAttribute('data-price'));
+          const comparison = this.sortStates.PRICE.dir === 'DESC' ? valB - valA : valA - valB;
+          if (comparison !== 0) return comparison;
+        }
+
+        // Priority 3: Sort by Beta (if enabled)
         if (isBetaActive) {
           const valA = parseFloat(a.getAttribute('data-beta'));
           const valB = parseFloat(b.getAttribute('data-beta'));
@@ -351,11 +403,11 @@ export class MarketState {
           if (comparison !== 0) return comparison;
         }
 
-        // 3. Sort by Price (if enabled)
-        if (isPriceActive) {
-          const valA = parseFloat(a.getAttribute('data-price'));
-          const valB = parseFloat(b.getAttribute('data-price'));
-          const comparison = this.sortStates.PRICE.dir === 'DESC' ? valB - valA : valA - valB;
+        // Priority 4: Sort by Size (if enabled)
+        if (isSizeActive) {
+          const valA = sizeWeight[a.getAttribute('data-size')] || 0;
+          const valB = sizeWeight[b.getAttribute('data-size')] || 0;
+          const comparison = this.sortStates.SIZE.dir === 'DESC' ? valB - valA : valA - valB;
           if (comparison !== 0) return comparison;
         }
 
@@ -442,5 +494,17 @@ export class MarketState {
 
   updatePendingOrders(ordersData) {
     this.pendingOrders = ordersData || {};
+  }
+
+  reset() {
+    this.roomCode = null;
+    this.role = 'player';
+    this.isSpectating = false;
+    this.boardStocks = {};
+    this.portfolio = { cash: 20000, stocks: {} };
+    this.pendingOrders = {};
+    this.priceHistory = {};
+    this.undoStack = [];
+    this.redoStack = [];
   }
 }

@@ -6,6 +6,7 @@ export class LobbyController {
     this.state = state;
     this.renderer = renderer;
     this.firebaseService = firebaseService;
+    this.isSubmitting = false;
   }
 
   bindLobbyEntrance(onJoinSuccess) {
@@ -13,8 +14,21 @@ export class LobbyController {
 
     this.renderer.lobbyForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (this.isSubmitting) return;
+
       const code = this.renderer.roomCodeInput.value.trim().toUpperCase();
       if (!code) return;
+
+      this.isSubmitting = true;
+      const btn = this.renderer.joinRoomBtn;
+      let originalBtnHtml = '';
+      if (btn) {
+        originalBtnHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'not-allowed';
+        btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="animate-spin h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> CHECKING...</span>`;
+      }
 
       try {
         await this.joinOrCreateRoom(code);
@@ -24,13 +38,88 @@ export class LobbyController {
       } catch (err) {
         console.error("Lobby join error:", err);
         this.renderer.showErrorAlert("เกิดข้อผิดพลาด", err.message || "ไม่สามารถระบุการเชื่อมต่อห้องเกมได้");
+      } finally {
+        this.isSubmitting = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+          if (originalBtnHtml) {
+            btn.innerHTML = originalBtnHtml;
+          }
+        }
       }
     });
   }
 
+  async promptRoleSelection() {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+
+    const modal = this.renderer.roleSelectionModal;
+    const btnGM = this.renderer.roleOptGMBtn;
+    const btnPlayer = this.renderer.roleOptPlayerBtn;
+    const btnCancel = this.renderer.roleOptCancelBtn;
+
+    if (!modal || !btnGM || !btnPlayer || !btnCancel) {
+      const choice = confirm("กด OK เพื่อเลือกเป็น GM หรือ Cancel เพื่อเลือกเป็น Player");
+      return choice ? 'game_master' : 'player';
+    }
+
+    return new Promise((resolve) => {
+      modal.style.display = 'flex';
+
+      const handleGM = () => {
+        cleanup();
+        modal.style.display = 'none';
+        resolve('game_master');
+      };
+
+      const handlePlayer = () => {
+        cleanup();
+        modal.style.display = 'none';
+        resolve('player');
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        modal.style.display = 'none';
+        resolve(null);
+      };
+
+      const cleanup = () => {
+        btnGM.removeEventListener('click', handleGM);
+        btnPlayer.removeEventListener('click', handlePlayer);
+        btnCancel.removeEventListener('click', handleCancel);
+      };
+
+      btnGM.addEventListener('click', handleGM);
+      btnPlayer.addEventListener('click', handlePlayer);
+      btnCancel.addEventListener('click', handleCancel);
+    });
+  }
+
+  withTimeout(promise, timeoutMs, errorMessage) {
+    let timer;
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error(errorMessage));
+      }, timeoutMs);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+  }
+
   async joinOrCreateRoom(code) {
+    // 0. Reset local state before any new room entrance
+    this.state.reset();
+
     // 1. Verify if the code is permitted in Firestore
-    const isAllowed = await this.firebaseService.checkRoomExists(code);
+    const isAllowed = await this.withTimeout(
+      this.firebaseService.checkRoomExists(code),
+      8000,
+      "หมดเวลาการเชื่อมต่อกับเซิร์ฟเวอร์ (Firestore Timeout)"
+    );
     if (!isAllowed) {
       this.renderer.showErrorAlert(
         "รหัสไม่ถูกต้อง",
@@ -39,42 +128,103 @@ export class LobbyController {
       return;
     }
 
-    // 2. Fetch room status from Firebase Realtime Database
-    let roomExists = false;
-    let isEnd = false;
+    const now = Date.now();
 
-    const roomSnapshot = await this.firebaseService.getRoomStateSnapshot(code);
+    // 2. Fetch room status & inspect stale/expired state from Firebase Realtime Database
+    let roomExists = false;
+    let roomData = null;
+
+    const roomSnapshot = await this.withTimeout(
+      this.firebaseService.getRoomStateSnapshot(code),
+      8000,
+      "หมดเวลาการเชื่อมต่อกับ Realtime Database"
+    );
+
     if (roomSnapshot && roomSnapshot.exists()) {
-      const roomData = roomSnapshot.val();
+      roomData = roomSnapshot.val();
       const members = roomData.members || {};
       const memberUids = Object.keys(members);
+      const expiresAt = roomData.expiresAt;
+      const isExpired = Boolean(expiresAt && expiresAt <= now);
+      const isEnded = Boolean(roomData.isEnd);
 
-      // If room exists but has 0 active members, treat as abandoned and purge old data!
-      if (memberUids.length === 0) {
-        console.log(`🧹 Abandoned room detected for code ${code} (0 active members). Purging old data...`);
+      // Check if room has stale members joined > 3.5 hours ago
+      const hasStaleMembers = memberUids.some(uid => {
+        const joinedAt = members[uid] ? members[uid].joinedAt : 0;
+        return joinedAt && (now - joinedAt > 3.5 * 60 * 60 * 1000);
+      });
+
+      // Purge abandoned, expired, ended, or stale rooms completely!
+      if (memberUids.length === 0 || isExpired || isEnded || hasStaleMembers) {
         await this.firebaseService.deleteRoomData(code);
         roomExists = false;
+        roomData = null;
       } else {
         roomExists = true;
-        isEnd = roomData.isEnd || false;
       }
     }
 
-    const user = this.firebaseService.getCurrentUser();
-    const now = Date.now();
+    let user = this.firebaseService.getCurrentUser();
+    if (!user) {
+      await this.firebaseService.init();
+      user = this.firebaseService.getCurrentUser();
+    }
+
+    const members = roomData ? (roomData.members || {}) : {};
+    const memberUids = Object.keys(members);
+
+    // Determine user role and display name
+    let role = null;
+    let displayName = null;
+
+    if (roomExists && members[user.uid]) {
+      // Re-joining player uses their existing role and name
+      role = members[user.uid].role;
+      displayName = members[user.uid].displayName || (role === 'game_master' ? 'GM' : 'Player_1');
+    } else {
+      // Check max capacity if room already exists
+      const maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 10;
+      if (roomExists && !members[user.uid] && memberUids.length >= maxPlayers) {
+        await this.renderer.showRoomFullModal();
+        return;
+      }
+
+      // Check if room already has GM
+      const hasGM = memberUids.some(uid => members[uid] && members[uid].role === 'game_master');
+      if (hasGM) {
+        // Automatic assignment to Player if GM is already present
+        role = 'player';
+      } else {
+        // No GM present -> Ask user to select role
+        role = await this.promptRoleSelection();
+        if (!role) {
+          return;
+        }
+      }
+
+      if (role === 'game_master') {
+        displayName = 'GM';
+      } else {
+        const existingPlayersCount = memberUids.filter(uid => members[uid] && members[uid].role === 'player').length;
+        displayName = `Player_${existingPlayersCount + 1}`;
+      }
+    }
 
     // 3. Initialize state parameters
     this.state.setRoomCode(code);
 
-    // Fetch Master Settings from Firestore first
-    const gameSetting = await this.firebaseService.getGameSetting();
+    // Fetch Master Settings from Firestore
+    const gameSetting = await this.withTimeout(
+      this.firebaseService.getGameSetting(),
+      8000,
+      "หมดเวลาการดึงข้อมูลการตั้งค่าเกม (getGameSetting Timeout)"
+    );
     this.state.setMasterStocks(gameSetting.stocks);
 
     // 4. Create or Join logic
-    if (!roomExists || isEnd) {
-      // Admin/Host opens the room first -> Role is Game Master
-      this.state.setRole('game_master');
+    const maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 10;
 
+    if (!roomExists) {
       // Build initial board configuration from master steps
       const initialBoardStocks = gameSetting.stocks.map(s => {
         const startValue = s.steps[s.startStep - 1];
@@ -90,33 +240,31 @@ export class LobbyController {
         };
       });
 
-      // Create board state
+      // Create fresh board state
       await this.firebaseService.createBoard(code, initialBoardStocks);
 
-      // Create room state
+      // Create fresh room state with 3-hour expiration timestamp
+      const expiresAt = now + (3 * 60 * 60 * 1000);
+      const initialMemberObj = {
+        role: role,
+        displayName: displayName,
+        joinedAt: now
+      };
+      if (role === 'player') {
+        initialMemberObj.portfolio = { cash: 20000 };
+      }
+
       await this.firebaseService.createRoom(code, gameSetting.roomSettings, {
-        [user.uid]: {
-          role: 'game_master',
-          displayName: 'GM',
-          joinedAt: now
-        }
+        [user.uid]: initialMemberObj
       });
-      this.state.setRole('game_master');
-      this.state.setPlayerName('GM');
+      await this.firebaseService.updateRoom(code, { expiresAt });
+
+      this.state.setRole(role);
+      this.state.setPlayerName(displayName);
     } else {
-      // Room already exists -> Determine role based on current members
-      const roomData = roomSnapshot.val();
-      const members = roomData.members || {};
-      const memberUids = Object.keys(members);
-      
-      let role = 'player';
-      let displayName = 'Player_1';
-      
       if (members[user.uid]) {
-        // Re-joining player uses their existing role and name
-        role = members[user.uid].role;
-        displayName = members[user.uid].displayName || (role === 'game_master' ? 'GM' : 'Player_1');
-        if (!members[user.uid].portfolio) {
+        // Re-joining player
+        if (!members[user.uid].portfolio && role === 'player') {
           await this.firebaseService.updateRoom(code, {
             [`members/${user.uid}/portfolio`]: {
               cash: 20000
@@ -124,36 +272,17 @@ export class LobbyController {
           });
         }
       } else {
-        // New participant: If max capacity allows, add them. Otherwise raise error.
-        const maxPlayers = (roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 10;
-        if (maxPlayers - memberUids.length <= 0) {
-          this.renderer.showErrorAlert("ห้องเต็ม", "จำนวนผู้เข้าร่วมในห้องนี้เต็มขีดจำกัดแล้ว");
+        // Atomic transaction to handle high concurrency joining
+        const txnResult = await this.firebaseService.joinRoomWithTransaction(code, {
+          uid: user.uid,
+          role: role,
+          displayName: displayName
+        }, maxPlayers);
+
+        if (!txnResult || !txnResult.committed) {
+          await this.renderer.showRoomFullModal();
           return;
         }
-        // If no members at all or room lacks a GM, assign game_master, else player
-        const hasMaster = memberUids.some(uid => members[uid] && members[uid].role === 'game_master');
-        role = (memberUids.length === 0 || !hasMaster) ? 'game_master' : 'player';
-
-        if (role === 'game_master') {
-          displayName = 'GM';
-        } else {
-          // Count existing players in room to determine sequence
-          const existingPlayersCount = memberUids.filter(uid => members[uid] && members[uid].role === 'player').length;
-          displayName = `Player_${existingPlayersCount + 1}`;
-        }
-
-        // Save to Firebase member list with default portfolio and displayName
-        await this.firebaseService.updateRoom(code, {
-          lastJoinedAt: now,
-          [`members/${user.uid}`]: {
-            role: role,
-            displayName: displayName,
-            joinedAt: now,
-            portfolio: {
-              cash: 20000
-            }
-          }
-        });
       }
 
       this.state.setRole(role);
@@ -173,6 +302,7 @@ export class LobbyController {
       console.warn("Could not sync initial board snapshot for late joiner:", e);
     }
 
+    console.log("[Lobby] ✅ Room entrance process finished successfully!");
     // 5. Transition screens and activate UI state
     this.renderer.showDashboard();
     

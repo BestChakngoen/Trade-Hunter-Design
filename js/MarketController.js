@@ -59,6 +59,50 @@ export class MarketController {
     });
 
     this.tradeController.bindTradeFormEvents();
+    this.bindLeaveRoomButton();
+  }
+
+  bindLeaveRoomButton() {
+    const leaveBtn = document.getElementById('leaveRoomBtn');
+    if (!leaveBtn) return;
+
+    leaveBtn.addEventListener('click', async () => {
+      const isGM = (this.state.role === 'game_master');
+      const title = "Leave Room";
+      const message = isGM 
+        ? "Are you sure you want to leave? As GM, this will end the session and close the room for all players."
+        : "Are you sure you want to leave the room? Your current portfolio data will be cleared.";
+
+      const result = await this.renderer.showConfirmAlert(title, message, "YES", "NO");
+      if (!result || !result.isConfirmed) return;
+
+      const roomCode = this.state.roomCode;
+      const currentUser = this.firebaseService.getCurrentUser();
+      const currentUid = currentUser ? currentUser.uid : null;
+
+      this.unsubscribeAll();
+
+      if (isGM) {
+        if (roomCode) {
+          try {
+            await this.firebaseService.deleteRoomData(roomCode);
+          } catch (e) {
+            console.error("Failed to delete room on GM leave:", e);
+          }
+        }
+      } else {
+        if (roomCode && currentUid) {
+          try {
+            await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
+          } catch (e) {
+            console.error("Failed to remove player node on leave:", e);
+          }
+        }
+      }
+
+      this.state.reset();
+      this.renderer.showLobby();
+    });
   }
 
   // Real-time synchronization Orchestrator
@@ -158,13 +202,21 @@ export class MarketController {
 
     if (user) {
       this.roomListenerUnsubscribe = this.firebaseService.listenToRoom(code, (roomData) => {
-        if (!roomData) return;
-
-        const membersCount = roomData.members ? Object.keys(roomData.members).length : 0;
-        if (membersCount === 0) {
-          console.log("No members remaining in room. Purging room data...");
-          this.firebaseService.deleteRoomData(code);
+        if (!roomData) {
+          if (this.state.roomCode) {
+            this.handleRoomExpired();
+          }
           return;
+        }
+
+        // 3-Hour Room Session Expiration Check & Timer Initialization
+        if (!roomData.expiresAt) {
+          if (this.state.role === 'game_master') {
+            const expiresAt = Date.now() + (3 * 60 * 60 * 1000);
+            this.firebaseService.updateRoom(code, { expiresAt });
+          }
+        } else {
+          this.startRoomCountdownTimer(roomData.expiresAt);
         }
 
         const currentUser = this.firebaseService.getCurrentUser();
@@ -172,6 +224,9 @@ export class MarketController {
 
         const orders = roomData.pendingOrders || {};
         this.state.updatePendingOrders(orders);
+
+        // Update real-time room members count & capacity status badge
+        this.renderer.updateRoomMembersUI(roomData.members, roomData.roomSettings);
 
         if (roomData.members && roomData.members[currentUid]) {
           const memberData = roomData.members[currentUid];
@@ -188,7 +243,57 @@ export class MarketController {
 
         this.renderer.updatePlayerPendingOrdersUI(orders, currentUid);
 
+        // Player: Detect GM Approval or Rejection and Salary Receipt
+        if (this.state.role !== 'game_master') {
+          const lastOrderMap = roomData.lastProcessedOrder || {};
+          const myLastOrder = lastOrderMap[currentUid];
+          
+          if (myLastOrder && myLastOrder.timestamp && myLastOrder.timestamp !== this.prevProcessedTimestamp) {
+            this.prevProcessedTimestamp = myLastOrder.timestamp;
+            if (myLastOrder.status === 'APPROVED') {
+              this.renderer.showTopToast(
+                "ORDER APPROVED",
+                `Your ${myLastOrder.type} order for ${myLastOrder.symbol} (${myLastOrder.volume || 1} share) was approved.`,
+                "approved"
+              );
+            } else if (myLastOrder.status === 'REJECTED') {
+              this.renderer.showTopToast(
+                "ORDER REJECTED",
+                `Your ${myLastOrder.type} order for ${myLastOrder.symbol} (${myLastOrder.volume || 1} share) was declined by GM.`,
+                "rejected"
+              );
+            }
+          }
+
+          const lastSalaryMap = roomData.lastSalaryReceived || {};
+          const mySalary = lastSalaryMap[currentUid];
+          if (mySalary && mySalary.timestamp && mySalary.timestamp !== this.prevSalaryTimestamp) {
+            this.prevSalaryTimestamp = mySalary.timestamp;
+            this.renderer.showTopToast(
+              "SALARY RECEIVED",
+              `You received a salary of ${Number(mySalary.amount || 10000).toLocaleString()} THB from GM.`,
+              "success"
+            );
+          }
+        }
+
+        // GM: Detect New Player Order Arrival
         if (this.state.role === 'game_master' && !this.state.isSpectating) {
+          const currentGMOrderIds = new Set(Object.keys(orders));
+          if (this.prevGMOrderIds) {
+            currentGMOrderIds.forEach(orderId => {
+              if (!this.prevGMOrderIds.has(orderId)) {
+                const newOrder = orders[orderId];
+                this.renderer.showTopToast(
+                  "NEW ORDER RECEIVED",
+                  `${newOrder.username || 'Player'} submitted a ${newOrder.type} order for ${newOrder.symbol}.`,
+                  "warning"
+                );
+              }
+            });
+          }
+          this.prevGMOrderIds = currentGMOrderIds;
+
           if (this.renderer.gmPendingOrdersSection) {
             this.renderer.gmPendingOrdersSection.style.display = 'block';
           }
@@ -222,7 +327,90 @@ export class MarketController {
     }
   }
 
+  startRoomCountdownTimer(expiresAt) {
+    const badge = document.getElementById('roomCountdownBadge');
+    const timerText = document.getElementById('roomCountdownTimerText');
+    const icon = document.getElementById('roomCountdownIcon');
+    if (!badge || !timerText) return;
+
+    badge.style.display = 'block';
+
+    const updateTimer = () => {
+      const remainingMs = expiresAt - Date.now();
+      if (remainingMs <= 0) {
+        this.handleRoomExpired();
+        return;
+      }
+
+      const totalSecs = Math.floor(remainingMs / 1000);
+      const hours = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+      const secs = String(totalSecs % 60).padStart(2, '0');
+
+      timerText.textContent = `${hours}:${mins}:${secs}`;
+
+      if (remainingMs < 10 * 60 * 1000) {
+        timerText.style.color = '#ff453a';
+        if (icon) icon.style.color = '#ff453a';
+      } else {
+        timerText.style.color = '#f3f4f6';
+        if (icon) icon.style.color = '#34d399';
+      }
+    };
+
+    updateTimer();
+    if (this.roomTimerInterval) clearInterval(this.roomTimerInterval);
+    this.roomTimerInterval = setInterval(updateTimer, 1000);
+  }
+
+  async handleRoomExpired() {
+    if (this.isHandlingExpiry) return;
+    this.isHandlingExpiry = true;
+
+    if (this.roomTimerInterval) {
+      clearInterval(this.roomTimerInterval);
+      this.roomTimerInterval = null;
+    }
+
+    const badge = document.getElementById('roomCountdownBadge');
+    if (badge) badge.style.display = 'none';
+
+    const roomCode = this.state.roomCode;
+    this.unsubscribeAll();
+
+    // 1. Display Modal Alert without OK button with 3.5s auto dismiss
+    this.renderer.showAutoDismissModal(
+      "SESSION EXPIRED",
+      "The 3-hour room session limit has expired. Returning to lobby...",
+      3500
+    );
+
+    // 2. Wait for 3.5 seconds
+    await new Promise(resolve => setTimeout(resolve, 3500));
+
+    // 3. Purge room data, reset state, and return to lobby
+    if (roomCode) {
+      try {
+        await this.firebaseService.deleteRoomData(roomCode);
+      } catch (e) {
+        console.error("Failed to delete room on expiry:", e);
+      }
+    }
+
+    this.state.reset();
+    this.renderer.showLobby();
+
+    this.isHandlingExpiry = false;
+  }
+
   unsubscribeAll() {
+    if (this.roomTimerInterval) {
+      clearInterval(this.roomTimerInterval);
+      this.roomTimerInterval = null;
+    }
+    const badge = document.getElementById('roomCountdownBadge');
+    if (badge) badge.style.display = 'none';
+
     if (this.boardListenerUnsubscribe) {
       this.boardListenerUnsubscribe();
       this.boardListenerUnsubscribe = null;

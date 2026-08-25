@@ -530,7 +530,7 @@
 /* ตารางแสดงสถิติตัวเลขใต็กราฟ (Start, Price, Beta, Change) */
 .chart-stats-grid {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important; /* แบ่งเป็น 4 คอลัมน์เท่าๆ กัน */
+  grid-template-columns: repeat(4, 1fr) !important; /* แบ่งเป็น 4 คอลัมน์เท่าๆ กัน (Start, Beta, Size, Change) */
   gap: 8px !important;
   margin-top: 12px !important;
   padding-top: 12px !important;
@@ -553,9 +553,9 @@
   border-radius: 24px;              /* 👈 ความมนกล่อง Danger Zone */
   padding: 24px;                    /* 👈 ระยะห่างขอบในกล่อง Danger Zone */
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
   transition: all 0.3s ease;
 }
 
@@ -716,4 +716,44 @@
   .control-btn img {
     width: 10px !important;
   }
+}
+
+/* --------------------------------------------------------------------------
+   5. 🔄 Reset Button Spin Animation
+   -------------------------------------------------------------------------- */
+@keyframes spinOnce {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spin-once {
+  animation: spinOnce 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. 🚪 Leave Room Button Animations
+   -------------------------------------------------------------------------- */
+.leave-room-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ff453a;
+  opacity: 0.8;
+  padding: 4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, filter 0.2s ease;
+}
+
+.leave-room-icon-btn:hover {
+  opacity: 1;
+  transform: scale(1.18) translateX(2px);
+  filter: drop-shadow(0 0 8px rgba(255, 69, 58, 0.65));
+}
+
+.leave-room-icon-btn:active {
+  transform: scale(0.85) translateX(0px);
+  filter: drop-shadow(0 0 4px rgba(255, 69, 58, 0.3));
 }

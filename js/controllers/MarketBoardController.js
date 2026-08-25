@@ -40,12 +40,18 @@ export class MarketBoardController {
       { id: 'sortToggles', key: 'scrolled_sortToggles' },
       { id: 'holdingsTableContainer', key: 'scrolled_holdingsTable' },
       { id: 'pendingOrdersTableContainer', key: 'scrolled_pendingOrdersTable' },
-      { id: 'gmPendingOrdersTableContainer', key: 'scrolled_gmPendingOrdersTable' }
+      { id: 'gmPendingOrdersTableContainer', key: 'scrolled_gmPendingOrdersTable' },
+      { id: 'gmPlayerSalaryTableContainer', key: 'scrolled_gmPlayerSalaryTable' }
     ];
 
     scrollConfigs.forEach(cfg => {
       const el = document.getElementById(cfg.id);
-      if (!el || el.dataset.scrollInitialized === 'true') return;
+      if (!el) return;
+
+      // Enable desktop mouse click-and-drag sliding
+      this.enableDragToScroll(el);
+
+      if (el.dataset.scrollInitialized === 'true') return;
       el.dataset.scrollInitialized = 'true';
 
       // If user previously scrolled in this session, start hidden while idle
@@ -75,27 +81,92 @@ export class MarketBoardController {
     });
   }
 
+  enableDragToScroll(el) {
+    if (!el || el.dataset.dragScrollInitialized === 'true') return;
+    el.dataset.dragScrollInitialized = 'true';
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let dragDistance = 0;
+
+    const updateCursor = () => {
+      if (el.scrollWidth > el.clientWidth) {
+        el.style.cursor = 'grab';
+      } else {
+        el.style.cursor = '';
+      }
+    };
+
+    updateCursor();
+    window.addEventListener('resize', updateCursor, { passive: true });
+
+    el.addEventListener('mousedown', (e) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      if (e.button !== 0) return;
+
+      isDown = true;
+      dragDistance = 0;
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+      el.style.cursor = 'grabbing';
+      el.style.userSelect = 'none';
+    });
+
+    el.addEventListener('mouseleave', () => {
+      if (!isDown) return;
+      isDown = false;
+      updateCursor();
+      el.style.removeProperty('user-select');
+    });
+
+    el.addEventListener('mouseup', () => {
+      if (!isDown) return;
+      isDown = false;
+      updateCursor();
+      el.style.removeProperty('user-select');
+    });
+
+    el.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      dragDistance = Math.abs(x - startX);
+      if (dragDistance > 3) {
+        e.preventDefault();
+        el.scrollLeft = scrollLeft - walk;
+      }
+    });
+
+    // Suppress child button clicks if the user was performing a drag movement
+    el.addEventListener('click', (e) => {
+      if (dragDistance > 5) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+  }
+
   bindSortButtons() {
     const handleSortClick = (type, e) => {
       const sortStates = this.state.sortStates;
-      const isAlreadyEnabled = sortStates[type].enabled;
+      const isAlreadyEnabled = sortStates[type] ? sortStates[type].enabled : false;
 
-      // Single-select: Disable all other sort options first
-      Object.keys(sortStates).forEach(key => {
-        if (key !== type) {
-          sortStates[key].enabled = false;
-        }
-      });
-
+      // Multi-Criteria Sorting: Each button toggles independently without disabling others
       if (type === 'SECTOR') {
         sortStates.SECTOR.enabled = !isAlreadyEnabled;
       } else {
         const sort = sortStates[type];
+        if (!sort) return;
+        
+        // 3-Stage Toggle: OFF -> DESC (มากไปน้อย) -> ASC (น้อยไปมาก) -> OFF (ปิด)
         if (!isAlreadyEnabled) {
           sort.enabled = true;
           sort.dir = 'DESC';
+        } else if (sort.dir === 'DESC') {
+          sort.dir = 'ASC';
         } else {
-          sort.dir = sort.dir === 'DESC' ? 'ASC' : 'DESC';
+          sort.enabled = false;
         }
       }
 
@@ -103,13 +174,24 @@ export class MarketBoardController {
       this.updateViewGrid();
     };
 
-    this.renderer.sortPriceBtn.addEventListener('click', (e) => handleSortClick('PRICE', e));
-    this.renderer.sortBetaBtn.addEventListener('click', (e) => handleSortClick('BETA', e));
-    this.renderer.sortSectorBtn.addEventListener('click', (e) => handleSortClick('SECTOR', e));
+    if (this.renderer.sortPriceBtn) this.renderer.sortPriceBtn.addEventListener('click', (e) => handleSortClick('PRICE', e));
+    if (this.renderer.sortBetaBtn) this.renderer.sortBetaBtn.addEventListener('click', (e) => handleSortClick('BETA', e));
+    if (this.renderer.sortSizeBtn) this.renderer.sortSizeBtn.addEventListener('click', (e) => handleSortClick('SIZE', e));
+    if (this.renderer.sortSectorBtn) this.renderer.sortSectorBtn.addEventListener('click', (e) => handleSortClick('SECTOR', e));
   }
 
   bindResetBtn() {
+    if (!this.renderer.resetBtn) return;
     this.renderer.resetBtn.addEventListener('click', () => {
+      // Trigger smooth 360-degree spin animation on reset icon
+      const icon = this.renderer.resetBtn.querySelector('.reset-icon');
+      if (icon) {
+        icon.classList.remove('spin-once');
+        void icon.offsetWidth; // Reflow to restart keyframe animation
+        icon.classList.add('spin-once');
+        setTimeout(() => icon.classList.remove('spin-once'), 500);
+      }
+
       this.state.resetFilters();
       this.renderer.updateSortButtonsUI(this.state.sortStates);
       this.renderer.updateSectorPillsUI(this.state.selectedSectors);
@@ -201,6 +283,7 @@ export class MarketBoardController {
 
             const isGM = (this.state.role === 'game_master');
             this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
+            this.renderer.showTopToast("ACTION UNDONE", "Reverted last room action", "info");
           }
         } catch (error) {
           console.error("Failed to undo room action:", error);
@@ -241,6 +324,7 @@ export class MarketBoardController {
 
             const isGM = (this.state.role === 'game_master');
             this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
+            this.renderer.showTopToast("ACTION REDONE", "Re-applied next room action", "info");
           }
         } catch (error) {
           console.error("Failed to redo room action:", error);
@@ -310,6 +394,7 @@ export class MarketBoardController {
           
           this.updateViewGrid();
           closeConfirm();
+          this.renderer.showTopToast("MARKET RESET", "Reset all stock prices to initial starting values", "warning");
         } catch (error) {
           console.error("Failed to reset board in database:", error);
         }

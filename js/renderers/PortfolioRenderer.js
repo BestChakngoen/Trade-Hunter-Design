@@ -17,19 +17,6 @@ export class PortfolioRenderer {
       const userBuyOrders = allOrders.filter(o => o && o.uid && String(o.uid).trim().toLowerCase() === targetUidStr && o.type === 'BUY');
       
       pendingBuyTotal = userBuyOrders.reduce((sum, o) => sum + (Number(o.volume || 1) * Number(o.price || 0)), 0);
-      
-      console.log('🔍 [DEBUG PortfolioRenderer]', {
-        userUid,
-        targetUidStr,
-        allPendingOrdersCount: allOrders.length,
-        userBuyOrdersCount: userBuyOrders.length,
-        userBuyOrders,
-        cash: stats.cash,
-        pendingBuyTotal,
-        effectiveCash: Math.max(0, stats.cash - pendingBuyTotal)
-      });
-    } else {
-      console.log('⚠️ [DEBUG PortfolioRenderer] Missing userUid or pendingOrders', { userUid, pendingOrders });
     }
     const effectiveCash = Math.max(0, stats.cash - pendingBuyTotal);
 
@@ -117,12 +104,21 @@ export class PortfolioRenderer {
     
     const orderList = Object.values(orders);
     const badgeEl = document.getElementById('gmPendingBadge');
+    const tabMgmtBadge = document.getElementById('tabMgmtBadge');
     
     if (badgeEl) {
       if (orderList.length > 0) {
         badgeEl.style.setProperty('display', 'inline-block', 'important');
       } else {
         badgeEl.style.setProperty('display', 'none', 'important');
+      }
+    }
+
+    if (tabMgmtBadge) {
+      if (orderList.length > 0) {
+        tabMgmtBadge.style.setProperty('display', 'inline-block', 'important');
+      } else {
+        tabMgmtBadge.style.setProperty('display', 'none', 'important');
       }
     }
 
@@ -142,15 +138,15 @@ export class PortfolioRenderer {
       
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-order-id="${order.id}">
+          <td class="p-3 text-center flex justify-center gap-2">
+            <button class="gm-approve-btn">Approve</button>
+            <button class="gm-reject-btn">Reject</button>
+          </td>
           <td class="p-3 font-semibold text-white">${order.username}</td>
           <td class="p-3 ${actionColor}">${order.type}</td>
           <td class="p-3 font-bold text-yellow-500">${order.symbol}</td>
           <td class="p-3">${order.volume.toLocaleString('en-US')}</td>
           <td class="p-3 text-gray-400">${formattedProposedPrice}</td>
-          <td class="p-3 text-center flex justify-center gap-2">
-            <button class="gm-approve-btn">✔️ Approve</button>
-            <button class="gm-reject-btn">❌ Reject</button>
-          </td>
         </tr>
       `;
     });
@@ -204,7 +200,7 @@ export class PortfolioRenderer {
           <td class="font-semibold text-white">${totalAmount.toLocaleString('en-US')}</td>
           <td>
             <span class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
-              PENDING GM APPROVAL
+              PENDING
             </span>
           </td>
         </tr>

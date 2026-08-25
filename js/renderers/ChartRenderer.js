@@ -23,6 +23,7 @@ export class ChartRenderer {
     const data = history.length === 1 ? [history[0], history[0]] : history;
     const displayData = data.slice(-15);
     
+    const startPrice = history[0];
     const initialVal = displayData[0];
     const currentVal = displayData[displayData.length - 1];
     const isPositive = currentVal >= initialVal;
@@ -30,8 +31,20 @@ export class ChartRenderer {
     const strokeColor = isPositive ? '#2dcc86' : '#ef4566';
     const shadowColor = isPositive ? 'rgba(45, 204, 134, 0.12)' : 'rgba(239, 69, 102, 0.12)';
     
-    const minVal = Math.min(...displayData) * 0.98;
-    const maxVal = Math.max(...displayData) * 1.02;
+    // Auto Zoom Out: Calculate Min & Max bounds including display points and Start Price
+    const allRelevantPoints = [...displayData, startPrice];
+    const rawMin = Math.min(...allRelevantPoints);
+    const rawMax = Math.max(...allRelevantPoints);
+    const rawDiff = rawMax - rawMin;
+    
+    // Dynamic Auto Zoom Out margin buffer (12% - 25% margin padding)
+    const marginRatio = rawDiff === 0 ? 0.15 : Math.max(0.12, Math.min(0.25, rawDiff / (rawMax || 1)));
+    let minVal = Math.max(0, rawMin - Math.max(100, rawDiff * marginRatio));
+    let maxVal = rawMax + Math.max(100, rawDiff * marginRatio);
+    
+    if (startPrice <= minVal) minVal = Math.max(0, startPrice * 0.85);
+    if (startPrice >= maxVal) maxVal = startPrice * 1.15;
+    
     const range = maxVal - minVal === 0 ? 100 : maxVal - minVal;
     
     const paddingLeft = 38;
@@ -68,8 +81,6 @@ export class ChartRenderer {
         y: paddingTop + chartHeight - ((p - minVal) / range) * chartHeight
       };
     });
-    
-    const startPrice = history[0];
     
     // Save chart coordinates and data properties inside the DOM element for interactivity
     canvas.chartData = {
@@ -156,17 +167,19 @@ export class ChartRenderer {
       ctx.fillText(label, coord.x, height - 8);
     }
 
-    // 6. Draw start & end dots
+    // 6. Draw dots on every trading step point along the line (Trading Frequency Nodes)
     coords.forEach((coord, i) => {
-      if (i === coords.length - 1 || i === 0) {
-        ctx.beginPath();
-        ctx.arc(coord.x, coord.y, i === coords.length - 1 ? 4 : 3, 0, Math.PI * 2);
-        ctx.fillStyle = i === coords.length - 1 ? strokeColor : '#ffffff';
-        ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = strokeColor;
-        ctx.stroke();
-      }
+      ctx.beginPath();
+      const isLatest = i === coords.length - 1;
+      const isStart = i === 0;
+      const radius = isLatest ? 4 : isStart ? 3 : 2.5;
+      
+      ctx.arc(coord.x, coord.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = isLatest ? strokeColor : isStart ? '#ffffff' : '#000000';
+      ctx.fill();
+      ctx.lineWidth = isLatest ? 2 : 1.5;
+      ctx.strokeStyle = strokeColor;
+      ctx.stroke();
     });
 
     // 7. Draw timeline vertical tracker line & highlight circle
@@ -355,6 +368,7 @@ export class ChartRenderer {
       const startEl = chartContainer.querySelector('.stat-start-price');
       const currentEl = chartContainer.querySelector('.stat-current-price');
       const betaEl = chartContainer.querySelector('.stat-beta-price');
+      const sizeEl = chartContainer.querySelector('.stat-size-badge');
       const changeEl = chartContainer.querySelector('.stat-change-pct');
       
       if (startEl) startEl.textContent = startPrice.toLocaleString('en-US');
@@ -369,6 +383,13 @@ export class ChartRenderer {
         const betaStyle = this.rendererRef ? this.rendererRef.calculateBetaColor(beta) : { color: '#fff', shadow: 'none' };
         betaEl.style.color = betaStyle.color;
         betaEl.style.textShadow = betaStyle.shadow;
+      }
+      if (sizeEl) {
+        const stockSize = card.getAttribute('data-size') || 'M';
+        sizeEl.textContent = stockSize;
+        sizeEl.className = stockSize === 'L' ? 'stat-size-badge text-xs font-bold text-blue-400' :
+                          stockSize === 'S' ? 'stat-size-badge text-xs font-bold text-amber-400' :
+                          'stat-size-badge text-xs font-bold text-emerald-400';
       }
       if (changeEl) {
         changeEl.textContent = `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`;

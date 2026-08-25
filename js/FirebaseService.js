@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, setPersistence, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { getDatabase, ref, get, set, update, onValue, onDisconnect } from 'firebase/database';
+import { getDatabase, ref, get, set, update, onValue, onDisconnect, runTransaction } from 'firebase/database';
 
 export class FirebaseService {
   constructor() {
@@ -39,7 +39,6 @@ export class FirebaseService {
     // Sign in anonymously to obtain a UID for the Realtime Database member tracking
     const credential = await signInAnonymously(this.auth);
     this.currentUser = credential.user;
-    console.log("Authenticated anonymously with UID:", this.currentUser.uid);
   }
 
   getCurrentUser() {
@@ -49,15 +48,9 @@ export class FirebaseService {
   // Check if room code exists in Firestore collection (games/traderHunter/rooms)
   async checkRoomExists(roomCode) {
     try {
-      console.log("Checking room validity for code:", roomCode);
-      const roomsSnapshot = await getDocs(collection(this.firestore, "games", "traderHunter", "rooms"));
-      let exists = false;
-      roomsSnapshot.forEach(doc => {
-        if (doc.id === roomCode) {
-          exists = true;
-        }
-      });
-      return exists;
+      const roomDocRef = doc(this.firestore, "games", "traderHunter", "rooms", roomCode);
+      const roomDocSnap = await getDoc(roomDocRef);
+      return roomDocSnap.exists();
     } catch (error) {
       console.error("Error in checkRoomExists:", error);
       throw error;
@@ -175,9 +168,7 @@ export class FirebaseService {
   // Realtime Database: Set trigger to clean up player node upon closing tab / disconnecting
   configureDisconnectCleanup(roomCode, userId) {
     const userRef = this.getUserInBoardRef(roomCode, userId);
-    onDisconnect(userRef).remove().then(() => {
-      console.log(`Configured onDisconnect cleanup for user ${userId}`);
-    }).catch(err => {
+    onDisconnect(userRef).remove().catch(err => {
       console.error("Failed to configure onDisconnect:", err);
     });
   }
@@ -190,9 +181,79 @@ export class FirebaseService {
       const boardRef = this.getBoardRef(roomCode);
       await set(roomRef, null);
       await set(boardRef, null);
-      console.log(`🧹 Purged empty room data for code: ${roomCode}`);
     } catch (e) {
       console.error("Failed to purge empty room data:", e);
     }
+  }
+
+  // Realtime Database: Remove a specific member node and their pending orders from room
+  async removeMemberFromRoom(roomCode, userId) {
+    if (!roomCode || !userId) return;
+    try {
+      const userRef = this.getUserInBoardRef(roomCode, userId);
+      await set(userRef, null);
+
+      // Purge all pending orders submitted by this player
+      const roomSnapshot = await this.getRoomStateSnapshot(roomCode);
+      if (roomSnapshot && roomSnapshot.exists()) {
+        const roomData = roomSnapshot.val();
+        const pendingOrders = roomData.pendingOrders || {};
+        const updates = {};
+        Object.entries(pendingOrders).forEach(([orderId, order]) => {
+          if (order && order.uid === userId) {
+            updates[`pendingOrders/${orderId}`] = null;
+          }
+        });
+        if (Object.keys(updates).length > 0) {
+          await this.updateRoom(roomCode, updates);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to remove member from room:", e);
+    }
+  }
+
+  // Realtime Database: Join room atomically with transaction to handle high concurrency
+  async joinRoomWithTransaction(roomCode, userObj, maxPlayers = 10) {
+    const roomRef = this.getRoomRef(roomCode);
+    
+    const result = await runTransaction(roomRef, (currentData) => {
+      if (currentData === null) {
+        return currentData;
+      }
+
+      const members = currentData.members || {};
+      const memberUids = Object.keys(members);
+      
+      // Rejoining player
+      if (members[userObj.uid]) {
+        return currentData;
+      }
+
+      // Concurrency Limit Check
+      if (memberUids.length >= maxPlayers) {
+        return; // Abort transaction (returns committed: false)
+      }
+
+      if (!currentData.members) {
+        currentData.members = {};
+      }
+
+      const memberObj = {
+        role: userObj.role,
+        displayName: userObj.displayName,
+        joinedAt: Date.now()
+      };
+      if (userObj.role === 'player') {
+        memberObj.portfolio = { cash: 20000 };
+      }
+
+      currentData.members[userObj.uid] = memberObj;
+      currentData.lastJoinedAt = Date.now();
+
+      return currentData;
+    });
+
+    return result;
   }
 }
