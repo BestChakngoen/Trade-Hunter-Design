@@ -387,9 +387,7 @@ export class ChartRenderer {
       if (sizeEl) {
         const stockSize = card.getAttribute('data-size') || 'M';
         sizeEl.textContent = stockSize;
-        sizeEl.className = stockSize === 'L' ? 'stat-size-badge text-xs font-bold text-blue-400' :
-                          stockSize === 'S' ? 'stat-size-badge text-xs font-bold text-amber-400' :
-                          'stat-size-badge text-xs font-bold text-emerald-400';
+        sizeEl.className = 'stat-size-badge text-xs font-bold text-white';
       }
       if (changeEl) {
         changeEl.textContent = `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`;

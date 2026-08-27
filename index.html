@@ -22,34 +22,33 @@
 </head>
 <body>
   <!-- Lobby / Code Entrance Screen -->
-  <div id="lobbyScreen" class="bg-black flex flex-col justify-start items-center w-full min-h-screen min-h-[100dvh]" style="display: none;">
-    <!-- แถบขาวด้านบนสุดสำหรับแสดงโลโก้ตรงกลาง -->
-    <header class="lobby-header w-full bg-white flex justify-center items-center shadow-sm shrink-0">
-      <img src="Assets/logo-transparent-0.5x.png" class="lobby-header-logo object-contain" alt="FINDICE Logo" />
-    </header>
-
-    <!-- เนื้อหาหลัก (ใช้ justify-start เพื่อให้ทุกค่า margin-bottom / padding-top ใน css/lobby.css ทำงานได้ 100% โดยไม่ถูก Flexbox กลืน) -->
-    <main class="lobby-spacing-top lobby-screen-padding-sides lobby-screen-padding-bottom flex flex-col justify-start items-center w-full flex-1 max-w-md">
-      <!-- ข้อความ BOARD GAME (คลาส lobby-title-text & lobby-spacing-title-to-image) -->
-      <div class="lobby-title-text lobby-spacing-title-to-image">
-        BOARD GAME
+  <div id="lobbyScreen" class="flex flex-col justify-between items-center w-full h-[100vh] h-[100dvh] relative overflow-hidden" style="background-image: url('Assets/UI_Lobby/BG.png'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+    <!-- เนื้อหาหลัก (จัดวาง Logo, Character, Code Input, Join Button ตามแบบ IMG_1417.jpg) -->
+    <main class="flex flex-col items-center justify-between w-full h-full max-w-full px-4 py-3 sm:py-5 z-10 box-border overflow-y-auto">
+      <!-- 1. โลโก้เกม Trader Hunter -->
+      <div class="lobby-logo-wrapper flex justify-center items-center w-full shrink-0">
+        <img src="Assets/UI_Lobby/Logo.png" class="lobby-logo-img object-contain" alt="TRADER HUNTER Logo" />
       </div>
 
-      <!-- รูปภาพปก Trader Hunter Banner (คลาส lobby-spacing-image-to-form) -->
-      <div class="flex justify-center lobby-spacing-image-to-form">
-        <img src="Assets/trader_hunter.jpg" class="img-fluid lobby-banner-img rounded-xl shadow-md border border-gray-800" alt="Trader Hunter Banner" />
+      <!-- 2. รูปภาพตัวละครหลัก 4 คน -->
+      <div class="lobby-character-wrapper flex justify-center items-center w-full my-auto shrink-0">
+        <img src="Assets/UI_Lobby/Picture%20character.png" class="lobby-character-img object-contain" alt="Trader Hunter Characters" />
       </div>
 
-      <!-- ช่องกรอกรหัสและปุ่มกด (คลาส lobby-spacing-input-to-btn) -->
-      <form id="lobbyForm" class="flex flex-col items-center w-full">
-        <div class="lobby-input-wrapper flex flex-col items-center w-full lobby-spacing-input-to-btn">
-          <label for="roomCodeInput" class="lobby-spacing-label-to-input block text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Code</label>
-          <input type="text" id="roomCodeInput" class="lobby-input bg-gray-800 border border-gray-700 text-white text-base rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 text-center uppercase font-black tracking-widest placeholder-gray-500 transition-all" placeholder="Room Code" required autocomplete="off" />
+      <!-- 3. ฟอร์มกรอกรหัสและปุ่มกด (อยู่ใต้ภาพตัวละคร) -->
+      <form id="lobbyForm" class="flex flex-col items-center w-full gap-2 shrink-0 relative z-20 mb-1" novalidate>
+        <!-- กรอบช่องกรอกรหัส CodeButton.png (หลอดขาว + วงกลมกุญแจสีเขียว) -->
+        <div class="lobby-code-box relative flex items-center justify-start">
+          <img src="Assets/UI_Lobby/CodeButton.png" class="lobby-code-btn-bg" alt="Code Frame" />
+          <input type="text" id="roomCodeInput" class="lobby-code-input" placeholder="ENTER ROOM CODE HERE!" autocomplete="off" maxlength="15" pattern="[A-Za-z0-9]+" />
+          <button type="submit" class="lobby-key-submit-btn" aria-label="Confirm Code"></button>
         </div>
 
-        <div class="lobby-btn-wrapper flex flex-col items-center w-full">
-          <button type="submit" id="joinRoomBtn" class="lobby-submit-btn text-[11px] sm:text-xs font-bold py-2.5 px-2 text-center cursor-pointer whitespace-nowrap">
-            CREATE / JOIN GAME
+        <!-- ปุ่มกดเข้าห้อง JoyButton.png (จอย!) -->
+        <div class="lobby-join-box relative flex items-center justify-center">
+          <button type="submit" id="joinRoomBtn" class="lobby-joy-btn flex items-center justify-center cursor-pointer" aria-label="JOIN GAME">
+            <img src="Assets/UI_Lobby/JoyButton.png" class="lobby-joy-btn-img" alt="JOY!" />
+            <span class="lobby-joy-btn-text">JOY</span>
           </button>
         </div>
       </form>
@@ -58,6 +57,11 @@
     <!-- Apple-Style Floating Role Selection Modal Card -->
     <div id="roleSelectionModal" class="apple-modal-overlay" style="display: none;">
       <div class="apple-modal-card">
+        <button type="button" id="roleOptCloseBtn" class="apple-modal-close" aria-label="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         <h3 class="apple-modal-title">Select Your Role</h3>
         <p class="apple-modal-subtitle">Please select a role to enter this game room.</p>
         
@@ -68,10 +72,6 @@
 
           <button type="button" id="roleOptPlayerBtn" class="apple-btn-player">
             Player
-          </button>
-
-          <button type="button" id="roleOptCancelBtn" class="apple-btn-cancel">
-            Cancel
           </button>
         </div>
       </div>
@@ -88,6 +88,59 @@
             OK
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Apple-Style Invalid Room Code Alert Modal Card -->
+    <div id="invalidRoomModal" class="apple-modal-overlay" style="display: none;">
+      <div class="apple-modal-card">
+        <h3 class="apple-modal-title" style="color: #ff453a;">Invalid Room Code</h3>
+        <p class="apple-modal-subtitle">Room code "<span id="invalidRoomCodeText" class="font-bold text-white uppercase">-</span>" was not found in the system. Please check your room code or contact system administrator.</p>
+        
+        <div class="apple-modal-actions">
+          <button type="button" id="invalidRoomOkBtn" class="apple-btn-gm" style="background: #ff453a; box-shadow: 0 4px 14px rgba(255, 69, 58, 0.35);">
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apple-Style Game Mode Selection Modal Card (For GM) -->
+    <div id="gameModeSelectionModal" class="apple-modal-overlay" style="display: none;">
+      <div class="apple-modal-card">
+        <h3 class="apple-modal-title">Select Game Mode</h3>
+        <p class="apple-modal-subtitle">Choose the gameplay mode for all players in this room.</p>
+        
+        <div class="apple-modal-actions flex flex-col gap-3" style="flex-direction: column;">
+          <button type="button" id="gameModeBasicBtn" class="apple-btn-basic">
+            <div class="flex flex-col items-start text-left">
+              <span class="font-black text-sm">Basic Mode</span>
+              <span class="text-[10px] opacity-80 font-normal">Price tracking board & filters only. No Portfolio/Management tabs.</span>
+            </div>
+          </button>
+
+          <button type="button" id="gameModeAdvanceBtn" class="apple-btn-advance">
+            <div class="flex flex-col items-start text-left">
+              <span class="font-black text-sm">Advance Mode</span>
+              <span class="text-[10px] opacity-80 font-normal">Full feature set including Portfolio, Management, Orders, & Finance.</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apple-Style Waiting For GM Modal Card (For Players) -->
+    <div id="waitingForGMModal" class="apple-modal-overlay" style="display: none;">
+      <div class="apple-modal-card flex flex-col items-center">
+        <div class="mb-4 flex justify-center">
+          <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <h3 class="apple-modal-title">Waiting for Game Master</h3>
+        <p class="apple-modal-subtitle text-xs text-gray-400 mb-2">Room Code: <span id="waitingRoomCodeBadge" class="text-blue-400 font-bold uppercase">-</span></p>
+        <p class="apple-modal-subtitle" style="margin-bottom: 0;">Please wait while the Game Master selects the game mode...</p>
       </div>
     </div>
   </div>
@@ -224,7 +277,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">5,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">FINCIAL</span><span class="card-beta">Beta 1.20</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 2. ABF -->
@@ -237,7 +290,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">5,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-amber-400">S</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">S</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">AGRO</span><span class="card-beta">Beta 2.03</span><span class="card-size">Size S</span></div>
         </article>
         <!-- 3. ZIF -->
@@ -250,7 +303,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">6,300</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">INDUS</span><span class="card-beta">Beta 1.15</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 4. FSF -->
@@ -263,7 +316,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">5,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">FINCIAL</span><span class="card-beta">Beta 0.43</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 5. SICF -->
@@ -276,7 +329,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">7,500</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-amber-400">S</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">S</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">TECH</span><span class="card-beta">Beta 2.11</span><span class="card-size">Size S</span></div>
         </article>
         <!-- 6. SUF -->
@@ -289,7 +342,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">7,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">AGRO</span><span class="card-beta">Beta 1.61</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 7. SAAF -->
@@ -302,7 +355,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">7,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">RESOURCE</span><span class="card-beta">Beta 0.73</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 8. VCOF -->
@@ -315,7 +368,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">10,500</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">TECH</span><span class="card-beta">Beta 1.73</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 9. ARROF -->
@@ -328,7 +381,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">10,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">PROPCON</span><span class="card-beta">Beta 0.58</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 10. KISF -->
@@ -341,7 +394,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">10,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">CONSUMP</span><span class="card-beta">Beta 1.23</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 11. TNF -->
@@ -354,7 +407,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">15,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-emerald-400">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">M</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">SERVICE</span><span class="card-beta">Beta 0.35</span><span class="card-size">Size M</span></div>
         </article>
         <!-- 12. DTSF -->
@@ -367,7 +420,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">15,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-blue-400">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">TECH</span><span class="card-beta">Beta 1.27</span><span class="card-size">Size L</span></div>
         </article>
         <!-- 13. DPF -->
@@ -380,7 +433,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">8,200</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-blue-400">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">AGRO</span><span class="card-beta">Beta 0.90</span><span class="card-size">Size L</span></div>
         </article>
         <!-- 14. DTF -->
@@ -393,7 +446,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">4,100</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-blue-400">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">INDUS</span><span class="card-beta">Beta 0.33</span><span class="card-size">Size L</span></div>
         </article>
         <!-- 15. PTF -->
@@ -406,7 +459,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">12,000</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-blue-400">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">RESOURCE</span><span class="card-beta">Beta 1.25</span><span class="card-size">Size L</span></div>
         </article>
         <!-- 16. CUF -->
@@ -419,7 +472,7 @@
             <div class="price-box"><p class="card-value text-2xl sm:text-3xl text-center font-bold text-gray-900">3,500</p></div>
             <div class="card-controls shrink-0"><div class="flex flex-col gap-1 items-center justify-center"><button class="control-btn up" title="Increase Price"><img src="Assets/caret-up-solid.png" alt="Up"></button><button class="control-btn down" title="Decrease Price"><img src="Assets/caret-down-solid.png" alt="Down"></button></div></div>
           </div>
-          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-blue-400">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
+          <div class="chart-container w-full" style="display: none;"><canvas class="stock-chart-canvas w-full h-32 mt-4"></canvas><div class="chart-stats-grid"><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Start</span><span class="stat-start-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Beta</span><span class="stat-beta-price text-xs font-bold text-gray-300">0</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Size</span><span class="stat-size-badge text-xs font-bold text-white">L</span></div><div><span class="block text-[8px] text-gray-500 font-bold uppercase tracking-wider">Change</span><span class="stat-change-pct text-xs font-bold text-gray-300">0%</span></div></div></div>
           <div style="display: none;"><span class="card-sector">CONSUMP</span><span class="card-beta">Beta 0.17</span><span class="card-size">Size L</span></div>
         </article>
       </div>
@@ -430,9 +483,9 @@
       <div class="danger-zone-card flex flex-col items-start gap-4">
         <div class="danger-zone-info w-full">
           <span class="danger-zone-title block">Danger Zone</span>
-          <p class="danger-zone-desc mt-1">Restart the game board. This will reset all stock prices to their initial starting values and wipe the price history graphs.</p>
+          <p class="danger-zone-desc mt-1">Restart the entire game session. This will reset all stock prices to starting values, reset all player portfolios to 20,000 cash, clear stock/debt holdings, and wipe all pending orders.</p>
         </div>
-        <button id="resetMarketBtn" class="danger-btn whitespace-nowrap">Reset Market Prices</button>
+        <button id="resetMarketBtn" class="danger-btn whitespace-nowrap">Reset Game</button>
       </div>
     </section>
     </div> <!-- Close marketTabContent -->
@@ -495,13 +548,12 @@
                 <th>Type</th>
                 <th>Symbol</th>
                 <th>Proposed Price</th>
-                <th>Estimated Amount</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody id="playerPendingOrdersBody">
               <tr>
-                <td colspan="5" class="text-center py-4 text-gray-500">No pending orders</td>
+                <td colspan="4" class="text-center py-4 text-gray-500">No pending orders</td>
               </tr>
             </tbody>
           </table>
@@ -628,6 +680,33 @@
             </button>
           </form>
         </div>
+      </section>
+
+      <!-- Debt Instruments Section -->
+      <section class="debt-section mb-10">
+        <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
+          <h3 class="text-xs font-black text-indigo-400 uppercase tracking-widest">DEBT INSTRUMENTS</h3>
+        </div>
+        <div class="table-container" id="debtTableContainer">
+          <table class="holdings-table min-w-[580px]">
+            <thead>
+              <tr>
+                <th class="text-center">Decisions</th>
+                <th>Instrument</th>
+                <th>Unit Value</th>
+                <th>Units Held</th>
+                <th>Total Value</th>
+                <th>Interest / Unit</th>
+              </tr>
+            </thead>
+            <tbody id="debtTableBody">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-gray-500">Loading debt instruments...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
 
     <!-- GM MANAGEMENT TAB CONTENT -->
@@ -662,7 +741,7 @@
       </section>
 
       <!-- GM Player Salary Management Panel -->
-      <section id="gmPlayerSalarySection" class="w-full mb-10 max-w-5xl mx-auto" style="display: block;">
+      <section id="gmPlayerSalarySection" class="w-full mb-8 max-w-5xl mx-auto" style="display: block;">
         <div class="p-2 sm:p-4">
           <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
             <h3 class="text-xs font-black text-emerald-400 uppercase tracking-widest">PLAYER SALARY MANAGEMENT</h3>
@@ -671,12 +750,62 @@
             <table class="gm-pending-orders-table w-full text-left text-xs text-gray-300 min-w-[480px]">
               <thead>
                 <tr class="border-b border-gray-800 bg-gray-950 text-gray-500">
-                  <th class="p-3">Player Name</th>
+                  <th class="p-3 text-center w-36">Action</th>
+                  <th class="p-3">Player</th>
                   <th class="p-3">Current Cash</th>
-                  <th class="p-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody id="gmPlayerSalaryBody">
+                <tr>
+                  <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- GM Player Dividend Management Panel -->
+      <section id="gmPlayerDividendSection" class="w-full mb-10 max-w-5xl mx-auto" style="display: block;">
+        <div class="p-2 sm:p-4">
+          <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
+            <h3 class="text-xs font-black text-indigo-400 uppercase tracking-widest">PLAYER DIVIDEND MANAGEMENT</h3>
+          </div>
+          <div class="table-container overflow-x-auto" id="gmPlayerDividendTableContainer">
+            <table class="gm-pending-orders-table w-full text-left text-xs text-gray-300 min-w-[480px]">
+              <thead>
+                <tr class="border-b border-gray-800 bg-gray-950 text-gray-500">
+                  <th class="p-3 text-center w-36">Action</th>
+                  <th class="p-3">Player</th>
+                  <th class="p-3">Stock Sizes</th>
+                </tr>
+              </thead>
+              <tbody id="gmPlayerDividendBody">
+                <tr>
+                  <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- GM Player Debt Interest Management Panel -->
+      <section id="gmPlayerDebtInterestSection" class="w-full mb-10 max-w-5xl mx-auto" style="display: block;">
+        <div class="p-2 sm:p-4">
+          <div class="gm-pending-title-wrapper flex items-center justify-between bg-gray-950/60 rounded-lg px-5 py-3 mb-5">
+            <h3 class="text-xs font-black text-white uppercase tracking-widest">PLAYER DEBT INTEREST MANAGEMENT</h3>
+          </div>
+          <div class="table-container overflow-x-auto" id="gmPlayerDebtInterestTableContainer">
+            <table class="gm-pending-orders-table w-full text-left text-xs text-gray-300 min-w-[480px]">
+              <thead>
+                <tr class="border-b border-gray-800 bg-gray-950 text-gray-500">
+                  <th class="p-3 text-center w-36">Action</th>
+                  <th class="p-3">Player</th>
+                  <th class="p-3">Debt Holdings</th>
+                </tr>
+              </thead>
+              <tbody id="gmPlayerDebtInterestBody">
                 <tr>
                   <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
                 </tr>
@@ -693,14 +822,14 @@
   <div id="confirmModal" class="modal">
     <div class="modal-content confirm-modal-content">
       <header class="modal-header">
-        <h3 class="confirm-modal-title">⚠️ Reset Market?</h3>
+        <h3 class="confirm-modal-title">⚠️ Reset Entire Game?</h3>
         <button id="closeConfirmModalBtn" class="close-modal-btn">&times;</button>
       </header>
       <div class="modal-body confirm-modal-body">
-        <p>Are you sure you want to reset all stock prices and history graphs to their starting values? This will restart the game board state. This action cannot be undone.</p>
+        <p>Are you sure you want to reset the entire game? This will reset all stock prices, set all players' cash to 20,000, clear all stock/debt holdings, and wipe pending orders. This action cannot be undone.</p>
         <div class="confirm-actions">
           <button id="cancelResetBtn" class="confirm-btn cancel-btn">Cancel</button>
-          <button id="confirmResetBtn" class="confirm-btn reset-btn-confirm">Reset Prices</button>
+          <button id="confirmResetBtn" class="confirm-btn reset-btn-confirm">Reset Game</button>
         </div>
       </div>
     </div>

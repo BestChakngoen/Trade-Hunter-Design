@@ -1,6 +1,7 @@
 import { LobbyController } from './controllers/LobbyController.js';
 import { TradeController } from './controllers/TradeController.js';
 import { MarketBoardController } from './controllers/MarketBoardController.js';
+import { TradeService } from './services/TradeService.js';
 
 /**
  * MarketController - Main Facade Controller coordinating Lobby, Trading, and Market Board modules.
@@ -19,6 +20,10 @@ export class MarketController {
 
     this.boardListenerUnsubscribe = null;
     this.roomListenerUnsubscribe = null;
+    this.prevSalaryTimestamp = null;
+    this.prevInterestTimestamp = null;
+    this.prevDividendTimestamp = null;
+    this.prevDebtInterestTimestamp = null;
   }
 
   get updateTradeFormPrice() {
@@ -45,6 +50,13 @@ export class MarketController {
     this.marketBoardController.bindDangerZone();
     this.marketBoardController.bindSpectatorEvents();
 
+    if (this.renderer.payAllDividendBtn) {
+      this.renderer.payAllDividendBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await this.tradeController.payAllPlayersDividend();
+      });
+    }
+
     // 3. Tab Navigation & Trade Form Events
     this.renderer.bindTabEvents((tab) => {
       if (tab === 'portfolio') {
@@ -52,6 +64,12 @@ export class MarketController {
         const user = this.firebaseService.getCurrentUser();
         const uid = user ? user.uid : null;
         this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, uid);
+        const debtData = TradeService.calculateDebtInstrumentsValue(this.state.portfolio?.debt);
+        this.renderer.updateDebtInstrumentsUI(
+          debtData,
+          async (key) => { await this.tradeController.submitDebtOrder('INVEST', key); },
+          async (key) => { await this.tradeController.submitDebtOrder('REDEEM', key); }
+        );
         if (this.tradeController.refreshDropdownOptions) {
           this.tradeController.refreshDropdownOptions();
         }
@@ -193,6 +211,12 @@ export class MarketController {
         const stats = this.state.getPortfolioStats();
         const uid = user ? user.uid : null;
         this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, uid);
+        const debtData = TradeService.calculateDebtInstrumentsValue(this.state.portfolio?.debt);
+        this.renderer.updateDebtInstrumentsUI(
+          debtData,
+          async (key) => { await this.tradeController.submitDebtOrder('INVEST', key); },
+          async (key) => { await this.tradeController.submitDebtOrder('REDEEM', key); }
+        );
       }
 
       if (this.tradeController.updateTradeFormPrice) {
@@ -228,14 +252,35 @@ export class MarketController {
         // Update real-time room members count & capacity status badge
         this.renderer.updateRoomMembersUI(roomData.members, roomData.roomSettings);
 
+        // Detect members who left the room and purge their data from undo/redo history
+        const currentMemberUids = new Set(Object.keys(roomData.members || {}));
+        if (this.prevMemberUids) {
+          this.prevMemberUids.forEach(uid => {
+            if (!currentMemberUids.has(uid)) {
+              this.state.removeMemberFromHistory(uid);
+            }
+          });
+        }
+        this.prevMemberUids = currentMemberUids;
+
+        if (roomData.roomSettings && roomData.roomSettings.gameMode) {
+          this.state.setGameMode(roomData.roomSettings.gameMode);
+        }
+
         if (roomData.members && roomData.members[currentUid]) {
           const memberData = roomData.members[currentUid];
           this.state.updatePortfolioFromMemberData(memberData);
 
-          this.renderer.updateControlsVisibility(this.state.role, this.state.playerName);
+          this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
 
           const stats = this.state.getPortfolioStats();
           this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, orders, currentUid);
+          const debtData = TradeService.calculateDebtInstrumentsValue(this.state.portfolio?.debt);
+          this.renderer.updateDebtInstrumentsUI(
+            debtData,
+            async (key) => { await this.tradeController.submitDebtOrder('INVEST', key); },
+            async (key) => { await this.tradeController.submitDebtOrder('REDEEM', key); }
+          );
           if (this.tradeController.refreshDropdownOptions) {
             this.tradeController.refreshDropdownOptions();
           }
@@ -275,6 +320,28 @@ export class MarketController {
               "success"
             );
           }
+
+          const lastDividendMap = roomData.lastDividendReceived || roomData.lastInterestReceived || {};
+          const myDividend = lastDividendMap[currentUid];
+          if (myDividend && myDividend.timestamp && myDividend.timestamp !== this.prevDividendTimestamp) {
+            this.prevDividendTimestamp = myDividend.timestamp;
+            this.renderer.showTopToast(
+              "DIVIDEND RECEIVED",
+              `You received stock dividend of ${Number(myDividend.amount || 0).toLocaleString('en-US')} from GM.`,
+              "success"
+            );
+          }
+
+          const lastDebtInterestMap = roomData.lastDebtInterestReceived || {};
+          const myDebtInterest = lastDebtInterestMap[currentUid];
+          if (myDebtInterest && myDebtInterest.timestamp && myDebtInterest.timestamp !== this.prevDebtInterestTimestamp) {
+            this.prevDebtInterestTimestamp = myDebtInterest.timestamp;
+            this.renderer.showTopToast(
+              "DEBT INTEREST RECEIVED",
+              `You received debt interest of ${Number(myDebtInterest.amount || 0).toLocaleString('en-US')} from GM.`,
+              "success"
+            );
+          }
         }
 
         // GM: Detect New Player Order Arrival
@@ -300,6 +367,12 @@ export class MarketController {
           if (this.renderer.gmPlayerSalarySection) {
             this.renderer.gmPlayerSalarySection.style.display = 'block';
           }
+          if (this.renderer.gmPlayerDividendSection) {
+            this.renderer.gmPlayerDividendSection.style.display = 'block';
+          }
+          if (this.renderer.gmPlayerDebtInterestSection) {
+            this.renderer.gmPlayerDebtInterestSection.style.display = 'block';
+          }
           this.renderer.updateGMPendingOrdersUI(
             orders,
             async (orderId) => {
@@ -315,12 +388,33 @@ export class MarketController {
               await this.tradeController.payPlayerSalary(playerUid);
             }
           );
+          this.renderer.updateGMPlayerDividendUI(
+            roomData.members,
+            this.state.boardStocks,
+            this.state.masterStocks,
+            this.state.originalCards,
+            async (playerUid) => {
+              await this.tradeController.payPlayerDividend(playerUid);
+            }
+          );
+          this.renderer.updateGMPlayerDebtInterestUI(
+            roomData.members,
+            async (playerUid) => {
+              await this.tradeController.payPlayerDebtInterest(playerUid);
+            }
+          );
         } else {
           if (this.renderer.gmPendingOrdersSection) {
             this.renderer.gmPendingOrdersSection.style.display = 'none';
           }
           if (this.renderer.gmPlayerSalarySection) {
             this.renderer.gmPlayerSalarySection.style.display = 'none';
+          }
+          if (this.renderer.gmPlayerDividendSection) {
+            this.renderer.gmPlayerDividendSection.style.display = 'none';
+          }
+          if (this.renderer.gmPlayerDebtInterestSection) {
+            this.renderer.gmPlayerDebtInterestSection.style.display = 'none';
           }
         }
       });

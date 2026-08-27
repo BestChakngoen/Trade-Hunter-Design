@@ -1,3 +1,5 @@
+import { TradeService } from '../services/TradeService.js';
+
 /**
  * PortfolioRenderer - Manages Portfolio Assets Table, PnL Summaries, and Orders Approval Queue Tables.
  */
@@ -9,16 +11,9 @@ export class PortfolioRenderer {
     const portTotalPnL = document.getElementById('portTotalPnL');
     const holdingsTableBody = document.getElementById('holdingsTableBody');
     
-    // Calculate pending BUY amount reserved by this player
-    let pendingBuyTotal = 0;
-    if (userUid && pendingOrders) {
-      const targetUidStr = String(userUid).trim().toLowerCase();
-      const allOrders = Object.values(pendingOrders);
-      const userBuyOrders = allOrders.filter(o => o && o.uid && String(o.uid).trim().toLowerCase() === targetUidStr && o.type === 'BUY');
-      
-      pendingBuyTotal = userBuyOrders.reduce((sum, o) => sum + (Number(o.volume || 1) * Number(o.price || 0)), 0);
-    }
-    const effectiveCash = Math.max(0, stats.cash - pendingBuyTotal);
+    // Calculate pending BUY & INVEST amount reserved by this player
+    const availableCashObj = TradeService.calculateAvailableCash(stats.cash, pendingOrders, userUid);
+    const effectiveCash = availableCashObj.effectiveAvailableCash;
 
     // CASH is real cash (only deducted when GM approves)
     if (portCash) portCash.textContent = stats.cash.toLocaleString('en-US');
@@ -133,25 +128,32 @@ export class PortfolioRenderer {
     
     let html = '';
     orderList.forEach(order => {
-      const formattedProposedPrice = order.price.toLocaleString('en-US');
-      const actionColor = order.type === 'BUY' ? 'text-positive font-bold' : 'text-negative font-bold';
+      const formattedProposedPrice = (order.price || order.unitPrice || 0).toLocaleString('en-US');
+      const typeUpper = String(order.type || '').toUpperCase();
+      let actionColor = 'text-gray-300 font-bold';
+      if (typeUpper === 'BUY') {
+        actionColor = 'text-positive font-bold';
+      } else if (typeUpper === 'SELL') {
+        actionColor = 'text-negative font-bold';
+      } else if (typeUpper === 'INVEST') {
+        actionColor = 'text-invest font-bold';
+      } else if (typeUpper === 'REDEEM') {
+        actionColor = 'text-redeem font-bold';
+      }
       
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-order-id="${order.id}">
-          <td class="p-3 text-center flex justify-center gap-2">
-            <button class="gm-approve-btn">Approve</button>
-            <button class="gm-reject-btn">Reject</button>
-          </td>
-          <td class="p-3 font-semibold text-white">${order.username}</td>
-          <td class="p-3 ${actionColor}">${order.type}</td>
-          <td class="p-3 font-bold text-yellow-500">${order.symbol}</td>
-          <td class="p-3">${order.volume.toLocaleString('en-US')}</td>
-          <td class="p-3 text-gray-400">${formattedProposedPrice}</td>
+          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center gap-2 h-full"><button class="gm-approve-btn">Approve</button><button class="gm-reject-btn">Reject</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle">${order.username}</td>
+          <td class="p-3 ${actionColor} align-middle">${order.type}</td>
+          <td class="p-3 font-bold text-yellow-500 align-middle">${order.symbol}</td>
+          <td class="p-3 align-middle">${(order.volume || 1).toLocaleString('en-US')}</td>
+          <td class="p-3 text-gray-400 align-middle">${formattedProposedPrice}</td>
         </tr>
       `;
     });
     gmPendingOrdersBody.innerHTML = html;
-    
+
     const rows = gmPendingOrdersBody.querySelectorAll('tr[data-order-id]');
     rows.forEach(row => {
       const orderId = row.getAttribute('data-order-id');
@@ -181,7 +183,7 @@ export class PortfolioRenderer {
     if (myOrders.length === 0) {
       playerPendingOrdersBody.innerHTML = `
         <tr>
-          <td colspan="5" class="text-center py-4 text-gray-500 font-medium">No pending orders</td>
+          <td colspan="4" class="text-center py-4 text-gray-500 font-medium">No pending orders</td>
         </tr>
       `;
       return;
@@ -189,16 +191,25 @@ export class PortfolioRenderer {
     
     let html = '';
     myOrders.forEach(order => {
-      const totalAmount = order.volume * order.price;
-      const actionColor = order.type === 'BUY' ? 'text-positive font-bold' : 'text-negative font-bold';
+      const orderPrice = order.price || order.unitPrice || 0;
+      const typeUpper = String(order.type || '').toUpperCase();
+      let actionColor = 'text-gray-300 font-bold';
+      if (typeUpper === 'BUY') {
+        actionColor = 'text-positive font-bold';
+      } else if (typeUpper === 'SELL') {
+        actionColor = 'text-negative font-bold';
+      } else if (typeUpper === 'INVEST') {
+        actionColor = 'text-invest font-bold';
+      } else if (typeUpper === 'REDEEM') {
+        actionColor = 'text-redeem font-bold';
+      }
       
       html += `
         <tr class="hover:bg-gray-900 transition-colors">
-          <td class="${actionColor}">${order.type}</td>
-          <td class="font-bold text-white">${order.symbol}</td>
-          <td>${order.price.toLocaleString('en-US')}</td>
-          <td class="font-semibold text-white">${totalAmount.toLocaleString('en-US')}</td>
-          <td>
+          <td class="${actionColor} align-middle">${order.type}</td>
+          <td class="font-bold text-white align-middle">${order.symbol}</td>
+          <td class="align-middle">${orderPrice.toLocaleString('en-US')}</td>
+          <td class="align-middle">
             <span class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
               PENDING
             </span>
@@ -212,7 +223,6 @@ export class PortfolioRenderer {
   updateGMPlayerSalaryUI(gmPlayerSalaryBody, members, onPaySalary) {
     if (!gmPlayerSalaryBody) return;
 
-    // Filter out GM members (check both role and displayName)
     const memberList = Object.entries(members || {}).filter(([uid, member]) => {
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
@@ -232,14 +242,12 @@ export class PortfolioRenderer {
     memberList.forEach(([uid, member]) => {
       const cash = member.portfolio?.cash ?? 20000;
       const formattedCash = cash.toLocaleString('en-US');
-      
+
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
-          <td class="p-3 font-semibold text-white">${member.displayName || 'Player'}</td>
-          <td class="p-3 text-emerald-400 font-semibold">${formattedCash}</td>
-          <td class="p-3 text-center flex justify-center">
-            <button type="button" class="gm-salary-btn" data-uid="${uid}">pay 10,000</button>
-          </td>
+          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center"><button type="button" class="gm-salary-btn" data-uid="${uid}" title="Pay 10,000 Salary">Salary 10,000</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle">${member.displayName || 'Player'}</td>
+          <td class="p-3 text-emerald-400 font-semibold align-middle">${formattedCash}</td>
         </tr>
       `;
     });
@@ -254,6 +262,184 @@ export class PortfolioRenderer {
         const playerUid = btn.getAttribute('data-uid');
         if (onPaySalary && playerUid) {
           onPaySalary(playerUid);
+        }
+      });
+    });
+  }
+
+  updateGMPlayerDividendUI(gmPlayerDividendBody, members, boardStocks = {}, masterStocks = {}, originalCards = [], onPayDividend = null) {
+    if (!gmPlayerDividendBody) return;
+
+    const memberList = Object.entries(members || {}).filter(([uid, member]) => {
+      const role = (member.role || '').toLowerCase();
+      const name = (member.displayName || '').toUpperCase();
+      return role !== 'game_master' && name !== 'GM';
+    });
+
+    if (memberList.length === 0) {
+      gmPlayerDividendBody.innerHTML = `
+        <tr>
+          <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = '';
+    memberList.forEach(([uid, member]) => {
+      const stocks = member.portfolio?.stocks || {};
+
+      const dividendData = TradeService.calculatePlayerDividend(stocks, boardStocks, masterStocks, originalCards);
+      
+      const sizeCounts = { S: 0, M: 0, L: 0 };
+      if (dividendData.breakdown && dividendData.breakdown.length > 0) {
+        dividendData.breakdown.forEach(item => {
+          const sz = String(item.size || 'M').toUpperCase();
+          if (sizeCounts[sz] !== undefined) {
+            sizeCounts[sz] += Number(item.volume || 0);
+          }
+        });
+      }
+
+      const activeParts = [];
+      ['S', 'M', 'L'].forEach(sizeKey => {
+        if (sizeCounts[sizeKey] > 0) {
+          activeParts.push(`${sizeKey}: ${sizeCounts[sizeKey]}`);
+        }
+      });
+
+      let holdingsSummaryText = '';
+      if (activeParts.length > 0) {
+        holdingsSummaryText = `<span class="text-gray-300 font-medium">${activeParts.join(', ')}</span>`;
+      } else {
+        holdingsSummaryText = `<span class="text-gray-500 italic">No stocks held</span>`;
+      }
+
+      const hasDividend = dividendData.totalDividend > 0;
+      const dividendBtnState = hasDividend ? '' : 'opacity-40';
+      const formattedDividend = dividendData.totalDividend.toLocaleString('en-US');
+
+      html += `
+        <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
+          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center"><button type="button" class="gm-dividend-btn ${dividendBtnState}" data-uid="${uid}" title="Pay ${formattedDividend} Dividend">Dividend ${formattedDividend}</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle">${member.displayName || 'Player'}</td>
+          <td class="p-3 align-middle">${holdingsSummaryText}</td>
+        </tr>
+      `;
+    });
+
+    gmPlayerDividendBody.innerHTML = html;
+
+    const dividendBtns = gmPlayerDividendBody.querySelectorAll('.gm-dividend-btn');
+    dividendBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const playerUid = btn.getAttribute('data-uid');
+        if (onPayDividend && playerUid) {
+          onPayDividend(playerUid);
+        }
+      });
+    });
+  }
+
+  updateDebtInstrumentsUI(debtTableBody, debtData, onInvestDebt = null, onRedeemDebt = null) {
+    if (!debtTableBody) return;
+
+    let html = '';
+    (debtData.items || []).forEach(item => {
+      const formattedUnitPrice = item.unitPrice.toLocaleString('en-US');
+      const formattedTotalVal = item.value.toLocaleString('en-US');
+      const formattedInterest = item.interestRate.toLocaleString('en-US');
+      const canRedeem = item.volume > 0;
+
+      html += `
+        <tr class="border-b border-gray-800 hover:bg-gray-850">
+          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center gap-3 h-full"><button type="button" class="debt-invest-btn" data-key="${item.key}">Invest</button><button type="button" class="debt-redeem-btn ${canRedeem ? '' : 'opacity-40'}" data-key="${item.key}">Redeem</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle">${item.name}</td>
+          <td class="p-3 text-gray-300 font-mono align-middle">${formattedUnitPrice}</td>
+          <td class="p-3 font-bold ${item.volume > 0 ? 'text-indigo-400' : 'text-gray-500'} align-middle">${item.volume}</td>
+          <td class="p-3 font-semibold text-white align-middle">${formattedTotalVal}</td>
+          <td class="p-3 text-white font-semibold align-middle">+${formattedInterest} / unit</td>
+        </tr>
+      `;
+    });
+
+    debtTableBody.innerHTML = html;
+
+    const investBtns = debtTableBody.querySelectorAll('.debt-invest-btn');
+    investBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (onInvestDebt && key) onInvestDebt(key);
+      });
+    });
+
+    const redeemBtns = debtTableBody.querySelectorAll('.debt-redeem-btn');
+    redeemBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (onRedeemDebt && key) onRedeemDebt(key);
+      });
+    });
+  }
+
+  updateGMPlayerDebtInterestUI(gmPlayerDebtInterestBody, members, onPayDebtInterest = null) {
+    if (!gmPlayerDebtInterestBody) return;
+
+    const memberList = Object.entries(members || {}).filter(([uid, member]) => {
+      const role = (member.role || '').toLowerCase();
+      const name = (member.displayName || '').toUpperCase();
+      return role !== 'game_master' && name !== 'GM';
+    });
+
+    if (memberList.length === 0) {
+      gmPlayerDebtInterestBody.innerHTML = `
+        <tr>
+          <td colspan="3" class="p-4 text-center text-gray-500">No players in room</td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = '';
+    memberList.forEach(([uid, member]) => {
+      const debt = member.portfolio?.debt || {};
+      const debtInterestData = TradeService.calculatePlayerDebtInterest(debt);
+
+      let debtHoldingsText = '';
+      if (debtInterestData.breakdown && debtInterestData.breakdown.length > 0) {
+        const parts = debtInterestData.breakdown.map(item => `${item.volume}x ${item.name}`);
+        debtHoldingsText = `<span class="text-gray-300 font-medium">${parts.join(', ')}</span>`;
+      } else {
+        debtHoldingsText = `<span class="text-gray-500 italic">No debt held</span>`;
+      }
+
+      const hasInterest = debtInterestData.totalInterest > 0;
+      const interestBtnState = hasInterest ? '' : 'opacity-40';
+      const formattedInterest = debtInterestData.totalInterest.toLocaleString('en-US');
+
+      html += `
+        <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
+          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center"><button type="button" class="gm-debt-interest-btn ${interestBtnState}" data-uid="${uid}" title="Pay ${formattedInterest} Debt Interest">Debt Interest ${formattedInterest}</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle">${member.displayName || 'Player'}</td>
+          <td class="p-3 align-middle">${debtHoldingsText}</td>
+        </tr>
+      `;
+    });
+
+    gmPlayerDebtInterestBody.innerHTML = html;
+
+    const btns = gmPlayerDebtInterestBody.querySelectorAll('.gm-debt-interest-btn');
+    btns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const playerUid = btn.getAttribute('data-uid');
+        if (onPayDebtInterest && playerUid) {
+          onPayDebtInterest(playerUid);
         }
       });
     });

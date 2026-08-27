@@ -110,11 +110,15 @@ export class FirebaseService {
   async createRoom(roomCode, roomSettings, members) {
     const roomRef = this.getRoomRef(roomCode);
     const now = Date.now();
+    const maxPlayers = (roomSettings && roomSettings.maxPlayers) ? roomSettings.maxPlayers : 5;
+    const gameMode = (roomSettings && roomSettings.gameMode !== undefined && roomSettings.gameMode !== null) ? roomSettings.gameMode : null;
+
     await set(roomRef, {
       createdAt: now,
       lastJoinedAt: now,
       roomSettings: {
-        maxPlayers: roomSettings.maxPlayers || 10
+        maxPlayers,
+        gameMode
       },
       members
     });
@@ -123,6 +127,13 @@ export class FirebaseService {
   async updateRoom(roomCode, updateData) {
     const roomRef = this.getRoomRef(roomCode);
     await update(roomRef, updateData);
+  }
+
+  async setRoomGameMode(roomCode, gameMode) {
+    const roomRef = this.getRoomRef(roomCode);
+    await update(roomRef, {
+      'roomSettings/gameMode': gameMode
+    });
   }
 
   // Realtime Database: Listen to Board updates in real-time
@@ -214,9 +225,10 @@ export class FirebaseService {
   }
 
   // Realtime Database: Join room atomically with transaction to handle high concurrency
-  async joinRoomWithTransaction(roomCode, userObj, maxPlayers = 10) {
+  async joinRoomWithTransaction(roomCode, userObj, maxPlayers = 5) {
     const roomRef = this.getRoomRef(roomCode);
-    
+    let assignedRole = userObj.role;
+
     const result = await runTransaction(roomRef, (currentData) => {
       if (currentData === null) {
         return currentData;
@@ -230,7 +242,7 @@ export class FirebaseService {
         return currentData;
       }
 
-      // Concurrency Limit Check
+      // Concurrency Limit Check (default 5 max players)
       if (memberUids.length >= maxPlayers) {
         return; // Abort transaction (returns committed: false)
       }
@@ -239,12 +251,26 @@ export class FirebaseService {
         currentData.members = {};
       }
 
+      // Check if GM already exists in members
+      const hasGM = Object.values(members).some(m => m && m.role === 'game_master');
+      let targetRole = userObj.role;
+      let targetName = userObj.displayName;
+
+      if (targetRole === 'game_master' && hasGM) {
+        // Demote to Player automatically if GM already exists!
+        targetRole = 'player';
+        const playerCount = Object.values(members).filter(m => m && m.role === 'player').length;
+        targetName = `Player_${playerCount + 1}`;
+      }
+
+      assignedRole = targetRole;
+
       const memberObj = {
-        role: userObj.role,
-        displayName: userObj.displayName,
+        role: targetRole,
+        displayName: targetName,
         joinedAt: Date.now()
       };
-      if (userObj.role === 'player') {
+      if (targetRole === 'player') {
         memberObj.portfolio = { cash: 20000 };
       }
 
@@ -254,6 +280,9 @@ export class FirebaseService {
       return currentData;
     });
 
-    return result;
+    return {
+      result,
+      assignedRole
+    };
   }
 }

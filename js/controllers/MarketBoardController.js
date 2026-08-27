@@ -385,18 +385,49 @@ export class MarketBoardController {
 
         const resetStocks = this.state.getResetStocks();
         try {
-          await this.firebaseService.updateStocksBoard(this.state.roomCode, resetStocks);
-          
+          const roomSnapshot = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
+          const roomData = roomSnapshot ? roomSnapshot.val() : null;
+
+          const resetMembers = {};
+          if (roomData && roomData.members) {
+            Object.entries(roomData.members).forEach(([uid, member]) => {
+              resetMembers[uid] = {
+                ...member,
+                portfolio: {
+                  cash: 20000,
+                  stocks: {},
+                  debt: {}
+                }
+              };
+            });
+          }
+
+          await this.firebaseService.updateRoom(this.state.roomCode, {
+            stocks: resetStocks,
+            members: resetMembers,
+            pendingOrders: null,
+            lastProcessedOrder: null,
+            lastSalaryReceived: null,
+            lastDividendReceived: null,
+            lastDebtInterestReceived: null
+          });
+          await this.firebaseService.setStocksBoard(this.state.roomCode, resetStocks);
+
+          this.state.undoStack = [];
+          this.state.redoStack = [];
+          this.state.pendingOrders = {};
+          this.renderer.updateHistoryControlsUI(true, false, false);
+
           this.state.resetFilters();
           this.renderer.updateSortButtonsUI(this.state.sortStates);
           this.renderer.updateSectorPillsUI(this.state.selectedSectors);
           this.renderer.clearAllCardAnimations(this.state.originalCards);
-          
+
           this.updateViewGrid();
           closeConfirm();
-          this.renderer.showTopToast("MARKET RESET", "Reset all stock prices to initial starting values", "warning");
+          this.renderer.showTopToast("GAME RESET", "Reset entire game session back to starting state", "warning");
         } catch (error) {
-          console.error("Failed to reset board in database:", error);
+          console.error("Failed to reset game in database:", error);
         }
       });
     }

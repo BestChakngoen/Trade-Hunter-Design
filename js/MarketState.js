@@ -1,3 +1,5 @@
+import { TradeService } from './services/TradeService.js';
+
 /**
  * Normalizes stock price to full hundreds (e.g. 5238 -> 5200, 5265 -> 5300)
  */
@@ -33,6 +35,7 @@ export class MarketState {
     
     this.roomCode = null;
     this.role = 'player'; // default role
+    this.gameMode = 'advance'; // 'basic' | 'advance'
     this.isSpectating = false; // spectator mode for GM
     
     // Master settings from Firestore (key: Stock Name)
@@ -61,6 +64,35 @@ export class MarketState {
     // Continuous Undo & Redo Action Stacks (Full Room State Snapshot)
     this.undoStack = [];
     this.redoStack = [];
+  }
+
+  setRoomCode(code) {
+    this.roomCode = code;
+  }
+
+  setRole(role) {
+    this.role = role;
+  }
+
+  setPlayerName(name) {
+    this.playerName = name;
+  }
+
+  setGameMode(mode) {
+    this.gameMode = mode;
+  }
+
+  setMasterStocks(stocks) {
+    this.masterStocks = {};
+    if (Array.isArray(stocks)) {
+      stocks.forEach(s => {
+        if (s && s.name) {
+          this.masterStocks[s.name] = s;
+        }
+      });
+    } else if (stocks && typeof stocks === 'object') {
+      this.masterStocks = stocks;
+    }
   }
 
   // Push room state snapshot (stocks, members portfolio/cash, pendingOrders) to Undo stack
@@ -106,6 +138,34 @@ export class MarketState {
 
   canRedo() {
     return this.redoStack.length > 0;
+  }
+
+  // Remove player UID from all undo and redo history snapshots
+  removeMemberFromHistory(playerUid) {
+    if (!playerUid) return;
+    const uidStr = String(playerUid).trim().toLowerCase();
+
+    const cleanSnapshot = (snapshot) => {
+      if (!snapshot) return;
+      if (snapshot.members) {
+        Object.keys(snapshot.members).forEach(uid => {
+          if (String(uid).trim().toLowerCase() === uidStr) {
+            delete snapshot.members[uid];
+          }
+        });
+      }
+      if (snapshot.pendingOrders) {
+        Object.keys(snapshot.pendingOrders).forEach(orderId => {
+          const order = snapshot.pendingOrders[orderId];
+          if (order && String(order.uid || '').trim().toLowerCase() === uidStr) {
+            delete snapshot.pendingOrders[orderId];
+          }
+        });
+      }
+    };
+
+    this.undoStack.forEach(cleanSnapshot);
+    this.redoStack.forEach(cleanSnapshot);
   }
 
   setRoomCode(code) {
@@ -157,6 +217,27 @@ export class MarketState {
       if (betaAttr) return parseFloat(betaAttr) || 1.0;
     }
     return 1.0;
+  }
+
+  // Get Stock Size (S, M, L) for a stock symbol
+  getStockSize(symbol) {
+    if (this.boardStocks[symbol] && this.boardStocks[symbol].size) {
+      return this.boardStocks[symbol].size;
+    }
+    if (this.masterStocks && this.masterStocks[symbol] && this.masterStocks[symbol].size) {
+      return this.masterStocks[symbol].size;
+    }
+    const card = this.originalCards.find(c => {
+      const titleEl = c.querySelector('.card-title');
+      const iconEl = c.querySelector('.card-icon');
+      const name = (titleEl ? titleEl.textContent : (iconEl ? iconEl.textContent : '')).trim();
+      return name === symbol;
+    });
+    if (card) {
+      const sizeAttr = card.getAttribute('data-size');
+      if (sizeAttr) return sizeAttr;
+    }
+    return 'M';
   }
 
   // Populate master settings from Firestore
@@ -453,13 +534,15 @@ export class MarketState {
       if (memberData.portfolio) {
         this.portfolio = {
           cash: memberData.portfolio.cash ?? 20000,
-          stocks: memberData.portfolio.stocks ?? {}
+          stocks: memberData.portfolio.stocks ?? {},
+          debt: memberData.portfolio.debt ?? { fixAccount: 0, bond10Y: 0, bond20Y: 0 }
         };
       }
     } else {
       this.portfolio = {
         cash: 20000,
-        stocks: {}
+        stocks: {},
+        debt: { fixAccount: 0, bond10Y: 0, bond20Y: 0 }
       };
     }
   }
@@ -468,9 +551,9 @@ export class MarketState {
     let totalStocksValue = 0;
     let totalCost = 0;
     
-    Object.keys(this.portfolio.stocks).forEach(symbol => {
+    Object.keys(this.portfolio.stocks || {}).forEach(symbol => {
       const holding = this.portfolio.stocks[symbol];
-      if (holding.volume > 0) {
+      if (holding && holding.volume > 0) {
         const currentStock = this.boardStocks[symbol];
         const marketPrice = currentStock ? currentStock.value : holding.avgPrice;
         
@@ -478,14 +561,18 @@ export class MarketState {
         totalCost += holding.volume * holding.avgPrice;
       }
     });
+
+    const debtData = TradeService.calculateDebtInstrumentsValue(this.portfolio.debt || {});
+    const totalDebtValue = debtData.totalValue;
     
-    const totalAssets = this.portfolio.cash + totalStocksValue;
+    const totalAssets = this.portfolio.cash + totalStocksValue + totalDebtValue;
     const totalPnL = totalStocksValue - totalCost;
     const totalPnLPct = totalCost === 0 ? 0 : (totalPnL / totalCost) * 100;
     
     return {
       cash: this.portfolio.cash,
       stocksValue: totalStocksValue,
+      debtValue: totalDebtValue,
       totalAssets: totalAssets,
       totalPnL: totalPnL,
       totalPnLPct: totalPnLPct

@@ -41,7 +41,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-html, body, #lobbyScreen, .lobby-wrapper {
+html, body {
   background-color: var(--bg-dominant-root) !important;
   background: var(--bg-dominant-root) !important;
 }

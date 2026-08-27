@@ -722,7 +722,7 @@
   background: transparent !important;
   color: #22c55e !important;
   font-weight: 800 !important;
-  font-size: 0.82rem !important;
+  font-size: 13px !important;
   padding: 4px 8px !important;
   border: none !important;
   border-radius: 6px !important;
@@ -733,7 +733,8 @@
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
 }
 
 .gm-approve-btn:hover {
@@ -750,7 +751,7 @@
   background: transparent !important;
   color: #ef4444 !important;
   font-weight: 800 !important;
-  font-size: 0.82rem !important;
+  font-size: 13px !important;
   padding: 4px 8px !important;
   border: none !important;
   border-radius: 6px !important;
@@ -761,7 +762,8 @@
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
 }
 
 .gm-reject-btn:hover {
@@ -779,7 +781,7 @@
   background: transparent !important;
   color: #10b981 !important;
   font-weight: 800 !important;
-  font-size: 0.82rem !important;
+  font-size: 13px !important;
   padding: 4px 8px !important;
   border: none !important;
   border-radius: 6px !important;
@@ -790,7 +792,8 @@
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
 }
 
 .gm-salary-btn:hover {
@@ -800,6 +803,124 @@
 }
 
 .gm-salary-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* ข้อความและปุ่มจ่ายเงินปันผล/ดอกเบี้ยของ GM */
+.gm-dividend-btn,
+.gm-interest-btn {
+  background: transparent !important;
+  color: #818cf8 !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  padding: 4px 8px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  outline: none !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+
+.gm-dividend-btn:hover,
+.gm-interest-btn:hover {
+  color: #c7d2fe !important;
+  transform: scale(1.06) !important;
+  text-shadow: 0 0 10px rgba(129, 140, 248, 0.7) !important;
+}
+
+.gm-dividend-btn:active,
+.gm-interest-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* ปุ่มจ่ายดอกเบี้ยตราสารหนี้ของ GM */
+.gm-debt-interest-btn {
+  background: transparent !important;
+  color: #f59e0b !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  padding: 4px 8px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  outline: none !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+
+.gm-debt-interest-btn:hover {
+  color: #fde68a !important;
+  transform: scale(1.06) !important;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.7) !important;
+}
+
+.gm-debt-interest-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* ปุ่ม Invest/Redeem ตราสารหนี้ในฝั่งผู้เล่น */
+.debt-invest-btn {
+  background: transparent !important;
+  color: #34d399 !important;
+  border: none !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  padding: 3px 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  outline: none !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+
+.debt-invest-btn:hover {
+  color: #6ee7b7 !important;
+  transform: scale(1.08) !important;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.6) !important;
+}
+
+.debt-invest-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.debt-redeem-btn {
+  background: transparent !important;
+  color: #f87171 !important;
+  border: none !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  padding: 3px 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  outline: none !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+
+.debt-redeem-btn:hover {
+  color: #fca5a5 !important;
+  transform: scale(1.08) !important;
+  text-shadow: 0 0 8px rgba(248, 113, 113, 0.6) !important;
+}
+
+.debt-redeem-btn:active {
   transform: scale(0.95) !important;
 }
 

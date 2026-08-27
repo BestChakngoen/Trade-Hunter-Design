@@ -122,6 +122,16 @@ body {
   color: #ffffff !important;        /* 👈 สีข้อความปานกลาง / เท่าทุน (สีขาว) */
 }
 
+.text-invest,
+.text-sky-400 {
+  color: #38bdf8 !important;        /* 👈 สีข้อความคำสั่ง INVEST (สีฟ้า) */
+}
+
+.text-redeem,
+.text-amber-400 {
+  color: #fbbf24 !important;        /* 👈 สีข้อความคำสั่ง REDEEM (สีเหลือง) */
+}
+
 .img-fluid {
   max-width: 100%;
   height: auto;

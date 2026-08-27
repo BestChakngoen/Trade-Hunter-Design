@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const renderer = new MarketRenderer();
   const controller = new MarketController(state, renderer, firebaseService);
   
+  // Show lobby screen immediately on page load
+  renderer.showLobby();
+
   try {
     await firebaseService.init();
     controller.init();

@@ -422,24 +422,24 @@
   }
 }
 
-/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) ชิดขวาที่ตำแหน่ง 90% หด-ขยายตามขนาดหน้าจอมือถือ */
+/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) จัดให้อยู่ตรงกลางคอลัมน์ไม่ติดขอบขวา */
 .card-controls {
   grid-column: 4;
-  justify-self: end;                /* 👈 ดันให้ชิดขวาที่ตำแหน่ง 90%-100% */
+  justify-self: center;             /* 👈 จัดให้อยู่ตรงกลางคอลัมน์ ช่วยให้ขยับมาทางซ้าย ไม่ชิดขวาจนดูอึดอัด */
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: clamp(24px, 7vw, 48px);
-  min-height: clamp(34px, 8vw, 44px);
+  max-width: clamp(32px, 8vw, 56px);
+  min-height: clamp(40px, 9vw, 56px);
 }
 
 .control-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(20px, 5.5vw, 28px);  /* 👈 ความกว้างปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
-  height: clamp(15px, 4.5vw, 22px); /* 👈 ความสูงปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
+  width: clamp(28px, 6vw, 36px);  /* 👈 ความกว้างปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
+  height: clamp(22px, 5vw, 28px); /* 👈 ความสูงปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
   padding: 0;
   margin: 0;
   border: none;
@@ -459,7 +459,7 @@
 }
 
 .control-btn img {
-  width: clamp(13px, 4vw, 20px);    /* 👈 ขนาดไอคอนลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
+  width: clamp(18px, 4.5vw, 24px);  /* 👈 ขนาดไอคอนลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
   height: auto;
   object-fit: contain;
   display: block;
@@ -467,30 +467,30 @@
 
 @media (max-width: 380px) {
   .card-controls {
-    max-width: 22px;
+    max-width: 26px;
   }
   .control-btn {
-    width: 18px;
-    height: 15px;
+    width: 22px;
+    height: 18px;
   }
   .control-btn img {
-    width: 12px;
+    width: 15px;
   }
 }
 
 @media (min-width: 640px) {
   .card-controls {
     width: 100%;
-    max-width: 48px;
+    max-width: 56px;
     min-height: 56px;
     padding-left: 0;
   }
   .control-btn {
-    width: 34px;                    /* 👈 ความกว้างปุ่มลูกศรบนคอมพิวเตอร์ */
-    height: 26px;                   /* 👈 ความสูงปุ่มลูกศรบนคอมพิวเตอร์ */
+    width: 40px;                    /* 👈 ความกว้างปุ่มลูกศรบนคอมพิวเตอร์ */
+    height: 32px;                   /* 👈 ความสูงปุ่มลูกศรบนคอมพิวเตอร์ */
   }
   .control-btn img {
-    width: 24px;                    /* 👈 ขนาดไอคอนลูกศรบนคอมพิวเตอร์ */
+    width: 28px;                    /* 👈 ขนาดไอคอนลูกศรบนคอมพิวเตอร์ */
   }
 }
 
@@ -651,16 +651,16 @@
   }
 
   .card-controls {
-    max-width: clamp(20px, 6vw, 36px) !important;
+    max-width: clamp(26px, 7vw, 42px) !important;
   }
 
   .control-btn {
-    width: clamp(16px, 5.5vw, 24px) !important;
-    height: clamp(14px, 4.5vw, 20px) !important;
+    width: clamp(22px, 6vw, 30px) !important;
+    height: clamp(18px, 5vw, 24px) !important;
   }
 
   .control-btn img {
-    width: clamp(11px, 4vw, 16px) !important;
+    width: clamp(15px, 4.5vw, 20px) !important;
     height: auto !important;
   }
 

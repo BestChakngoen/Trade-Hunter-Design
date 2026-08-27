@@ -28,11 +28,23 @@ export class MarketRenderer {
     this.roleSelectionModal = document.getElementById('roleSelectionModal');
     this.roleOptGMBtn = document.getElementById('roleOptGMBtn');
     this.roleOptPlayerBtn = document.getElementById('roleOptPlayerBtn');
-    this.roleOptCancelBtn = document.getElementById('roleOptCancelBtn');
+    this.roleOptCloseBtn = document.getElementById('roleOptCloseBtn');
+
+    // Game Mode Selection Modal (GM) & Waiting Modal (Player)
+    this.gameModeSelectionModal = document.getElementById('gameModeSelectionModal');
+    this.gameModeBasicBtn = document.getElementById('gameModeBasicBtn');
+    this.gameModeAdvanceBtn = document.getElementById('gameModeAdvanceBtn');
+    this.waitingForGMModal = document.getElementById('waitingForGMModal');
+    this.waitingRoomCodeBadge = document.getElementById('waitingRoomCodeBadge');
     
     // Room Full Alert Modal
     this.roomFullModal = document.getElementById('roomFullModal');
     this.roomFullOkBtn = document.getElementById('roomFullOkBtn');
+    
+    // Invalid Room Code Modal
+    this.invalidRoomModal = document.getElementById('invalidRoomModal');
+    this.invalidRoomCodeText = document.getElementById('invalidRoomCodeText');
+    this.invalidRoomOkBtn = document.getElementById('invalidRoomOkBtn');
     
     // Confirm Dialog Modal components
     this.confirmModal = document.getElementById('confirmModal');
@@ -49,6 +61,12 @@ export class MarketRenderer {
     this.gmPendingOrdersBody = document.getElementById('gmPendingOrdersBody');
     this.gmPlayerSalarySection = document.getElementById('gmPlayerSalarySection');
     this.gmPlayerSalaryBody = document.getElementById('gmPlayerSalaryBody');
+    this.gmPlayerDividendSection = document.getElementById('gmPlayerDividendSection');
+    this.gmPlayerDividendBody = document.getElementById('gmPlayerDividendBody');
+    this.gmPlayerDebtInterestSection = document.getElementById('gmPlayerDebtInterestSection');
+    this.gmPlayerDebtInterestBody = document.getElementById('gmPlayerDebtInterestBody');
+    this.payAllDividendBtn = document.getElementById('payAllDividendBtn');
+    this.debtTableBody = document.getElementById('debtTableBody');
     this.playerPendingOrdersBody = document.getElementById('playerPendingOrdersBody');
 
     // Sub-renderers following Single Responsibility Principle
@@ -91,15 +109,14 @@ export class MarketRenderer {
     if (this.userRoomCodeBadge) {
       this.userRoomCodeBadge.textContent = roomCode ? roomCode.toUpperCase() : '-';
     }
+    if (this.waitingRoomCodeBadge) {
+      this.waitingRoomCodeBadge.textContent = roomCode ? roomCode.toUpperCase() : '-';
+    }
   }
 
-  updateRoomMembersUI(members = {}, roomSettings = {}) {
+  updateRoomMembersDisplay(memberCount, maxPlayers = 5) {
     if (!this.roomMembersBadge) return;
-    const memberCount = Object.keys(members || {}).length;
-    const maxPlayers = (roomSettings && roomSettings.maxPlayers) ? roomSettings.maxPlayers : 10;
-    const isFull = memberCount >= maxPlayers;
-
-    if (isFull) {
+    if (memberCount >= maxPlayers) {
       this.roomMembersBadge.textContent = `${memberCount}/${maxPlayers} (FULL)`;
       this.roomMembersBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-red-400';
     } else {
@@ -108,11 +125,19 @@ export class MarketRenderer {
     }
   }
 
-  updateControlsVisibility(role, playerName) {
+  updateRoomMembersUI(members = {}, roomSettings = {}) {
+    const memberCount = Object.keys(members || {}).length;
+    const maxPlayers = (roomSettings && roomSettings.maxPlayers) ? roomSettings.maxPlayers : 5;
+    this.updateRoomMembersDisplay(memberCount, maxPlayers);
+  }
+
+  updateControlsVisibility(role, playerName, gameMode = 'advance') {
     const isMaster = (role === 'game_master');
+    const isBasicMode = (gameMode === 'basic');
     
     if (this.userRoleBadge) {
-      this.userRoleBadge.textContent = isMaster ? 'Game Master' : (playerName || 'Player_1');
+      const modeLabel = isBasicMode ? ' [BASIC]' : '';
+      this.userRoleBadge.textContent = (isMaster ? 'Game Master' : (playerName || 'Player_1')) + modeLabel;
       if (isMaster) {
         this.userRoleBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-red-400';
       } else {
@@ -138,14 +163,29 @@ export class MarketRenderer {
     const mainNavTabs = document.getElementById('mainNavTabs');
     const tabPortBtn = document.getElementById('tabPortBtn');
     const tabMgmtBtn = document.getElementById('tabMgmtBtn');
-    
-    if (mainNavTabs) mainNavTabs.style.setProperty('display', 'flex', 'important');
-    if (role === 'game_master') {
-      if (tabPortBtn) tabPortBtn.style.display = 'none';
-      if (tabMgmtBtn) tabMgmtBtn.style.display = 'block';
+    const tradeWidget = document.querySelector('.trade-widget-section');
+    const marketTabContent = document.getElementById('marketTabContent');
+    const portfolioTabContent = document.getElementById('portfolioTabContent');
+    const mgmtTabContent = document.getElementById('mgmtTabContent');
+
+    if (isBasicMode) {
+      // Basic Mode: Hide ALL navigation tabs completely!
+      if (mainNavTabs) mainNavTabs.style.setProperty('display', 'none', 'important');
+      if (tradeWidget) tradeWidget.style.display = 'none';
+      if (portfolioTabContent) portfolioTabContent.style.display = 'none';
+      if (mgmtTabContent) mgmtTabContent.style.display = 'none';
+      if (marketTabContent) marketTabContent.style.display = 'block';
     } else {
-      if (tabPortBtn) tabPortBtn.style.display = 'block';
-      if (tabMgmtBtn) tabMgmtBtn.style.display = 'none';
+      // Advance Mode: Show standard navigation tabs
+      if (mainNavTabs) mainNavTabs.style.setProperty('display', 'flex', 'important');
+      if (tradeWidget) tradeWidget.style.display = 'block';
+      if (role === 'game_master') {
+        if (tabPortBtn) tabPortBtn.style.display = 'none';
+        if (tabMgmtBtn) tabMgmtBtn.style.display = 'block';
+      } else {
+        if (tabPortBtn) tabPortBtn.style.display = 'block';
+        if (tabMgmtBtn) tabMgmtBtn.style.display = 'none';
+      }
     }
   }
 
@@ -345,6 +385,61 @@ export class MarketRenderer {
   bindTimelineEvents(canvas, chartContainer, startPrice, beta) { this.chartRenderer.bindTimelineEvents(canvas, chartContainer, startPrice, beta); }
   toggleCardChart(card, history, startPrice, beta) { this.chartRenderer.toggleCardChart(card, history, startPrice, beta); }
 
+  triggerShakeCodeBox() {
+    // 1. เคลียร์ข้อความในช่องกรอกให้อัตโนมัติและโฟกัสช่องพิมพ์
+    if (this.roomCodeInput) {
+      this.roomCodeInput.value = '';
+      this.roomCodeInput.focus();
+    }
+
+    // 2. แอนิเมชันสั่นสะเทือนเรืองแสงแดง JS Web Animations API 100% การันตีผล
+    const codeBox = document.querySelector('.lobby-code-box');
+    if (codeBox) {
+      const currentY = getComputedStyle(codeBox).getPropertyValue('--lobby-code-box-y').trim() || '-150px';
+      codeBox.animate([
+        { left: '0px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.5))' },
+        { left: '-35px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 0 35px #ef4444)' },
+        { left: '35px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 0 40px #f87171)' },
+        { left: '-25px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 0 30px #ef4444)' },
+        { left: '25px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 0 25px #f87171)' },
+        { left: '-12px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 0 20px #ef4444)' },
+        { left: '12px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 0 15px #ef4444)' },
+        { left: '0px', transform: `translateY(${currentY})`, filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.5))' }
+      ], {
+        duration: 500,
+        easing: 'cubic-bezier(0.36, 0.07, 0.19, 0.97)'
+      });
+    }
+  }
+
+  showInvalidRoomModal(code) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    if (this.invalidRoomCodeText) {
+      this.invalidRoomCodeText.textContent = code ? code.toUpperCase() : '-';
+    }
+    const modal = this.invalidRoomModal;
+    const okBtn = this.invalidRoomOkBtn;
+    if (!modal || !okBtn) {
+      this.showErrorAlert("Invalid Room Code", `Room code "${code}" was not found in the system. Please check your room code or contact system administrator.`);
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      modal.style.display = 'flex';
+      const handleOk = () => {
+        okBtn.removeEventListener('click', handleOk);
+        modal.style.display = 'none';
+        if (this.roomCodeInput) {
+          this.roomCodeInput.focus();
+        }
+        resolve();
+      };
+      okBtn.addEventListener('click', handleOk);
+    });
+  }
+
   showRoomFullModal() {
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
@@ -372,6 +467,17 @@ export class MarketRenderer {
     this.portfolioRenderer.updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders, userUid); 
   }
   updateGMPendingOrdersUI(orders, onApprove, onReject) { this.portfolioRenderer.updateGMPendingOrdersUI(this.gmPendingOrdersBody, orders, onApprove, onReject); }
-  updateGMPlayerSalaryUI(members, onPaySalary) { this.portfolioRenderer.updateGMPlayerSalaryUI(this.gmPlayerSalaryBody, members, onPaySalary); }
+  updateGMPlayerSalaryUI(members, onPaySalary) { 
+    this.portfolioRenderer.updateGMPlayerSalaryUI(this.gmPlayerSalaryBody, members, onPaySalary); 
+  }
+  updateGMPlayerDividendUI(members, boardStocks = {}, masterStocks = {}, originalCards = [], onPayDividend = null) { 
+    this.portfolioRenderer.updateGMPlayerDividendUI(this.gmPlayerDividendBody, members, boardStocks, masterStocks, originalCards, onPayDividend); 
+  }
   updatePlayerPendingOrdersUI(orders, uid) { this.portfolioRenderer.updatePlayerPendingOrdersUI(orders, uid); }
+  updateDebtInstrumentsUI(debtData, onInvestDebt = null, onRedeemDebt = null) {
+    this.portfolioRenderer.updateDebtInstrumentsUI(this.debtTableBody, debtData, onInvestDebt, onRedeemDebt);
+  }
+  updateGMPlayerDebtInterestUI(members, onPayDebtInterest = null) {
+    this.portfolioRenderer.updateGMPlayerDebtInterestUI(this.gmPlayerDebtInterestBody, members, onPayDebtInterest);
+  }
 }
