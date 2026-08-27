@@ -273,14 +273,8 @@ export class LobbyController {
       const isExpired = Boolean(expiresAt && expiresAt <= now);
       const isEnded = Boolean(roomData.isEnd);
 
-      // Check if room has stale members joined > 15 minutes ago during testing
-      const hasStaleMembers = memberUids.some(uid => {
-        const joinedAt = members[uid] ? members[uid].joinedAt : 0;
-        return joinedAt && (now - joinedAt > 15 * 60 * 1000);
-      });
-
-      // Purge abandoned, expired, ended, or stale rooms completely!
-      if (memberUids.length === 0 || isExpired || isEnded || hasStaleMembers) {
+      // Purge expired or ended rooms completely!
+      if (memberUids.length === 0 || isExpired || isEnded) {
         await this.firebaseService.deleteRoomData(code);
         roomExists = false;
         roomData = null;
@@ -381,13 +375,23 @@ export class LobbyController {
         initialMemberObj.portfolio = { cash: 20000 };
       }
 
-      await this.firebaseService.createRoom(code, {
-        maxPlayers,
-        gameMode: null
-      }, {
-        [user.uid]: initialMemberObj
-      });
-      await this.firebaseService.updateRoom(code, { expiresAt });
+      // Double check if room was created by another client while promptRoleSelection modal was open
+      const freshSnap = await this.firebaseService.getRoomStateSnapshot(code);
+      if (freshSnap && freshSnap.exists()) {
+        await this.firebaseService.joinRoomWithTransaction(code, {
+          uid: user.uid,
+          role: role,
+          displayName: displayName
+        }, maxPlayers);
+      } else {
+        await this.firebaseService.createRoom(code, {
+          maxPlayers,
+          gameMode: null
+        }, {
+          [user.uid]: initialMemberObj
+        });
+        await this.firebaseService.updateRoom(code, { expiresAt });
+      }
 
       roomExists = true;
     } else {
