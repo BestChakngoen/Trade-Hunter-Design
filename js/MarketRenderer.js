@@ -446,19 +446,26 @@ export class MarketRenderer {
     }
     const modal = this.roomFullModal;
     const okBtn = this.roomFullOkBtn;
-    if (!modal || !okBtn) {
+    const resetBtn = document.getElementById('roomFullResetBtn');
+
+    if (!modal) {
       alert("Room Full\nThis game room has reached its maximum player limit.");
-      return Promise.resolve();
+      return Promise.resolve('close');
     }
 
     return new Promise((resolve) => {
       modal.style.display = 'flex';
-      const handleOk = () => {
-        okBtn.removeEventListener('click', handleOk);
+      const cleanup = (action) => {
+        if (okBtn) okBtn.removeEventListener('click', handleOk);
+        if (resetBtn) resetBtn.removeEventListener('click', handleReset);
         modal.style.display = 'none';
-        resolve();
+        resolve(action);
       };
-      okBtn.addEventListener('click', handleOk);
+      const handleOk = () => cleanup('close');
+      const handleReset = () => cleanup('reset');
+
+      if (okBtn) okBtn.addEventListener('click', handleOk);
+      if (resetBtn) resetBtn.addEventListener('click', handleReset);
     });
   }
 

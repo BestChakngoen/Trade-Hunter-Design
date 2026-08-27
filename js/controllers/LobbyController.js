@@ -273,10 +273,10 @@ export class LobbyController {
       const isExpired = Boolean(expiresAt && expiresAt <= now);
       const isEnded = Boolean(roomData.isEnd);
 
-      // Check if room has stale members joined > 3.5 hours ago
+      // Check if room has stale members joined > 15 minutes ago during testing
       const hasStaleMembers = memberUids.some(uid => {
         const joinedAt = members[uid] ? members[uid].joinedAt : 0;
-        return joinedAt && (now - joinedAt > 3.5 * 60 * 60 * 1000);
+        return joinedAt && (now - joinedAt > 15 * 60 * 1000);
       });
 
       // Purge abandoned, expired, ended, or stale rooms completely!
@@ -310,7 +310,11 @@ export class LobbyController {
       // Check max capacity if room already exists (Default 5 players max)
       const maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
       if (roomExists && !members[user.uid] && memberUids.length >= maxPlayers) {
-        await this.renderer.showRoomFullModal();
+        const roomFullAction = await this.renderer.showRoomFullModal();
+        if (roomFullAction === 'reset') {
+          await this.firebaseService.deleteRoomData(code);
+          return this.joinOrCreateRoom(code);
+        }
         return;
       }
 

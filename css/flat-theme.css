@@ -32,18 +32,26 @@
   --accent-blue-border: rgba(37, 99, 235, 0.35);
 }
 
-/* 1. 🏢 Body & Global Background (60% Dominant - Financial Navy) */
-body {
-  background-color: var(--bg-dominant-root) !important;
-  background: var(--bg-dominant-root) !important;
+/* 1. 🏢 Body & Global Background (BG.png Background for Game Room & App) */
+html, body {
+  background-color: #0b0f19 !important;
+  background-image: url('../Assets/UI_Lobby/BG.png') !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
   color: var(--text-secondary-bright) !important;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-html, body {
-  background-color: var(--bg-dominant-root) !important;
-  background: var(--bg-dominant-root) !important;
+.page-shell {
+  background-image: url('../Assets/UI_Lobby/BG.png') !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
 }
 
 /* 2. 🏛️ Flat Hero Header & Logo (60% Surface / 30% Off-White Text) */
@@ -235,12 +243,20 @@ html, body {
   border: 1px solid var(--border-secondary-subtle) !important;
 }
 
-/* 8. ⚠️ Flat Danger Zone Section */
+/* 8. ⚠️ Flat Danger Zone Section (พื้นหลังสีดำสนิทเน้นย้ำความเด่นชัด) */
 .danger-zone-card {
-  background: rgba(239, 68, 68, 0.04) !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  border: 2px solid rgba(239, 68, 68, 0.6) !important;
   border-radius: 16px !important;
-  box-shadow: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(239, 68, 68, 0.25) !important;
+  transition: all 0.25s ease !important;
+}
+
+.danger-zone-card:hover {
+  background: #050505 !important;
+  border-color: rgba(239, 68, 68, 0.85) !important;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.85), 0 0 28px rgba(239, 68, 68, 0.4) !important;
 }
 
 .danger-btn {
@@ -287,4 +303,22 @@ html, body {
 
 .flash-down {
   animation: flashRedFlat 0.4s ease-out !important;
+}
+
+.price-flash-red {
+  animation: flashRedFlat 0.8s ease-out !important;
+}
+
+/* 10. 🔄 Global Smooth Spinning & Pulse Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 0.9s linear infinite !important;
 }
