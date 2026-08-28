@@ -52,12 +52,20 @@ html, body {
 .page-shell {
   background-image: url('../Assets/UI_Lobby/BG.png') !important;
   background-size: auto !important;
-  background-position: center center !important;
+  background-position: center top !important;
   background-repeat: no-repeat !important;
-  background-attachment: fixed !important;
+  background-attachment: scroll !important;
   min-height: 100% !important;
   min-height: 100svh !important;
   min-height: 100dvh !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 768px) {
+  .page-shell {
+    background-position: center center !important;
+    background-attachment: fixed !important;
+  }
 }
 
 /* 2. 🏛️ Flat Hero Header & Logo (60% Surface / 30% Off-White Text) */

@@ -69,6 +69,12 @@ body {
   padding: 36px 24px 60px;          /* 👈 ระยะห่างขอบใน [บน] [ซ้าย-ขวา] [ล่าง] */
 }
 
+@media (max-width: 640px) {
+  .page-shell {
+    padding: 16px 12px 40px;
+  }
+}
+
 /* กล่อง Hero ด้านบนสุด */
 .hero {
   display: flex;
