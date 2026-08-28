@@ -34,6 +34,10 @@
 
 /* 1. 🏢 Body & Global Background (BG.png Background for Game Room & App) */
 html, body {
+  height: 100% !important;
+  min-height: 100% !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
   background-color: #0b0f19 !important;
   background-image: url('../Assets/UI_Lobby/BG.png') !important;
   background-size: auto !important;
@@ -51,7 +55,9 @@ html, body {
   background-position: center center !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
-  min-height: 100vh !important;
+  min-height: 100% !important;
+  min-height: 100svh !important;
+  min-height: 100dvh !important;
 }
 
 /* 2. 🏛️ Flat Hero Header & Logo (60% Surface / 30% Off-White Text) */

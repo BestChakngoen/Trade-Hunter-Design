@@ -40,8 +40,11 @@ html, body {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
+  inset: 0 !important;
+  width: 100% !important;
   width: 100vw !important;
-  height: 100vh !important;
+  height: 100% !important;
+  height: 100svh !important;
   height: 100dvh !important;
   background-image: url('../Assets/UI_Lobby/BG.png') !important;
   background-size: auto !important;
