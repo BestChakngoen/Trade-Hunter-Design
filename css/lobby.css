@@ -44,7 +44,7 @@ html, body {
   height: 100vh !important;
   height: 100dvh !important;
   background-image: url('../Assets/UI_Lobby/BG.png') !important;
-  background-size: cover !important;
+  background-size: auto !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
   z-index: 99999 !important;
