@@ -83,6 +83,10 @@ export class LobbyController {
           onJoinSuccess(code);
         }
       } catch (err) {
+        if (err && err.message === 'USER_CANCELLED_WAITING') {
+          console.log("[Lobby] User cancelled waiting for GM.");
+          return;
+        }
         console.error("Lobby join error:", err);
         this.renderer.showErrorAlert("เกิดข้อผิดพลาด", err.message || "ไม่สามารถระบุการเชื่อมต่อห้องเกมได้");
       } finally {
@@ -202,23 +206,48 @@ export class LobbyController {
 
   async waitForGameModeSelection(code) {
     const modal = this.renderer.waitingForGMModal;
+    const closeBtn = this.renderer.waitingCloseBtn;
     if (modal) modal.style.display = 'flex';
     this.renderer.updateRoomCodeDisplay(code);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let unsub = null;
+
+      const cleanup = () => {
+        if (typeof unsub === 'function') {
+          unsub();
+          unsub = null;
+        }
+        if (closeBtn) {
+          closeBtn.removeEventListener('click', handleClose);
+        }
+        if (modal) modal.style.display = 'none';
+      };
 
       const checkMode = (roomVal) => {
         const mode = roomVal?.roomSettings?.gameMode;
         if (mode) {
-          if (typeof unsub === 'function') {
-            unsub();
-            unsub = null;
-          }
-          if (modal) modal.style.display = 'none';
+          cleanup();
           resolve(mode);
         }
       };
+
+      const handleClose = async () => {
+        cleanup();
+        const currentUser = this.firebaseService.getCurrentUser();
+        if (code && currentUser?.uid) {
+          try {
+            await this.firebaseService.removeMemberFromRoom(code, currentUser.uid);
+          } catch (e) {
+            console.warn("Could not remove member on cancel waiting:", e);
+          }
+        }
+        reject(new Error('USER_CANCELLED_WAITING'));
+      };
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', handleClose);
+      }
 
       unsub = this.firebaseService.listenToRoom(code, (data) => {
         checkMode(data);

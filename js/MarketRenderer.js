@@ -35,6 +35,7 @@ export class MarketRenderer {
     this.gameModeBasicBtn = document.getElementById('gameModeBasicBtn');
     this.gameModeAdvanceBtn = document.getElementById('gameModeAdvanceBtn');
     this.waitingForGMModal = document.getElementById('waitingForGMModal');
+    this.waitingCloseBtn = document.getElementById('waitingCloseBtn');
     this.waitingRoomCodeBadge = document.getElementById('waitingRoomCodeBadge');
     
     // Room Full Alert Modal
