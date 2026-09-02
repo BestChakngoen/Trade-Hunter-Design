@@ -170,16 +170,17 @@ export class LobbyController {
     });
   }
 
-  async promptGameModeSelection() {
+  async promptGameModeSelection(roomCode, currentUid) {
     const modal = this.renderer.gameModeSelectionModal;
     const btnBasic = this.renderer.gameModeBasicBtn;
     const btnAdvance = this.renderer.gameModeAdvanceBtn;
+    const btnClose = this.renderer.gameModeCloseBtn;
 
     if (!modal || !btnBasic || !btnAdvance) {
       return 'advance';
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       modal.style.display = 'flex';
 
       const handleBasic = () => {
@@ -194,13 +195,28 @@ export class LobbyController {
         resolve('advance');
       };
 
+      const handleClose = async () => {
+        cleanup();
+        modal.style.display = 'none';
+        if (roomCode) {
+          try {
+            await this.firebaseService.deleteRoomData(roomCode);
+          } catch (e) {
+            console.warn("Could not delete room on GM cancel game mode:", e);
+          }
+        }
+        reject(new Error('GM_CANCELLED_GAME_MODE'));
+      };
+
       const cleanup = () => {
         btnBasic.removeEventListener('click', handleBasic);
         btnAdvance.removeEventListener('click', handleAdvance);
+        if (btnClose) btnClose.removeEventListener('click', handleClose);
       };
 
       btnBasic.addEventListener('click', handleBasic);
       btnAdvance.addEventListener('click', handleAdvance);
+      if (btnClose) btnClose.addEventListener('click', handleClose);
     });
   }
 
@@ -225,6 +241,11 @@ export class LobbyController {
       };
 
       const checkMode = (roomVal) => {
+        if (!roomVal) {
+          cleanup();
+          reject(new Error('USER_CANCELLED_WAITING'));
+          return;
+        }
         const mode = roomVal?.roomSettings?.gameMode;
         if (mode) {
           cleanup();
@@ -357,8 +378,16 @@ export class LobbyController {
       if (role === 'game_master') {
         displayName = 'GM';
       } else {
-        const existingPlayersCount = memberUids.filter(uid => members[uid] && members[uid].role === 'player').length;
-        displayName = `Player_${existingPlayersCount + 1}`;
+        const existingNames = new Set(
+          Object.values(members || {})
+            .filter(m => m && m.role === 'player' && m.displayName)
+            .map(m => m.displayName)
+        );
+        let nextIndex = 1;
+        while (existingNames.has(`Player_${nextIndex}`)) {
+          nextIndex++;
+        }
+        displayName = `Player_${nextIndex}`;
       }
     }
 
@@ -449,8 +478,16 @@ export class LobbyController {
         if (txnRes.assignedRole) {
           role = txnRes.assignedRole;
           if (role === 'player' && displayName === 'GM') {
-            const playerCount = Object.values(members).filter(m => m && m.role === 'player').length;
-            displayName = `Player_${playerCount + 1}`;
+            const existingNames = new Set(
+              Object.values(members || {})
+                .filter(m => m && m.role === 'player' && m.displayName)
+                .map(m => m.displayName)
+            );
+            let nextIndex = 1;
+            while (existingNames.has(`Player_${nextIndex}`)) {
+              nextIndex++;
+            }
+            displayName = `Player_${nextIndex}`;
           }
         }
       }
@@ -466,19 +503,35 @@ export class LobbyController {
 
     if (!gameMode) {
       if (role === 'game_master') {
-        gameMode = await this.promptGameModeSelection();
-        if (!gameMode) gameMode = 'advance';
-        await this.firebaseService.setRoomGameMode(code, gameMode);
+        try {
+          gameMode = await this.promptGameModeSelection(code, user.uid);
+          if (!gameMode) gameMode = 'advance';
+          await this.firebaseService.setRoomGameMode(code, gameMode);
+        } catch (err) {
+          if (err && err.message === 'GM_CANCELLED_GAME_MODE') {
+            this.renderer.showLobby();
+            return;
+          }
+          throw err;
+        }
       } else {
-        gameMode = await this.waitForGameModeSelection(code);
+        try {
+          gameMode = await this.waitForGameModeSelection(code);
+        } catch (err) {
+          if (err && err.message === 'USER_CANCELLED_WAITING') {
+            this.renderer.showLobby();
+            return;
+          }
+          throw err;
+        }
       }
     }
 
     this.state.setGameMode(gameMode);
     this.state.setRoomCode(code);
 
-    // Configure player cleanup on disconnect
-    this.firebaseService.configureDisconnectCleanup(code, user.uid);
+    // Configure player/GM cleanup on disconnect
+    this.firebaseService.configureDisconnectCleanup(code, user.uid, role === 'game_master');
 
     // Sync latest board snapshot immediately for late-joining players
     try {

@@ -110,7 +110,8 @@
 
     <!-- Apple-Style Game Mode Selection Modal Card (For GM) -->
     <div id="gameModeSelectionModal" class="apple-modal-overlay" style="display: none;">
-      <div class="apple-modal-card">
+      <div class="apple-modal-card relative">
+        <button type="button" id="gameModeCloseBtn" class="apple-modal-close" aria-label="Close modal">&times;</button>
         <h3 class="apple-modal-title">Select Game Mode</h3>
         <p class="apple-modal-subtitle">Choose the gameplay mode for all players in this room.</p>
         
@@ -825,6 +826,29 @@
     </div>
   </div>
 
+
+  <!-- Apple-Style GM Takeover Election Modal Card -->
+  <div id="gmTransferModal" class="apple-modal-overlay" style="display: none;">
+    <div class="apple-modal-card flex flex-col items-center relative">
+      <div class="apple-modal-icon mb-3" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+        <svg xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: 28px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      </div>
+      <h3 class="apple-modal-title text-red-500 font-bold">GM Left the Game!</h3>
+      <p class="apple-modal-subtitle text-xs text-gray-300 mb-5">
+        The Game Master has left the room. Would you like to take over as the new GM to continue the game?
+      </p>
+      <div class="apple-modal-actions flex gap-3 w-full">
+        <button type="button" id="gmTransferDeclineBtn" class="apple-btn-player" style="background: #475569; box-shadow: none;">
+          Decline
+        </button>
+        <button type="button" id="gmTransferClaimBtn" class="apple-btn-gm" style="background: #ef4444; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
+          Become GM
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Custom Confirmation Dialog Modal -->
   <div id="confirmModal" class="modal">

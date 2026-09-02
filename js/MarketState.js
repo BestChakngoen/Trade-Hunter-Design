@@ -528,10 +528,15 @@ export class MarketState {
 
   updatePortfolioFromMemberData(memberData) {
     if (memberData) {
+      if (memberData.role) {
+        this.role = memberData.role;
+      }
       if (memberData.displayName) {
         this.playerName = memberData.displayName;
       }
-      if (memberData.portfolio) {
+      if (memberData.role === 'game_master') {
+        this.portfolio = null;
+      } else if (memberData.portfolio) {
         this.portfolio = {
           cash: memberData.portfolio.cash ?? 20000,
           stocks: memberData.portfolio.stocks ?? {},
@@ -548,6 +553,17 @@ export class MarketState {
   }
 
   getPortfolioStats() {
+    if (!this.portfolio) {
+      return {
+        cash: 0,
+        stocksValue: 0,
+        debtValue: 0,
+        totalAssets: 0,
+        totalPnL: 0,
+        totalPnLPct: 0
+      };
+    }
+
     let totalStocksValue = 0;
     let totalCost = 0;
     

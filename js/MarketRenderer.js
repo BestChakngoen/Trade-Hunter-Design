@@ -34,6 +34,7 @@ export class MarketRenderer {
     this.gameModeSelectionModal = document.getElementById('gameModeSelectionModal');
     this.gameModeBasicBtn = document.getElementById('gameModeBasicBtn');
     this.gameModeAdvanceBtn = document.getElementById('gameModeAdvanceBtn');
+    this.gameModeCloseBtn = document.getElementById('gameModeCloseBtn');
     this.waitingForGMModal = document.getElementById('waitingForGMModal');
     this.waitingCloseBtn = document.getElementById('waitingCloseBtn');
     this.waitingRoomCodeBadge = document.getElementById('waitingRoomCodeBadge');
@@ -49,6 +50,11 @@ export class MarketRenderer {
     
     // Confirm Dialog Modal components
     this.confirmModal = document.getElementById('confirmModal');
+
+    // GM Transfer Modal
+    this.gmTransferModal = document.getElementById('gmTransferModal');
+    this.gmTransferClaimBtn = document.getElementById('gmTransferClaimBtn');
+    this.gmTransferDeclineBtn = document.getElementById('gmTransferDeclineBtn');
 
     // Role & Room Controller Elements
     this.roleController = document.getElementById('roleController');
@@ -187,6 +193,21 @@ export class MarketRenderer {
         if (tabPortBtn) tabPortBtn.style.display = 'block';
         if (tabMgmtBtn) tabMgmtBtn.style.display = 'none';
       }
+
+      // Ensure Market tab is active by default upon joining/entering game
+      const tabMarketBtn = document.getElementById('tabMarketBtn');
+      if (tabMarketBtn) {
+        tabMarketBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider";
+      }
+      if (tabPortBtn) {
+        tabPortBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
+      }
+      if (tabMgmtBtn) {
+        tabMgmtBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider relative";
+      }
+      if (marketTabContent) marketTabContent.style.display = 'block';
+      if (portfolioTabContent) portfolioTabContent.style.display = 'none';
+      if (mgmtTabContent) mgmtTabContent.style.display = 'none';
     }
   }
 
@@ -468,6 +489,40 @@ export class MarketRenderer {
       if (okBtn) okBtn.addEventListener('click', handleOk);
       if (resetBtn) resetBtn.addEventListener('click', handleReset);
     });
+  }
+
+  showGMTransferModal(onClaim, onDecline) {
+    const modal = this.gmTransferModal;
+    const claimBtn = this.gmTransferClaimBtn;
+    const declineBtn = this.gmTransferDeclineBtn;
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+
+    const handleClaim = (e) => {
+      e.preventDefault();
+      if (onClaim) onClaim();
+    };
+
+    const handleDecline = (e) => {
+      e.preventDefault();
+      modal.style.display = 'none';
+      if (onDecline) onDecline();
+    };
+
+    if (claimBtn) {
+      claimBtn.onclick = handleClaim;
+    }
+    if (declineBtn) {
+      declineBtn.onclick = handleDecline;
+    }
+  }
+
+  hideGMTransferModal() {
+    const modal = this.gmTransferModal;
+    if (modal) {
+      modal.style.display = 'none';
+    }
   }
 
   // Portfolio & Orders Delegations

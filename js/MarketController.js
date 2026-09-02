@@ -101,11 +101,22 @@ export class MarketController {
       this.unsubscribeAll();
 
       if (isGM) {
-        if (roomCode) {
+        if (roomCode && currentUid) {
           try {
-            await this.firebaseService.deleteRoomData(roomCode);
+            const roomSnap = await this.firebaseService.getRoomStateSnapshot(roomCode);
+            const roomData = roomSnap ? roomSnap.val() : null;
+            const members = roomData ? (roomData.members || {}) : {};
+            const otherMembers = Object.keys(members).filter(uid => uid !== currentUid);
+
+            await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
+
+            if (otherMembers.length > 0) {
+              await this.firebaseService.triggerGMTransfer(roomCode);
+            } else {
+              await this.firebaseService.deleteRoomData(roomCode);
+            }
           } catch (e) {
-            console.error("Failed to delete room on GM leave:", e);
+            console.error("Failed to handle GM leave:", e);
           }
         }
       } else {
@@ -251,6 +262,54 @@ export class MarketController {
 
         // Update real-time room members count & capacity status badge
         this.renderer.updateRoomMembersUI(roomData.members, roomData.roomSettings);
+
+        // GM Disconnect / Takeover Transfer Election Handler
+        const members = roomData.members || {};
+        const hasGM = Object.values(members).some(m => m && m.role === 'game_master');
+        const transferReq = roomData.gmTransferRequest;
+
+        if (!hasGM && Object.keys(members).length > 0 && (!transferReq || (!transferReq.active && !transferReq.claimedBy))) {
+          this.firebaseService.triggerGMTransfer(code);
+        }
+
+        if (!hasGM && transferReq && transferReq.active && !transferReq.claimedBy) {
+          if (this.state.role !== 'game_master') {
+            this.renderer.showGMTransferModal(
+              async () => {
+                const claimRes = await this.firebaseService.claimGMRoleWithTransaction(code, currentUid, this.state.playerName);
+                if (claimRes && claimRes.claimed) {
+                  this.state.setRole('game_master');
+                  this.state.portfolio = null;
+                  this.renderer.hideGMTransferModal();
+                  this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
+                  
+                  // Switch tab automatically from Portfolio to Management
+                  const tabMgmtBtn = document.getElementById('tabMgmtBtn');
+                  if (tabMgmtBtn) {
+                    tabMgmtBtn.click();
+                  }
+
+                  this.renderer.showTopToast("GM TAKEOVER SUCCESS", "You are now the new Game Master!", "success");
+                } else {
+                  this.renderer.hideGMTransferModal();
+                  this.renderer.showTopToast("TAKEOVER FAILED", "Another player has already taken over as GM!", "rejected");
+                }
+              },
+              () => {
+                // Declined by user
+              }
+            );
+          }
+        } else {
+          this.renderer.hideGMTransferModal();
+          if (transferReq && transferReq.claimedBy && transferReq.claimedBy !== this.prevGMClaimedBy) {
+            this.prevGMClaimedBy = transferReq.claimedBy;
+            if (transferReq.claimedBy !== currentUid) {
+              const claimedName = transferReq.claimedByName || 'Player';
+              this.renderer.showTopToast("NEW GM ELECTED", `${claimedName} has taken over as the new GM!`, "approved");
+            }
+          }
+        }
 
         // Detect members who left the room and purge their data from undo/redo history
         const currentMemberUids = new Set(Object.keys(roomData.members || {}));

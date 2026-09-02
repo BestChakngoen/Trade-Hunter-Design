@@ -176,12 +176,95 @@ export class FirebaseService {
     await set(ordersRef, pendingOrders || {});
   }
 
-  // Realtime Database: Set trigger to clean up player node upon closing tab / disconnecting
-  configureDisconnectCleanup(roomCode, userId) {
+  // Realtime Database: Set trigger to clean up player/GM node upon closing tab / disconnecting
+  configureDisconnectCleanup(roomCode, userId, isGM = false) {
     const userRef = this.getUserInBoardRef(roomCode, userId);
-    onDisconnect(userRef).remove().catch(err => {
-      console.error("Failed to configure onDisconnect:", err);
+    if (isGM) {
+      const gmTransferRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/gmTransferRequest`);
+      onDisconnect(userRef).remove().catch(err => {
+        console.error("Failed to configure GM onDisconnect userRef:", err);
+      });
+      onDisconnect(gmTransferRef).set({
+        active: true,
+        claimedBy: null,
+        timestamp: Date.now()
+      }).catch(err => {
+        console.error("Failed to configure GM onDisconnect transferRef:", err);
+      });
+    } else {
+      onDisconnect(userRef).remove().catch(err => {
+        console.error("Failed to configure onDisconnect:", err);
+      });
+    }
+  }
+
+  // Realtime Database: Trigger GM election request manually
+  async triggerGMTransfer(roomCode) {
+    if (!roomCode) return;
+    try {
+      const roomRef = this.getRoomRef(roomCode);
+      await update(roomRef, {
+        gmTransferRequest: {
+          active: true,
+          claimedBy: null,
+          timestamp: Date.now()
+        }
+      });
+    } catch (e) {
+      console.error("Failed to trigger GM transfer:", e);
+    }
+  }
+
+  // Realtime Database: Claim GM role atomically with transaction (First-Come, First-Served)
+  async claimGMRoleWithTransaction(roomCode, userId, userName) {
+    const roomRef = this.getRoomRef(roomCode);
+    let claimSuccess = false;
+
+    const result = await runTransaction(roomRef, (currentData) => {
+      if (currentData === null) return currentData;
+
+      const members = currentData.members || {};
+      const currentGM = Object.values(members).find(m => m && m.role === 'game_master');
+      
+      // If GM already exists, claim fails
+      if (currentGM) {
+        return;
+      }
+
+      if (!members[userId]) {
+        return;
+      }
+
+      // Promote player to GM
+      members[userId].role = 'game_master';
+      members[userId].displayName = 'GM';
+      delete members[userId].portfolio;
+
+      // Clear any pending orders associated with this player
+      if (currentData.pendingOrders) {
+        Object.keys(currentData.pendingOrders).forEach(orderId => {
+          const order = currentData.pendingOrders[orderId];
+          if (order && (order.uid === userId || order.userUid === userId)) {
+            delete currentData.pendingOrders[orderId];
+          }
+        });
+      }
+
+      currentData.gmTransferRequest = {
+        active: false,
+        claimedBy: userId,
+        claimedByName: userName || 'Player',
+        timestamp: Date.now()
+      };
+
+      claimSuccess = true;
+      return currentData;
     });
+
+    return {
+      result,
+      claimed: claimSuccess && result.committed
+    };
   }
 
   // Realtime Database: Delete room and board data when empty
@@ -259,8 +342,16 @@ export class FirebaseService {
       if (targetRole === 'game_master' && hasGM) {
         // Demote to Player automatically if GM already exists!
         targetRole = 'player';
-        const playerCount = Object.values(members).filter(m => m && m.role === 'player').length;
-        targetName = `Player_${playerCount + 1}`;
+        const existingNames = new Set(
+          Object.values(members)
+            .filter(m => m && m.role === 'player' && m.displayName)
+            .map(m => m.displayName)
+        );
+        let nextIndex = 1;
+        while (existingNames.has(`Player_${nextIndex}`)) {
+          nextIndex++;
+        }
+        targetName = `Player_${nextIndex}`;
       }
 
       assignedRole = targetRole;

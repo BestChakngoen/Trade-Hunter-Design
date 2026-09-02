@@ -30,7 +30,8 @@ export class PortfolioRenderer {
     }
     
     if (holdingsTableBody) {
-      const symbols = Object.keys(portfolio.stocks).filter(symbol => portfolio.stocks[symbol].volume > 0);
+      const stocksObj = (portfolio && portfolio.stocks) ? portfolio.stocks : {};
+      const symbols = Object.keys(stocksObj).filter(symbol => stocksObj[symbol] && stocksObj[symbol].volume > 0);
       
       if (symbols.length === 0) {
         holdingsTableBody.innerHTML = `
