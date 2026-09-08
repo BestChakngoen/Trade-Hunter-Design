@@ -15,10 +15,17 @@
   --lobby-joy-btn-y: -175px;      /* 👈 เลื่อนปุ่มจอยสติ๊ก: ติดลบ(-) เลื่อนขึ้น / ค่าบวก(+) เลื่อนลง */
 
   /* ⌨️ 3. ปรับขนาดและตำแหน่งของกล่องกรอกรหัสภายในหลอดขาว (Inner Input Controls) */
-  --lobby-input-width: 68%;         /* 👈 ความกว้างพื้นที่พิมพ์รหัส (เช่น 60% - 75%) */
+  --lobby-input-width: 60%;         /* 👈 ความกว้างพื้นที่พิมพ์รหัส (เช่น 60% - 75%) */
+  --lobby-input-height: 40%;        /* 👈 ความสูงพื้นที่พิมพ์รหัส/คอนเทนเนอร์ช่องสล็อต */
   --lobby-input-font-size: 1.15rem; /* 👈 ขนาดฟอนต์ตัวพิมพ์/ข้อความในกล่อง (เช่น 0.8rem - 1.5rem) */
-  --lobby-input-offset-x: 12%;      /* 👈 ขยับตำแหน่งแนวนอนของช่องกรอก (ซ้าย/ขวา) */
-  --lobby-input-offset-y: 6%;       /* 👈 ขยับตำแหน่งแนวตั้งของช่องกรอก (ขึ้น/ลง) */
+  --lobby-input-offset-x: 15%;      /* 👈 ขยับตำแหน่งแนวนอนของช่องกรอก (ซ้าย/ขวา) */
+  --lobby-input-offset-y: 29%;       /* 👈 ขยับตำแหน่งแนวตั้งของช่องกรอก (ขึ้น/ลง) */
+  --lobby-slot-height: 75%;         /* 👈 ความสูงของกรอบสล็อตสี่เหลี่ยมแต่ละช่อง */
+  --lobby-slot-max-width: 33px;     /* 👈 ความกว้างสูงสุดของกรอบสล็อตสี่เหลี่ยมแต่ละช่อง */
+  --lobby-slot-gap: 4px;            /* 👈 ระยะห่างระหว่างช่องสล็อตทั้ง 6 ช่อง */
+  --lobby-placeholder-offset-x: 0px;/* 👈 ขยับตำแหน่งแนวนอนของข้อความใส่รหัส (ซ้าย/ขวา) */
+  --lobby-placeholder-offset-y: -4px;/* 👈 ขยับตำแหน่งแนวตั้งของข้อความใส่รหัส (ขึ้น/ลง) */
+  --lobby-placeholder-font-size: 0.9rem; /* 👈 ขนาดตัวอักษรของข้อความใส่รหัส */
 
   /* 🎮 4. ปรับขนาดและตำแหน่งตัวหนังสือบนปุ่ม JOY (Joy Button Text Controls) */
   --lobby-joy-text-size: 1.8rem;    /* 👈 ขนาดตัวอักษร JOY บนปุ่มกด (เช่น 1.2rem - 2.5rem) */
@@ -170,10 +177,12 @@ html, body {
 
 .lobby-code-input::placeholder {
   color: #334155 !important;
-  font-size: calc(var(--lobby-input-font-size) * 0.78) !important;
+  font-size: var(--lobby-placeholder-font-size, calc(var(--lobby-input-font-size) * 0.78)) !important;
   font-weight: 800 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
+  display: inline-block !important;
+  transform: translate(var(--lobby-placeholder-offset-x, 0px), var(--lobby-placeholder-offset-y, 0px)) !important;
   animation: lobbyPulsePlaceholder 1.8s infinite ease-in-out !important;
 }
 

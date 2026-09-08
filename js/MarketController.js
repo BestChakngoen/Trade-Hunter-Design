@@ -42,6 +42,7 @@ export class MarketController {
 
     // 2. Bind Market Board Operations
     this.marketBoardController.bindSectorFilter();
+    this.marketBoardController.bindSizeFilter();
     this.marketBoardController.bindSortButtons();
     this.marketBoardController.bindResetBtn();
     this.marketBoardController.bindPriceControls();
@@ -88,8 +89,8 @@ export class MarketController {
       const isGM = (this.state.role === 'game_master');
       const title = "Leave Room";
       const message = isGM 
-        ? "Are you sure you want to leave? As GM, this will end the session and close the room for all players."
-        : "Are you sure you want to leave the room? Your current portfolio data will be cleared.";
+        ? "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? ในฐานะ GM การออกจากห้องอาจส่งมอบสิทธิ์ให้ผู้เล่นคนอื่น หรือปิดเซสชันห้องเกมสำหรับทุกคน"
+        : "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? ข้อมูลพอร์ตโฟลิโอปัจจุบันของคุณจะถูกล้างออกจากห้องนี้";
 
       const result = await this.renderer.showConfirmAlert(title, message, "YES", "NO");
       if (!result || !result.isConfirmed) return;
@@ -159,6 +160,42 @@ export class MarketController {
       if (this.renderer.priceGrid) {
         const liveCards = Array.from(this.renderer.priceGrid.querySelectorAll('.price-card'));
         this.renderer.applyPriceColors(liveCards, this.state.boardStocks, this.state.masterStocks, this.state.initialPrices);
+      }
+
+      const changedStocks = [];
+      firebaseBoard.stocks.forEach(stock => {
+        const symbol = stock.name;
+        const currentVal = stock.value;
+        const prevVal = oldPrices[symbol];
+        if (prevVal !== undefined && prevVal !== currentVal) {
+          changedStocks.push({
+            symbol,
+            currentVal,
+            prevVal,
+            isUp: currentVal > prevVal
+          });
+        }
+      });
+
+      // Real-time Toast Notifications for non-GM Players when stock prices are updated by GM
+      if (this.state.role !== 'game_master' && changedStocks.length > 0) {
+        if (changedStocks.length === 1) {
+          const { symbol, currentVal, isUp } = changedStocks[0];
+          this.renderer.showTopToast(
+            isUp ? "STOCK PRICE INCREASED" : "STOCK PRICE DECREASED",
+            `ราคาหุ้น ${symbol} ${isUp ? 'ปรับขึ้นเป็น' : 'ปรับลดลงเหลือ'} ${currentVal.toLocaleString('en-US')} บาท`,
+            isUp ? "success" : "warning"
+          );
+        } else {
+          const upCount = changedStocks.filter(s => s.isUp).length;
+          const downCount = changedStocks.filter(s => !s.isUp).length;
+          const isUp = upCount >= downCount;
+          this.renderer.showTopToast(
+            isUp ? "MARKET PRICE INCREASED" : "MARKET PRICE DECREASED",
+            `ราคาหุ้นในตลาดถูกปรับเปลี่ยนทั้งหมด ${changedStocks.length} หุ้น`,
+            isUp ? "success" : "warning"
+          );
+        }
       }
 
       firebaseBoard.stocks.forEach(stock => {
@@ -283,16 +320,16 @@ export class MarketController {
                   this.renderer.hideGMTransferModal();
                   this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
                   
-                  // Switch tab automatically from Portfolio to Management
-                  const tabMgmtBtn = document.getElementById('tabMgmtBtn');
-                  if (tabMgmtBtn) {
-                    tabMgmtBtn.click();
+                  // Switch tab automatically to Market page as default upon taking over GM
+                  const tabMarketBtn = document.getElementById('tabMarketBtn');
+                  if (tabMarketBtn) {
+                    tabMarketBtn.click();
                   }
 
-                  this.renderer.showTopToast("GM TAKEOVER SUCCESS", "You are now the new Game Master!", "success");
+                  this.renderer.showTopToast("GM TAKEOVER SUCCESS", "คุณได้สวมบทบาทเป็นผู้ควบคุมเกม (GM) คนใหม่แล้ว!", "success");
                 } else {
                   this.renderer.hideGMTransferModal();
-                  this.renderer.showTopToast("TAKEOVER FAILED", "Another player has already taken over as GM!", "rejected");
+                  this.renderer.showTopToast("TAKEOVER FAILED", "ผู้เล่นคนอื่นได้ทำการสวมบทบาทเป็น GM ไปก่อนแล้ว!", "rejected");
                 }
               },
               () => {
@@ -306,7 +343,7 @@ export class MarketController {
             this.prevGMClaimedBy = transferReq.claimedBy;
             if (transferReq.claimedBy !== currentUid) {
               const claimedName = transferReq.claimedByName || 'Player';
-              this.renderer.showTopToast("NEW GM ELECTED", `${claimedName} has taken over as the new GM!`, "approved");
+              this.renderer.showTopToast("NEW GM ELECTED", `${claimedName} ได้ทำการสวมบทบาทเป็น GM คนใหม่แล้ว!`, "approved");
             }
           }
         }
@@ -316,7 +353,7 @@ export class MarketController {
         if (this.prevMemberUids) {
           this.prevMemberUids.forEach(uid => {
             if (!currentMemberUids.has(uid)) {
-              this.state.removeMemberFromHistory(uid);
+              this.state.purgeUserData(uid);
             }
           });
         }
@@ -347,9 +384,9 @@ export class MarketController {
 
         this.renderer.updatePlayerPendingOrdersUI(orders, currentUid);
 
-        // Player: Detect GM Approval or Rejection and Salary Receipt
-        if (this.state.role !== 'game_master') {
-          const lastOrderMap = roomData.lastProcessedOrder || {};
+        // Player: Detect Trade Approval & Rejection Toast Notifications
+        if (this.state.role === 'player') {
+          const lastOrderMap = roomData.lastProcessedOrder || roomData.lastOrderProcessed || {};
           const myLastOrder = lastOrderMap[currentUid];
           
           if (myLastOrder && myLastOrder.timestamp && myLastOrder.timestamp !== this.prevProcessedTimestamp) {
@@ -357,13 +394,13 @@ export class MarketController {
             if (myLastOrder.status === 'APPROVED') {
               this.renderer.showTopToast(
                 "ORDER APPROVED",
-                `Your ${myLastOrder.type} order for ${myLastOrder.symbol} (${myLastOrder.volume || 1} share) was approved.`,
+                `คำสั่ง ${myLastOrder.type} หุ้น ${myLastOrder.symbol} (${myLastOrder.volume || 1} หุ้น) ได้รับการอนุมัติแล้ว`,
                 "approved"
               );
             } else if (myLastOrder.status === 'REJECTED') {
               this.renderer.showTopToast(
                 "ORDER REJECTED",
-                `Your ${myLastOrder.type} order for ${myLastOrder.symbol} (${myLastOrder.volume || 1} share) was declined by GM.`,
+                `คำสั่ง ${myLastOrder.type} หุ้น ${myLastOrder.symbol} (${myLastOrder.volume || 1} หุ้น) ถูกปฏิเสธโดย GM`,
                 "rejected"
               );
             }
@@ -375,7 +412,7 @@ export class MarketController {
             this.prevSalaryTimestamp = mySalary.timestamp;
             this.renderer.showTopToast(
               "SALARY RECEIVED",
-              `You received a salary of ${Number(mySalary.amount || 10000).toLocaleString()} THB from GM.`,
+              `คุณได้รับเงินเดือนจำนวน ${Number(mySalary.amount || 10000).toLocaleString()} บาทจาก GM`,
               "success"
             );
           }
@@ -386,7 +423,7 @@ export class MarketController {
             this.prevDividendTimestamp = myDividend.timestamp;
             this.renderer.showTopToast(
               "DIVIDEND RECEIVED",
-              `You received stock dividend of ${Number(myDividend.amount || 0).toLocaleString('en-US')} from GM.`,
+              `คุณได้รับเงินปันผลหุ้นจำนวน ${Number(myDividend.amount || 0).toLocaleString('en-US')} บาทจาก GM`,
               "success"
             );
           }
@@ -397,7 +434,7 @@ export class MarketController {
             this.prevDebtInterestTimestamp = myDebtInterest.timestamp;
             this.renderer.showTopToast(
               "DEBT INTEREST RECEIVED",
-              `You received debt interest of ${Number(myDebtInterest.amount || 0).toLocaleString('en-US')} from GM.`,
+              `คุณได้รับดอกเบี้ยเงินกู้จำนวน ${Number(myDebtInterest.amount || 0).toLocaleString('en-US')} บาทจาก GM`,
               "success"
             );
           }
@@ -412,7 +449,7 @@ export class MarketController {
                 const newOrder = orders[orderId];
                 this.renderer.showTopToast(
                   "NEW ORDER RECEIVED",
-                  `${newOrder.username || 'Player'} submitted a ${newOrder.type} order for ${newOrder.symbol}.`,
+                  `${newOrder.username || 'ผู้เล่น'} ได้ส่งคำสั่ง ${newOrder.type} หุ้น ${newOrder.symbol}`,
                   "warning"
                 );
               }

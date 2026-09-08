@@ -39,7 +39,7 @@ export class GMManagementHandler {
       const roomData = roomSnapshot.val();
       const memberData = roomData.members ? roomData.members[order.uid] : null;
       if (!memberData) {
-        this.renderer.showErrorAlert("Error", "Player data not found in this room.");
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องนี้");
         return;
       }
 
@@ -55,7 +55,7 @@ export class GMManagementHandler {
         const configPrice = DEBT_INSTRUMENTS[key]?.unitPrice || tradePrice;
         if (order.type === 'INVEST') {
           if (cash < configPrice) {
-            this.renderer.showErrorAlert("Approval Failed", `Player ${order.username} has insufficient cash for ${order.symbol}.`);
+            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} มีเงินสดไม่เพียงพอสำหรับ ${order.symbol}`);
             return;
           }
           newPortfolio = {
@@ -69,7 +69,7 @@ export class GMManagementHandler {
         } else { // REDEEM
           const currentVol = currentDebt[key] || 0;
           if (currentVol < 1) {
-            this.renderer.showErrorAlert("Approval Failed", `Player ${order.username} has no units of ${order.symbol} to redeem.`);
+            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} ไม่มีหน่วยลงทุนของ ${order.symbol} สำหรับขายคืน`);
             return;
           }
           newPortfolio = {
@@ -83,7 +83,7 @@ export class GMManagementHandler {
         }
       } else if (order.type === 'BUY') {
         if (cash < totalCost) {
-          this.renderer.showErrorAlert("Approval Failed", `Player ${order.username} has insufficient cash for BUY order. (Required: ${totalCost.toLocaleString()} THB, Available: ${cash.toLocaleString()} THB)`);
+          this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} มีเงินสดไม่เพียงพอสำหรับคำสั่ง BUY (ต้องการ: ${totalCost.toLocaleString()} บาท, มีอยู่: ${cash.toLocaleString()} บาท)`);
           return;
         }
         const calcPort = TradeService.calculateBuyPortfolio(cash, currentStocks, order.symbol, order.volume, tradePrice);
@@ -95,7 +95,7 @@ export class GMManagementHandler {
         const holding = currentStocks[order.symbol];
         if (!holding || holding.volume < order.volume) {
           const userVol = holding ? holding.volume : 0;
-          this.renderer.showErrorAlert("Approval Failed", `Player ${order.username} has insufficient shares of ${order.symbol} for SELL order. (Required: ${order.volume.toLocaleString()}, Available: ${userVol.toLocaleString()})`);
+          this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} มีหุ้น ${order.symbol} ไม่เพียงพอสำหรับคำสั่ง SELL (ต้องการ: ${order.volume.toLocaleString()} หุ้น, มีอยู่: ${userVol.toLocaleString()} หุ้น)`);
           return;
         }
         const calcPort = TradeService.calculateSellPortfolio(cash, currentStocks, order.symbol, order.volume, tradePrice);
@@ -134,13 +134,13 @@ export class GMManagementHandler {
 
       this.renderer.showTopToast(
         "ORDER APPROVED",
-        `Approved ${order.type} ${order.symbol} for ${order.displayName || order.username || 'Player'}`,
+        `อนุมัติคำสั่ง ${order.type} หุ้น ${order.symbol} ของ ${order.displayName || order.username || 'ผู้เล่น'} เรียบร้อยแล้ว`,
         "success"
       );
 
     } catch (error) {
       console.error("Failed to approve order:", error);
-      this.renderer.showErrorAlert("Error", "Failed to approve trade order.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถอนุมัติคำสั่งซื้อขายได้");
     }
   }
 
@@ -168,12 +168,12 @@ export class GMManagementHandler {
 
       this.renderer.showTopToast(
         "ORDER REJECTED",
-        `Rejected ${order ? order.type : ''} ${order ? order.symbol : ''} for ${order ? (order.displayName || order.username || 'Player') : 'Player'}`,
+        `ปฏิเสธคำสั่ง ${order ? order.type : ''} หุ้น ${order ? order.symbol : ''} ของ ${order ? (order.displayName || order.username || 'ผู้เล่น') : 'ผู้เล่น'} เรียบร้อยแล้ว`,
         "rejected"
       );
     } catch (error) {
       console.error("Failed to reject order:", error);
-      this.renderer.showErrorAlert("Error", "Failed to reject trade order.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถปฏิเสธคำสั่งซื้อขายได้");
     }
   }
 
@@ -183,7 +183,7 @@ export class GMManagementHandler {
       const roomData = roomSnapshot ? roomSnapshot.val() : null;
 
       if (!roomData || !roomData.members || !roomData.members[playerUid]) {
-        this.renderer.showErrorAlert("Error", "Player data not found in room.");
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องเกม");
         return;
       }
 
@@ -192,7 +192,7 @@ export class GMManagementHandler {
 
       const confirmResult = await this.renderer.showConfirmAlert(
         "Confirm Salary Payment",
-        `Do you want to pay a salary of 10,000 to player "${playerName}"?`,
+        `คุณต้องการจ่ายเงินเดือน 10,000 บาท ให้กับผู้เล่น "${playerName}" หรือไม่?`,
         "YES",
         "NO"
       );
@@ -214,12 +214,12 @@ export class GMManagementHandler {
 
       this.renderer.showTopToast(
         "SALARY PAID", 
-        `Successfully transferred 10,000 salary to "${playerName}".`,
+        `โอนเงินเดือน 10,000 บาท ให้กับ "${playerName}" เรียบร้อยแล้ว`,
         "success"
       );
     } catch (error) {
       console.error("Failed to pay salary to player:", error);
-      this.renderer.showErrorAlert("Error", "Failed to pay salary to player.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถจ่ายเงินเดือนให้ผู้เล่นได้");
     }
   }
 
@@ -229,7 +229,7 @@ export class GMManagementHandler {
       const roomData = roomSnapshot ? roomSnapshot.val() : null;
 
       if (!roomData || !roomData.members || !roomData.members[playerUid]) {
-        this.renderer.showErrorAlert("Error", "Player data not found in room.");
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องเกม");
         return;
       }
 
@@ -247,7 +247,7 @@ export class GMManagementHandler {
       if (dividendData.totalDividend <= 0) {
         this.renderer.showErrorAlert(
           "No Dividend Payable", 
-          `Player "${playerName}" does not hold any stocks to receive dividend.`
+          `ผู้เล่น "${playerName}" ไม่มีหุ้นสำหรับรับเงินปันผล`
         );
         return;
       }
@@ -255,7 +255,7 @@ export class GMManagementHandler {
       const formattedDividend = dividendData.totalDividend.toLocaleString('en-US');
       const confirmResult = await this.renderer.showConfirmAlert(
         "Confirm Dividend Payment",
-        `Do you want to pay stock dividend of ${formattedDividend} to player "${playerName}"?`,
+        `คุณต้องการจ่ายเงินปันผลหุ้นจำนวน ${formattedDividend} บาท ให้กับผู้เล่น "${playerName}" หรือไม่?`,
         "YES",
         "NO"
       );
@@ -277,12 +277,12 @@ export class GMManagementHandler {
 
       this.renderer.showTopToast(
         "DIVIDEND PAID", 
-        `Successfully transferred ${formattedDividend} dividend to "${playerName}".`,
+        `โอนเงินปันผลหุ้นจำนวน ${formattedDividend} บาท ให้กับ "${playerName}" เรียบร้อยแล้ว`,
         "success"
       );
     } catch (error) {
       console.error("Failed to pay dividend to player:", error);
-      this.renderer.showErrorAlert("Error", "Failed to pay dividend to player.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถจ่ายเงินปันผลให้ผู้เล่นได้");
     }
   }
 
@@ -292,7 +292,7 @@ export class GMManagementHandler {
       const roomData = roomSnapshot ? roomSnapshot.val() : null;
 
       if (!roomData || !roomData.members) {
-        this.renderer.showErrorAlert("Error", "Room data not found.");
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลห้องเกม");
         return;
       }
 
@@ -330,14 +330,14 @@ export class GMManagementHandler {
       if (totalTransferredCount === 0) {
         this.renderer.showErrorAlert(
           "No Dividend Payable", 
-          "None of the players currently hold stocks to receive dividend."
+          "ยังไม่มีผู้เล่นคนใดถือครองหุ้นสำหรับรับเงินปันผล"
         );
         return;
       }
 
       const confirmResult = await this.renderer.showConfirmAlert(
         "Confirm Bulk Dividend Payment",
-        `Do you want to pay stock dividend to ${totalTransferredCount} player(s) for a total of ${totalAmountPaid.toLocaleString('en-US')} THB?`,
+        `คุณต้องการจ่ายเงินปันผลหุ้นให้กับผู้เล่นทั้งหมด ${totalTransferredCount} คน รวมเป็นเงินทั้งสิ้น ${totalAmountPaid.toLocaleString('en-US')} บาท หรือไม่?`,
         "YES",
         "NO"
       );
@@ -349,12 +349,12 @@ export class GMManagementHandler {
 
       this.renderer.showTopToast(
         "BULK DIVIDEND PAID", 
-        `Paid ${totalAmountPaid.toLocaleString('en-US')} THB total dividend to ${totalTransferredCount} player(s).`,
+        `จ่ายเงินปันผลหุ้นรวมเป็นเงิน ${totalAmountPaid.toLocaleString('en-US')} บาท ให้กับผู้เล่น ${totalTransferredCount} คน เรียบร้อยแล้ว`,
         "success"
       );
     } catch (error) {
       console.error("Failed to pay bulk dividend to players:", error);
-      this.renderer.showErrorAlert("Error", "Failed to pay bulk dividend.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถจ่ายเงินปันผลกลุ่มได้");
     }
   }
 
@@ -364,7 +364,7 @@ export class GMManagementHandler {
       const roomData = roomSnapshot ? roomSnapshot.val() : null;
 
       if (!roomData || !roomData.members || !roomData.members[playerUid]) {
-        this.renderer.showErrorAlert("Error", "Player data not found in room.");
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องเกม");
         return;
       }
 
@@ -377,7 +377,7 @@ export class GMManagementHandler {
       if (debtInterestData.totalInterest <= 0) {
         this.renderer.showErrorAlert(
           "Cannot Pay Debt Interest", 
-          `Player "${playerName}" does not hold any debt instruments to receive interest.`
+          `ผู้เล่น "${playerName}" ไม่มีหน่วยลงทุนตราสารหนี้สำหรับรับดอกเบี้ย`
         );
         return;
       }
@@ -385,7 +385,7 @@ export class GMManagementHandler {
       const formattedInterest = debtInterestData.totalInterest.toLocaleString('en-US');
       const confirmResult = await this.renderer.showConfirmAlert(
         "Confirm Debt Interest Payment",
-        `Do you want to pay debt interest of ${formattedInterest} to player "${playerName}"?`,
+        `คุณต้องการจ่ายดอกเบี้ยเงินกู้จำนวน ${formattedInterest} บาท ให้กับผู้เล่น "${playerName}" หรือไม่?`,
         "YES",
         "NO"
       );
@@ -407,12 +407,12 @@ export class GMManagementHandler {
 
       this.renderer.showTopToast(
         "DEBT INTEREST PAID", 
-        `Successfully transferred ${formattedInterest} debt interest to "${playerName}".`,
+        `โอนดอกเบี้ยเงินกู้จำนวน ${formattedInterest} บาท ให้กับ "${playerName}" เรียบร้อยแล้ว`,
         "success"
       );
     } catch (error) {
       console.error("Failed to pay debt interest to player:", error);
-      this.renderer.showErrorAlert("Error", "Failed to pay debt interest to player.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถจ่ายดอกเบี้ยเงินกู้ให้ผู้เล่นได้");
     }
   }
 }

@@ -25,12 +25,11 @@ export function calculateExponentialBetaPrice(currentPrice, beta = 1.0, directio
 export class MarketState {
   constructor(cardElements) {
     this.originalCards = cardElements;
-    this.selectedSectors = new Set(['ALL']);
+    this.selectedSectors = new Set();
+    this.selectedSizes = new Set();
     this.sortStates = {
       SECTOR: { enabled: false, dir: 'ASC' },
-      BETA: { enabled: false, dir: 'DESC' },
-      PRICE: { enabled: false, dir: 'DESC' },
-      SIZE: { enabled: false, dir: 'DESC' }
+      PRICE: { enabled: false, dir: 'DESC' }
     };
     
     this.roomCode = null;
@@ -416,6 +415,86 @@ export class MarketState {
     return updatedStocks;
   }
 
+  // Generate updated stocks list for saving to Firebase when upgrading price step for visible/target stocks by +1
+  getBatchUpdatedStocksForUp(targetSymbols = null) {
+    const boardStocksArray = Object.values(this.boardStocks);
+    if (!boardStocksArray.length) return null;
+
+    let hasChanges = false;
+    const updatedStocks = boardStocksArray.map(s => {
+      const symbol = s.name;
+      if (targetSymbols && targetSymbols.size > 0 && !targetSymbols.has(symbol)) {
+        return s;
+      }
+      const master = this.masterStocks[symbol];
+      if (!master) return s;
+
+      const nextStep = s.step + 1;
+      const beta = this.getStockBeta(symbol);
+      const nextValue = calculateExponentialBetaPrice(s.value, beta, 1, 0.16);
+      if (nextValue < 0) return s;
+
+      hasChanges = true;
+      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
+      const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
+      const newHistory = [...currentHistory, nextValue];
+      this.priceHistory[symbol] = newHistory;
+
+      return {
+        ...s,
+        step: nextStep,
+        value: nextValue,
+        oldValue: s.value,
+        history: newHistory,
+        updatedAt: Date.now()
+      };
+    });
+
+    return hasChanges ? updatedStocks : null;
+  }
+
+  // Generate updated stocks list for saving to Firebase when downgrading price step for visible/target stocks by -1
+  getBatchUpdatedStocksForDown(targetSymbols = null) {
+    const boardStocksArray = Object.values(this.boardStocks);
+    if (!boardStocksArray.length) return null;
+
+    let hasChanges = false;
+    const updatedStocks = boardStocksArray.map(s => {
+      const symbol = s.name;
+      if (targetSymbols && targetSymbols.size > 0 && !targetSymbols.has(symbol)) {
+        return s;
+      }
+      const master = this.masterStocks[symbol];
+      if (!master) return s;
+
+      let prevStep = s.step - 1;
+      if (prevStep < 0) {
+        prevStep = 0;
+      }
+
+      const beta = this.getStockBeta(symbol);
+      const nextValue = Math.max(100, calculateExponentialBetaPrice(s.value, beta, -1, 0.16));
+      if (nextValue < 0) return s;
+
+      hasChanges = true;
+      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
+      const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
+      const newHistory = [...currentHistory, nextValue];
+      this.priceHistory[symbol] = newHistory;
+
+      return {
+        ...s,
+        step: prevStep,
+        value: nextValue,
+        oldValue: s.value,
+        history: newHistory,
+        updatedAt: Date.now()
+      };
+    });
+
+    return hasChanges ? updatedStocks : null;
+  }
+
   // Reset entire market state back to initial steps
   getResetStocks() {
     return Object.values(this.boardStocks).map(s => {
@@ -438,29 +517,26 @@ export class MarketState {
   resetFilters() {
     this.sortStates = {
       SECTOR: { enabled: false, dir: 'ASC' },
-      BETA: { enabled: false, dir: 'DESC' },
-      PRICE: { enabled: false, dir: 'DESC' },
-      SIZE: { enabled: false, dir: 'DESC' }
+      PRICE: { enabled: false, dir: 'DESC' }
     };
     this.selectedSectors.clear();
-    this.selectedSectors.add('ALL');
+    this.selectedSizes.clear();
   }
 
   getFilteredAndSortedCards() {
     let filtered = this.originalCards.filter(card => {
       const sector = card.getAttribute('data-sector');
-      return this.selectedSectors.has('ALL') || this.selectedSectors.has(sector);
+      const size = card.getAttribute('data-size');
+      const matchSector = this.selectedSectors.size === 0 || this.selectedSectors.has(sector);
+      const matchSize = this.selectedSizes.size === 0 || this.selectedSizes.has(size);
+      return matchSector && matchSize;
     });
 
     const isSectorActive = this.sortStates.SECTOR.enabled;
-    const isBetaActive = this.sortStates.BETA.enabled;
     const isPriceActive = this.sortStates.PRICE.enabled;
-    const isSizeActive = this.sortStates.SIZE ? this.sortStates.SIZE.enabled : false;
 
-    if (isSectorActive || isBetaActive || isPriceActive || isSizeActive) {
-      const sizeWeight = { 'L': 3, 'M': 2, 'S': 1 };
+    if (isSectorActive || isPriceActive) {
       filtered.sort((a, b) => {
-        // Priority 1: Sort by Sector (if enabled) - always ASC (A-Z)
         if (isSectorActive) {
           const valA = a.getAttribute('data-sector') || '';
           const valB = b.getAttribute('data-sector') || '';
@@ -468,27 +544,10 @@ export class MarketState {
           if (comparison !== 0) return comparison;
         }
 
-        // Priority 2: Sort by Price (if enabled)
         if (isPriceActive) {
           const valA = parseFloat(a.getAttribute('data-price'));
           const valB = parseFloat(b.getAttribute('data-price'));
           const comparison = this.sortStates.PRICE.dir === 'DESC' ? valB - valA : valA - valB;
-          if (comparison !== 0) return comparison;
-        }
-
-        // Priority 3: Sort by Beta (if enabled)
-        if (isBetaActive) {
-          const valA = parseFloat(a.getAttribute('data-beta'));
-          const valB = parseFloat(b.getAttribute('data-beta'));
-          const comparison = this.sortStates.BETA.dir === 'DESC' ? valB - valA : valA - valB;
-          if (comparison !== 0) return comparison;
-        }
-
-        // Priority 4: Sort by Size (if enabled)
-        if (isSizeActive) {
-          const valA = sizeWeight[a.getAttribute('data-size')] || 0;
-          const valB = sizeWeight[b.getAttribute('data-size')] || 0;
-          const comparison = this.sortStates.SIZE.dir === 'DESC' ? valB - valA : valA - valB;
           if (comparison !== 0) return comparison;
         }
 

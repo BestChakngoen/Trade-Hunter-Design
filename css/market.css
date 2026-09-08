@@ -4,21 +4,21 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. 🎛️ Filter & Sort Container (ส่วนตัวกรอง Sector และปุ่มจัดเรียง)
+   1. 🎛️ FILTER & SORT CONTAINER (ส่วนตัวกรอง Sector และปุ่มจัดเรียง)
    -------------------------------------------------------------------------- */
 
 /* กล่องรวมเมนูตัวกรองทั้งหมดด้านบน */
 .filter-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;                        /* 👈 ระยะห่างระหว่างส่วนในกล่องตัวกรอง */
-  margin-bottom: 32px;              /* 👈 ระยะห่างใต้กล่องตัวกรอง ก่อนถึงตารางหุ้น */
-  background: rgba(16, 18, 30, 0.92); /* 👈 สีพื้นหลังกล่องตัวกรอง (สีเข้มใส) */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* 👈 เส้นขอบกระจกใส */
-  padding: 24px 28px;               /* 👈 ระยะห่างขอบในกล่องตัวกรอง */
-  border-radius: 28px;              /* 👈 ความมนของมุมกล่องตัวกรอง */
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); /* 👈 เงาสมจริง */
-  backdrop-filter: blur(12px);       /* 👈 เอฟเฟกต์เบลอฉากหลัง (Glassmorphism) */
+  gap: 20px;
+  margin-bottom: 32px;
+  background: rgba(16, 18, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 24px 28px;
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
 }
 
 /* แถบแสดงสถานะ User (Role Indicator) มุมบนซ้ายของกล่อง Filter */
@@ -69,121 +69,223 @@
 .filter-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;                        /* 👈 ระยะห่างระหว่างหัวข้อตัวกรองกับปุ่มกด */
+  gap: 10px;
   min-width: 0;
 }
 
 /* ข้อความหัวข้อตัวกรอง (เช่น Sector, Sort By) */
 .filter-title {
-  font-size: 0.76rem;               /* 👈 ขนาดฟอนต์หัวข้อตัวกรอง */
-  font-weight: 800;                /* 👈 ความหนาตัวอักษรหัวข้อ */
-  color: #b3b6c1;                   /* 👈 สีตัวอักษรหัวข้อ (สีเทาสว่าง) */
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #b3b6c1;
   text-transform: uppercase;
-  letter-spacing: 0.08em;           /* 👈 ระยะห่างตัวอักษรหัวข้อ */
+  letter-spacing: 0.08em;
 }
 
-/* === กรอบครอบและแถบเลื่อนสไลด์บาร์ (Sector Pills & Sort Toggles Scrollbars) === */
+/* === กรอบครอบตัวกรอง (Sector Pills & Sort Toggles Wrappers) === */
 .sector-pills-wrapper,
 .sort-toggles-wrapper {
   position: relative;
   width: 100%;
-  overflow: hidden;
 }
 
-.sector-pills,
-.sort-toggles {
-  display: flex;
-  gap: 8px;                         /* 👈 ระยะห่างระหว่างแต่ละปุ่ม */
-  overflow-x: auto;                 /* เลื่อนแนวนอนได้บนหน้าจอมือถือ */
-  padding-bottom: 8px;              /* เผื่อพื้นที่ให้สไลด์บาร์ด้านล่าง */
-  -webkit-overflow-scrolling: touch; /* เลื่อนได้อย่างลื่นไหลบน iOS/Android */
-  scrollbar-width: thin;            /* กำหนดขนาดแถบเลื่อนบน Firefox */
-  scrollbar-color: #334155 #0f172a; /* 👈 สีหัวเลื่อนและรางสไตล์เดียวกับ Portfolio Holdings */
+/* --------------------------------------------------------------------------
+   2. 🖼️ SECTOR FILTER BUTTONS CONFIGURATION (ส่วนการตั้งค่าขนาดและปุ่ม SECTOR)
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* 📏 2.1 ขนาดของปุ่มรูปภาพ Sector */
+  --sector-img-size: 48px;
+  --sector-gap: 4px;
+  --sector-all-height: 48px;
+
+  /* 🖼️ 2.2 กรอบและแสงเรืองแสง (Border & Active Glow Configuration) */
+  --sector-border-width: 2px;
+  --sector-active-glow-blur: 8px;
+  --sector-active-glow-opacity: 0.4;
+
+  /* 🎯 2.3 ตำแหน่งและการจัดวางแนว (Position & Alignment) */
+  --sector-align-vertical: center;
+  --sector-margin-bottom: 8px;
+
+  /* ⚡ 2.4 อัตราการขยายขนาด (Scale Factors) */
+  --sector-hover-scale: 1.08;
+  --sector-active-scale: 1.00;
+  --sector-active-icon-scale: 1.1;
+
+  /* 👁️ 2.5 ความโปร่งแสงสำหรับปุ่มที่ไม่ได้ Active */
+  --sector-inactive-opacity: 0.72;
 }
 
-/* ตกแต่งสไลด์บาร์ (Scrollbar) สไตล์เดียวกับ Portfolio Holdings */
-.sector-pills::-webkit-scrollbar,
-.sort-toggles::-webkit-scrollbar {
-  height: 6px !important;           /* 👈 ความสูงสไลด์บาร์แนวนอน (6px) */
-  display: block !important;
+.sector-pills {
+  display: flex !important;
+  align-items: var(--sector-align-vertical) !important;
+  gap: var(--sector-gap) !important;
+  padding-bottom: var(--sector-margin-bottom) !important;
 }
 
-.sector-pills::-webkit-scrollbar-track,
-.sort-toggles::-webkit-scrollbar-track {
-  background: #0f172a !important;   /* 👈 รางเลื่อนสีเข้มสไตล์เดียวกับ Portfolio Holdings */
-  border-radius: 4px;
-}
-
-.sector-pills::-webkit-scrollbar-thumb,
-.sort-toggles::-webkit-scrollbar-thumb {
-  background: #334155 !important;   /* 👈 ปุ่มสไลด์บาร์สี Slate Gray สไตล์เดียวกับ Portfolio Holdings */
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.sector-pills::-webkit-scrollbar-thumb:hover,
-.sort-toggles::-webkit-scrollbar-thumb:hover {
-  background: #475569 !important;
-}
-
-/* ซ่อนสไลด์บาร์เมื่อไม่ได้เลื่อน โดยคงความสูงและ padding-bottom เท่าเดิมเพื่อป้องกันอาการขยาย-หด (Layout Shift) */
-.sector-pills.scrolled-hidden,
-.sort-toggles.scrolled-hidden {
-  scrollbar-color: transparent transparent !important;
-}
-
-.sector-pills.scrolled-hidden::-webkit-scrollbar-track,
-.sort-toggles.scrolled-hidden::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-.sector-pills.scrolled-hidden::-webkit-scrollbar-thumb,
-.sort-toggles.scrolled-hidden::-webkit-scrollbar-thumb {
-  background: transparent !important;
-}
-
-/* เม็ดปุ่ม Sector ปกติ (เช่น ALL, FINCIAL, TECH) */
+/* 🔘 BUTTON BASE STYLES */
 .pill {
-  flex-shrink: 0 !important;        /* 👈 ป้องกันปุ่มหดเพื่อให้สไลด์บาร์ทำงานเมื่อล้นแถว */
-  background: rgba(255, 255, 255, 0.03); /* 👈 สีพื้นหลังปุ่มปกติ */
-  border: 1px solid rgba(255, 255, 255, 0.1);  /* 👈 สีเส้นขอบปุ่มปกติ */
-  color: #b3b6c1;                    /* 👈 สีข้อความบนปุ่ม */
-  padding: 10px 20px;                /* 👈 ขนาดความใหญ่ปุ่ม [บน-ล่าง] [ซ้าย-ขวา] */
-  border-radius: 14px;               /* 👈 ความมนของเม็ดปุ่ม */
-  font-size: 0.82rem;                /* 👈 ขนาดตัวอักษรในปุ่ม */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  height: var(--sector-all-height) !important;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #b3b6c1;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  white-space: nowrap;               /* ห้ามตัดคำขึ้นบรรทัดใหม่ */
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pill:hover {
-  background: rgba(255, 255, 255, 0.08); /* 👈 สีปุ่มเมื่อเอาเมาส์ไปวาง (Hover) */
+  background: rgba(255, 255, 255, 0.08);
   color: #f7f8fb;
-  transform: translateY(-1px);      /* 👈 ยกปุ่มลอยขึ้นเล็กน้อย */
 }
 
-/* เม็ดปุ่ม Sector ที่กำลังเลือกใช้งานอยู่ (Active Pill) */
-.pill.active {
-  background: linear-gradient(135deg, rgba(96, 255, 184, 0.15) 0%, rgba(96, 255, 184, 0.03) 100%); /* 👈 สีพื้นหลังตอนเลือก (สีเขียวตระการตา) */
-  border-color: #60ffb8;             /* 👈 สีเส้นขอบตอนเลือก */
-  color: #60ffb8;                    /* 👈 สีตัวอักษรตอนเลือก */
-  box-shadow: 0 0 16px rgba(96, 255, 184, 0.12); /* 👈 เอฟเฟกต์เรืองแสงสีเขียวรอบปุ่ม */
+/* 🖼️ IMAGE SECTOR BUTTONS */
+.pill.pill-img-only {
+  background: transparent !important;
+  border: var(--sector-border-width) solid transparent !important;
+  outline: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border-radius: 50% !important;
+  width: var(--sector-img-size) !important;
+  height: var(--sector-img-size) !important;
+  box-sizing: border-box !important;
+  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* === ปุ่มกดจัดเรียง (Sort Toggle Buttons) === */
+.pill.pill-img-only:not(.active) {
+  opacity: var(--sector-inactive-opacity) !important;
+}
+
+.pill .pill-icon {
+  width: var(--sector-img-size) !important;
+  height: var(--sector-img-size) !important;
+  object-fit: contain;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  filter: none !important;
+  display: block !important;
+}
+
+/* ✨ HOVER & ACTIVE ANIMATIONS */
+.pill.pill-img-only:not(.active):hover {
+  transform: scale(var(--sector-hover-scale)) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+.pill.pill-img-only:not(.active):hover .pill-icon {
+  transform: scale(var(--sector-hover-scale)) !important;
+}
+
+.pill.pill-img-only.active {
+  transform: scale(var(--sector-active-scale)) !important;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+
+.pill.pill-img-only.active .pill-icon {
+  transform: scale(var(--sector-active-icon-scale)) !important;
+  background: transparent !important;
+}
+
+.pill.pill-img-only.active:hover {
+  transform: scale(var(--sector-active-scale)) !important;
+  background: transparent !important;
+}
+
+.pill.pill-img-only.active:hover .pill-icon {
+  transform: scale(var(--sector-active-icon-scale)) !important;
+  background: transparent !important;
+}
+
+/* 🌈 ACTIVE SECTOR BORDER COLORS */
+.pill.pill-img-only[data-value="FINCIAL"].active {
+  border-color: #af6b90 !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(175, 107, 144, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="CONSUMP"].active {
+  border-color: #c97b81 !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(201, 123, 129, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="RESOURCE"].active {
+  border-color: #7258ab !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(114, 88, 171, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="INDUS"].active {
+  border-color: #7e7a79 !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(126, 122, 121, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="TECH"].active {
+  border-color: #4480a8 !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(68, 128, 168, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="PROPCON"].active {
+  border-color: #a57c2b !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(165, 124, 43, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="AGRO"].active {
+  border-color: #276943 !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(39, 105, 67, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill.pill-img-only[data-value="SERVICE"].active {
+  border-color: #acba43 !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(172, 186, 67, var(--sector-active-glow-opacity)) !important;
+}
+
+.pill:not(.pill-img-only).active {
+  background: linear-gradient(135deg, rgba(96, 255, 184, 0.15) 0%, rgba(96, 255, 184, 0.03) 100%);
+  border-color: #60ffb8;
+  color: #60ffb8;
+}
+
+.pill[data-value="ALL"] {
+  background-color: rgba(148, 163, 184, 0.15) !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+  color: #cbd5e1 !important;
+}
+
+.pill[data-value="ALL"]:hover,
+.pill[data-value="ALL"].active {
+  background-color: #475569 !important;
+  border-color: #94a3b8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 var(--sector-active-glow-blur) rgba(148, 163, 184, var(--sector-active-glow-opacity)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. 🔀 SORT TOGGLE BUTTONS (ปุ่มกดจัดเรียง)
+   -------------------------------------------------------------------------- */
 .sort-toggles {
   display: flex;
-  gap: 12px;                         /* 👈 ระยะห่างระหว่างปุ่ม Sort แต่ละตัว */
+  gap: 12px;
 }
 
 .sort-toggle-btn {
-  flex-shrink: 0 !important;        /* 👈 ห้ามหดปุ่ม เพื่อขยายล้นแนวนอนเปิดสไลด์บาร์เลื่อนได้ */
+  flex-shrink: 0 !important;
   white-space: nowrap !important;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #b3b6c1;
-  border-radius: 16px;               /* 👈 ความมนปุ่มเรียงลำดับ */
+  border-radius: 16px;
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
@@ -200,7 +302,7 @@
 }
 
 .sort-label {
-  padding: 12px 18px;                /* 👈 ระยะห่างปุ่มข้อความคำว่า Price / Beta */
+  padding: 12px 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -216,7 +318,7 @@
 
 /* ลูกศรชี้ขึ้น/ลงของปุ่ม Sort */
 .sort-icon {
-  padding: 12px 16px;                /* 👈 ขนาดช่องใส่ลูกศรเรียงลำดับ */
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,7 +332,6 @@
   color: #f7f8fb;
 }
 
-/* ปุ่มจัดเรียงที่เปิดใช้งานอยู่ */
 .sort-toggle-btn.active {
   background: linear-gradient(135deg, rgba(96, 255, 184, 0.12) 0%, rgba(96, 255, 184, 0.02) 100%);
   border-color: #60ffb8;
@@ -250,11 +351,11 @@
   background: rgba(96, 255, 184, 0.18);
 }
 
-/* ปุ่ม Reset ตัวกรอง (ปุ่มสีแดงล้างการตั้งค่า) */
+/* ปุ่ม Reset ตัวกรอง */
 .sort-toggle-btn.reset-btn {
   background: rgba(250, 55, 95, 0.03);
   border-color: rgba(250, 55, 95, 0.15);
-  color: #fa375f;                    /* 👈 สีตัวอักษรและไอคอน Reset (สีชมพูแดง) */
+  color: #fa375f;
 }
 
 .sort-toggle-btn.reset-btn:hover {
@@ -265,40 +366,40 @@
 }
 
 /* --------------------------------------------------------------------------
-   2. 📈 Stock Cards Grid & Controls (การ์ดแสดงราคาหุ้นและปุ่มปรับราคา)
+   4. 📈 STOCK CARDS GRID & CONTROLS (การ์ดแสดงราคาหุ้นและปุ่มปรับราคา)
    -------------------------------------------------------------------------- */
 .section-title {
-  margin-bottom: 16px;              /* 👈 ระยะห่างใต้คำว่า Price Level */
-  font-size: 1.05rem;              /* 👈 ขนาดตัวอักษรหัวข้อ Price Level */
+  margin-bottom: 16px;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #60ffb8;                   /* 👈 สีตัวอักษรหัวข้อ Price Level */
+  color: #60ffb8;
 }
 
 .price-section {
-  margin-bottom: 32px;              /* 👈 ระยะห่างใต้ส่วนแสดงหุ้นทั้งหมด */
+  margin-bottom: 32px;
 }
 
 .price-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;                        /* 👈 ระยะห่างระหว่างการ์ดหุ้นแต่ละตัว (px) */
+  gap: 12px;
   width: 100%;
 }
 
-/* ปุ่ม View Graph (เปิด/ปิดดูแนวกราฟย่อย) */
+/* ปุ่ม View Graph */
 .view-graph-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 0.75rem;               /* 👈 ขนาดตัวอักษรบนปุ่ม View Graph */
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #a5b4fc;                   /* 👈 สีตัวอักษร View Graph สว่างอ่านง่าย */
+  color: #a5b4fc;
   cursor: pointer;
-  padding: 8px 18px;                /* 👈 ขนาดความใหญ่ของปุ่ม View Graph */
-  border-radius: 20px;              /* 👈 ความมนของปุ่ม View Graph */
-  background: rgba(79, 70, 229, 0.16); /* 👈 สีพื้นหลังปุ่ม View Graph */
-  border: 1px solid rgba(129, 140, 248, 0.4); /* 👈 เส้นขอบปุ่ม View Graph */
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: rgba(79, 70, 229, 0.16);
+  border: 1px solid rgba(129, 140, 248, 0.4);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   white-space: nowrap;
@@ -315,7 +416,7 @@
 }
 
 .view-graph-btn.active {
-  color: #fb7185;                   /* 👈 สีตัวอักษรเมื่อกำลังเปิดกราฟอยู่ (สีโรสพิ้งค์สว่าง) */
+  color: #fb7185;
   background: rgba(225, 29, 72, 0.2);
   border-color: rgba(244, 63, 94, 0.6);
   box-shadow: 0 0 12px rgba(225, 29, 72, 0.3);
@@ -327,13 +428,7 @@
   border-color: rgba(244, 63, 94, 0.9);
 }
 
-/* --------------------------------------------------------------------------
-   🔒 [LOCKED & FROZEN] การจัดวางตำแหน่งเลย์เอาต์การ์ดหุ้น (ห้ามเปลี่ยนแปลงในภายหลัง)
-   - 0% - 22%: โลโก้และชื่อหุ้น (ชิดซ้าย)
-   - 22% - 48%: ปุ่ม View Graph (เริ่มต้นที่ตำแหน่ง 22% อยู่ใกล้ชื่อหุ้นและเรียงตรงกันแนวตั้ง)
-   - 48% - 88%: ช่องแสดงราคาหุ้น (.price-box)
-   - 88% - 100%: ปุ่มปรับราคาขึ้น-ลง (.card-controls ชิดขวาที่ตำแหน่ง ~90%)
-   -------------------------------------------------------------------------- */
+/* 🔒 [LOCKED & FROZEN] การจัดวางตำแหน่งเลย์เอาต์การ์ดหุ้น */
 .price-card > div:first-child {
   display: grid;
   grid-template-columns: 22% 26% 40% 12%;
@@ -341,7 +436,6 @@
   width: 100%;
 }
 
-/* ส่วนที่ 1 & 2: โลโก้ + ชื่อหุ้น และ ปุ่ม View Graph */
 .price-card > div:first-child > div:first-child {
   grid-column: span 2;
   display: flex;
@@ -350,7 +444,7 @@
 }
 
 .price-card > div:first-child > div:first-child > div:first-child {
-  width: 45.83%;                    /* 👈 จัดพื้นที่ชื่อหุ้นฝั่งซ้ายที่ 22% ของการ์ดพอดี */
+  width: 45.83%;
   flex-shrink: 0;
 }
 
@@ -361,7 +455,7 @@
   flex-shrink: 0;
 }
 
-/* ช่องสีเหลี่ยมแสดงตัวเลขราคาหุ้น */
+/* ช่องสี่เหลี่ยมแสดงตัวเลขราคาหุ้น */
 .price-box {
   grid-column: 3;
   justify-self: center;
@@ -371,15 +465,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e5e7eb;        /* 👈 สีพื้นหลังกล่องราคา (สีเทาสว่าง) */
-  border-radius: 0.5rem;            /* 👈 ความมนของมุมกล่องราคา */
+  background-color: #e5e7eb;
+  border-radius: 0.5rem;
   flex-shrink: 0;
   margin: 0 auto;
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
   border: 1px solid transparent;
 }
 
-/* 🟢 หุ้นขึ้น (Price Up Theme) */
 .price-box.price-up {
   background-color: rgba(16, 185, 129, 0.16) !important;
   border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
@@ -391,7 +484,6 @@
   text-shadow: 0 0 10px rgba(52, 211, 153, 0.4) !important;
 }
 
-/* 🔴 หุ้นลง (Price Down Theme) */
 .price-box.price-down {
   background-color: rgba(239, 68, 68, 0.16) !important;
   border: 1.5px solid rgba(239, 68, 68, 0.45) !important;
@@ -403,7 +495,6 @@
   text-shadow: 0 0 10px rgba(248, 113, 113, 0.4) !important;
 }
 
-/* ⚪ หุ้นราคาเท่าเดิม (Neutral Theme) */
 .price-box.price-neutral {
   background-color: #e5e7eb !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -417,15 +508,15 @@
 
 @media (min-width: 640px) {
   .price-box {
-    max-width: 240px;               /* 👈 ความกว้างสูงสุดของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
-    height: 56px;                   /* 👈 ความสูงของกล่องราคาบนหน้าจอคอมพิวเตอร์ */
+    max-width: 240px;
+    height: 56px;
   }
 }
 
-/* ปุ่มปรับราคาขึ้น-ลง (Up / Down Caret Buttons) จัดให้อยู่ตรงกลางคอลัมน์ไม่ติดขอบขวา */
+/* ปุ่มปรับราคาขึ้น-ลง */
 .card-controls {
   grid-column: 4;
-  justify-self: center;             /* 👈 จัดให้อยู่ตรงกลางคอลัมน์ ช่วยให้ขยับมาทางซ้าย ไม่ชิดขวาจนดูอึดอัด */
+  justify-self: center;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -438,8 +529,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(28px, 6vw, 36px);  /* 👈 ความกว้างปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
-  height: clamp(22px, 5vw, 28px); /* 👈 ความสูงปุ่มลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
+  width: clamp(28px, 6vw, 36px);
+  height: clamp(22px, 5vw, 28px);
   padding: 0;
   margin: 0;
   border: none;
@@ -451,15 +542,15 @@
 
 .control-btn:hover {
   opacity: 1;
-  transform: scale(1.18);           /* 👈 ขยายขนาดปุ่มลูกศร 18% เมื่อเอาเมาส์ไปชี้ */
+  transform: scale(1.18);
 }
 
 .control-btn:active {
-  transform: scale(0.9);            /* 👈 ย่อขนาดลงเมื่อกดปุ่ม */
+  transform: scale(0.9);
 }
 
 .control-btn img {
-  width: clamp(18px, 4.5vw, 24px);  /* 👈 ขนาดไอคอนลูกศรแบบ Fluid ยืดหดตามจอมือถือ */
+  width: clamp(18px, 4.5vw, 24px);
   height: auto;
   object-fit: contain;
   display: block;
@@ -486,19 +577,19 @@
     padding-left: 0;
   }
   .control-btn {
-    width: 40px;                    /* 👈 ความกว้างปุ่มลูกศรบนคอมพิวเตอร์ */
-    height: 32px;                   /* 👈 ความสูงปุ่มลูกศรบนคอมพิวเตอร์ */
+    width: 40px;
+    height: 32px;
   }
   .control-btn img {
-    width: 28px;                    /* 👈 ขนาดไอคอนลูกศรบนคอมพิวเตอร์ */
+    width: 28px;
   }
 }
 
 /* --------------------------------------------------------------------------
-   3. 📊 Inline Expandable Chart (กราฟราคาสต็อคแบบยืดหดคลี่ออกด้านล่างการ์ด)
+   5. 📊 INLINE EXPANDABLE CHART (กราฟราคาสต็อคแบบยืดหด)
    -------------------------------------------------------------------------- */
 .chart-container {
-  border-top: 1px dashed rgba(255, 255, 255, 0.1); /* 👈 เส้นปรุกระจายกั้นระหว่างการ์ดกับกราฟ */
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -522,15 +613,15 @@
 }
 
 .stock-chart-canvas {
-  background: rgba(255, 255, 255, 0.015); /* 👈 สีพื้นหลังพื้นที่วาดกราฟ */
-  border-radius: 8px;               /* 👈 ความมนของมุมกราฟ */
+  background: rgba(255, 255, 255, 0.015);
+  border-radius: 8px;
   padding: 4px;
 }
 
-/* ตารางแสดงสถิติตัวเลขใต็กราฟ (Start, Price, Beta, Change) */
+/* ตารางแสดงสถิติตัวเลขใต้กราฟ */
 .chart-stats-grid {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important; /* แบ่งเป็น 4 คอลัมน์เท่าๆ กัน (Start, Beta, Size, Change) */
+  grid-template-columns: repeat(4, 1fr) !important;
   gap: 8px !important;
   margin-top: 12px !important;
   padding-top: 12px !important;
@@ -540,18 +631,18 @@
 }
 
 /* --------------------------------------------------------------------------
-   4. ⚠️ Danger Zone (กล่องสำหรับกดรีเซ็ตกระดานหุ้นทั้งหมด)
+   6. ⚠️ DANGER ZONE (กล่องสำหรับกดรีเซ็ตกระดานหุ้นทั้งหมด)
    -------------------------------------------------------------------------- */
 .danger-zone-section {
-  margin-top: 48px;                 /* 👈 ระยะห่างขอบบนกล่อง Danger Zone */
-  margin-bottom: 48px;              /* 👈 ระยะห่างขอบล่างกล่อง Danger Zone */
+  margin-top: 48px;
+  margin-bottom: 48px;
 }
 
 .danger-zone-card {
-  background: rgba(250, 55, 95, 0.02); /* 👈 สีพื้นหลังกล่องเตือน (สีชมพูจางๆ) */
-  border: 1px dashed rgba(250, 55, 95, 0.25); /* 👈 เส้นขอบเส้นประเตือนภัย */
-  border-radius: 24px;              /* 👈 ความมนกล่อง Danger Zone */
-  padding: 24px;                    /* 👈 ระยะห่างขอบในกล่อง Danger Zone */
+  background: rgba(250, 55, 95, 0.02);
+  border: 1px dashed rgba(250, 55, 95, 0.25);
+  border-radius: 24px;
+  padding: 24px;
   display: flex;
   flex-direction: column !important;
   align-items: flex-start !important;
@@ -570,29 +661,27 @@
   gap: 4px;
 }
 
-/* ข้อความคำว่า Danger Zone */
 .danger-zone-title {
-  font-size: 1.1rem;                /* 👈 ขนาดตัวอักษร Danger Zone */
+  font-size: 1.1rem;
   font-weight: 800;
-  color: #fa375f;                   /* 👈 สีตัวอักษรคำว่า Danger Zone (สีชมพูแดง) */
-  text-shadow: 0 0 10px rgba(250, 55, 95, 0.15); /* เอฟเฟกต์เรืองแสง */
+  color: #fa375f;
+  text-shadow: 0 0 10px rgba(250, 55, 95, 0.15);
 }
 
 .danger-zone-desc {
-  font-size: 0.85rem;               /* 👈 ขนาดคำอธิบายการ Reset */
+  font-size: 0.85rem;
   color: #b3b6c1;
   margin: 0;
   line-height: 1.4;
 }
 
-/* ปุ่มกด Reset Market Prices */
 .danger-btn {
-  background: #fa375f;              /* 👈 สีพื้นหลังปุ่ม Reset (สีชมพูแดงเด่น) */
-  color: #ffffff;                   /* 👈 สีข้อความบนปุ่ม Reset */
+  background: #fa375f;
+  color: #ffffff;
   border: none;
-  padding: 14px 28px;               /* 👈 ขนาดความใหญ่ของปุ่ม Reset */
-  border-radius: 16px;              /* 👈 ความมนของมุมปุ่ม Reset */
-  font-size: 0.9rem;                /* 👈 ขนาดตัวอักษรปุ่ม Reset */
+  padding: 14px 28px;
+  border-radius: 16px;
+  font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -601,31 +690,29 @@
 }
 
 .danger-btn:hover {
-  background: #ff5277;              /* 👈 สีปุ่ม Reset เมื่อเอาเมาส์ไปวาง (Hover) */
-  transform: translateY(-2px);      /* 👈 ยกปุ่มลอยขึ้น */
+  background: #ff5277;
+  transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(250, 55, 95, 0.4);
 }
 
 .danger-btn:active {
-  transform: translateY(0) scale(0.96); /* 👈 ย่อลงเมื่อคลิกกด */
+  transform: translateY(0) scale(0.96);
   box-shadow: 0 4px 12px rgba(250, 55, 95, 0.2);
 }
 
-/* ==========================================================================
-   📱 Responsive Mobile Styles สำหรับการ์ดหุ้น (ไม่กระทบการแสดงผล Desktop)
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   7. 📱 RESPONSIVE MOBILE STYLES (สำหรับจอมือถือ)
+   -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
   .price-card {
     padding: 10px 8px !important;
   }
 
-  /* ขยายพื้นที่ไอคอน+ชื่อหุ้นเป็น 38% และกระชับช่องราคาหุ้นลงเหลือ 30% */
   .price-card > div:first-child {
     grid-template-columns: 38% 18% 30% 14% !important;
     gap: 4px !important;
   }
 
-  /* รักษาสัดส่วนไอคอนหุ้นให้เด่นชัด คมชัด ไม่ถูกบีบเบี้ยวเด็ดขาด */
   .price-card img {
     width: 36px !important;
     height: 36px !important;
@@ -645,7 +732,6 @@
     font-size: 1.05rem !important;
   }
 
-  /* ปรับกระชับขนาดช่องราคาหุ้น */
   .price-box .card-value {
     font-size: 1.05rem !important;
   }
@@ -664,7 +750,6 @@
     height: auto !important;
   }
 
-  /* ⚠️ Danger Zone Responsive Styles บนจอมือถือ */
   .danger-zone-section {
     margin-top: 32px !important;
     margin-bottom: 32px !important;
@@ -719,7 +804,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   5. 🔄 Reset Button Spin Animation
+   8. 🔄 ANIMATIONS & UTILITY BUTTONS
    -------------------------------------------------------------------------- */
 @keyframes spinOnce {
   0% { transform: rotate(0deg); }
@@ -730,9 +815,6 @@
   animation: spinOnce 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* --------------------------------------------------------------------------
-   6. 🚪 Leave Room Button Animations
-   -------------------------------------------------------------------------- */
 .leave-room-icon-btn {
   background: none;
   border: none;
@@ -756,4 +838,49 @@
 .leave-room-icon-btn:active {
   transform: scale(0.85) translateX(0px);
   filter: drop-shadow(0 0 4px rgba(255, 69, 58, 0.3));
+}
+
+/* GM Batch Price Controls (+1 All & -1 All Buttons) */
+#batchIncreasePriceBtn {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease, transform 0.1s ease !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3) !important;
+}
+
+#batchIncreasePriceBtn:hover {
+  background-color: #059669 !important;
+}
+
+#batchIncreasePriceBtn:active {
+  transform: scale(0.95) !important;
+}
+
+#batchDecreasePriceBtn {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease, transform 0.1s ease !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3) !important;
+}
+
+#batchDecreasePriceBtn:hover {
+  background-color: #dc2626 !important;
+}
+
+#batchDecreasePriceBtn:active {
+  transform: scale(0.95) !important;
 }

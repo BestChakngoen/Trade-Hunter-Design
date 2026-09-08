@@ -15,12 +15,12 @@ export class OrderSubmissionHandler {
       const userPortfolio = this.state.portfolio ? (this.state.portfolio.stocks || {}) : {};
       const ownedCount = Object.keys(userPortfolio).filter(sym => userPortfolio[sym] && userPortfolio[sym].volume > 0).length;
       if (ownedCount === 0 || !symbol) {
-        this.renderer.showErrorAlert("No Stocks Owned", "You do not have any stocks in your portfolio to sell.");
+        this.renderer.showErrorAlert("No Stocks Owned", "คุณไม่มีหุ้นในพอร์ตโฟลิโอสำหรับส่งคำสั่งขาย");
         return false;
       }
     }
     if (!symbol) {
-      this.renderer.showErrorAlert("Invalid Selection", "Please select a stock before submitting your order.");
+      this.renderer.showErrorAlert("Invalid Selection", "โปรดเลือกหุ้นก่อนส่งคำสั่งซื้อขาย");
       return false;
     }
     return true;
@@ -48,7 +48,7 @@ export class OrderSubmissionHandler {
     if (orderType === 'BUY' && effectiveAvailableCash < currentPrice) {
       this.renderer.showErrorAlert(
         "Insufficient Funds", 
-        `Your available cash is insufficient for this BUY order.\nAvailable Cash: ${effectiveAvailableCash.toLocaleString()} THB\nRequired: ${currentPrice.toLocaleString()} THB`
+        `เงินสดคงเหลือไม่เพียงพอสำหรับคำสั่งซื้อนี้\nเงินสดคงเหลือ: ${effectiveAvailableCash.toLocaleString()} บาท\nต้องการ: ${currentPrice.toLocaleString()} บาท`
       );
       return;
     }
@@ -59,7 +59,7 @@ export class OrderSubmissionHandler {
         const userVol = holding ? holding.volume : 0;
         this.renderer.showErrorAlert(
           "Insufficient Shares", 
-          `You do not have enough shares of ${symbol} to sell.\nOwned: ${userVol.toLocaleString()} shares | Required: 1 share`
+          `คุณมีหุ้น ${symbol} ไม่เพียงพอสำหรับส่งคำสั่งขาย\nมีอยู่: ${userVol.toLocaleString()} หุ้น | ต้องการ: 1 หุ้น`
         );
         return;
       }
@@ -98,7 +98,7 @@ export class OrderSubmissionHandler {
 
       this.renderer.showTopToast(
         "ORDER SUBMITTED",
-        `${orderType} order for ${symbol} (1 share) submitted successfully.`,
+        `ส่งคำสั่ง ${orderType} หุ้น ${symbol} (1 หุ้น) เรียบร้อยแล้ว`,
         "success"
       );
 
@@ -114,7 +114,7 @@ export class OrderSubmissionHandler {
 
     } catch (error) {
       console.error("Order processing error:", error);
-      this.renderer.showErrorAlert("ข้อผิดพลาด", "ไม่สามารถส่งคำสั่งซื้อขายได้");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถส่งคำสั่งซื้อขายได้");
     }
   }
 
@@ -124,7 +124,7 @@ export class OrderSubmissionHandler {
 
     const user = this.firebaseService.getCurrentUser();
     if (!user) {
-      this.renderer.showErrorAlert("Authentication Error", "You must be logged in to submit an order.");
+      this.renderer.showErrorAlert("Authentication Error", "คุณต้องเข้าสู่ระบบก่อนส่งคำสั่งซื้อขาย");
       return;
     }
 
@@ -135,13 +135,13 @@ export class OrderSubmissionHandler {
     if (type === 'INVEST') {
       const availableCashObj = TradeService.calculateAvailableCash(currentCash, this.state.pendingOrders, user.uid);
       if (availableCashObj.effectiveAvailableCash < config.unitPrice) {
-        this.renderer.showErrorAlert("Insufficient Cash", `You do not have enough available cash to invest in ${config.name}. Required: ${config.unitPrice.toLocaleString('en-US')}`);
+        this.renderer.showErrorAlert("Insufficient Cash", `คุณมีเงินสดไม่เพียงพอสำหรับลงทุนใน ${config.name}\nต้องการ: ${config.unitPrice.toLocaleString('en-US')} บาท`);
         return;
       }
     } else if (type === 'REDEEM') {
       const currentVol = Number(currentDebt[instrumentKey] || 0);
       if (currentVol < 1) {
-        this.renderer.showErrorAlert("Cannot Redeem", `You do not hold any units of ${config.name} to redeem.`);
+        this.renderer.showErrorAlert("Cannot Redeem", `คุณไม่มีหน่วยลงทุนของ ${config.name} สำหรับขายคืน`);
         return;
       }
     }
@@ -177,12 +177,12 @@ export class OrderSubmissionHandler {
 
       this.renderer.showTopToast(
         "ORDER SUBMITTED",
-        `${type} order for 1 unit of ${config.name} submitted for GM approval.`,
+        `ส่งคำสั่ง ${type} 1 หน่วยของ ${config.name} เพื่อรอ GM อนุมัติเรียบร้อยแล้ว`,
         "info"
       );
     } catch (err) {
       console.error("Failed to submit debt order:", err);
-      this.renderer.showErrorAlert("Error", "Failed to submit debt order.");
+      this.renderer.showErrorAlert("Error", "ไม่สามารถส่งคำสั่งตราสารหนี้ได้");
     }
   }
 }

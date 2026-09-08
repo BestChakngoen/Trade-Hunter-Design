@@ -26,6 +26,16 @@ export class LobbyController {
             e.target.setSelectionRange(newPos, newPos);
           }
         }
+        this.updateRoomCodeSlots(e.target.value);
+      });
+      this.renderer.roomCodeInput.addEventListener('focus', () => {
+        this.updateRoomCodeSlots(this.renderer.roomCodeInput.value);
+      });
+      this.renderer.roomCodeInput.addEventListener('blur', () => {
+        const slotsContainer = document.getElementById('roomCodeSlots');
+        if (slotsContainer) {
+          slotsContainer.querySelectorAll('.code-slot').forEach(slot => slot.classList.remove('active-focus'));
+        }
       });
     }
 
@@ -67,6 +77,7 @@ export class LobbyController {
       }
 
       this.isSubmitting = true;
+
       const btn = this.renderer.joinRoomBtn;
       let originalBtnHtml = '';
       if (btn) {
@@ -88,6 +99,7 @@ export class LobbyController {
           return;
         }
         console.error("Lobby join error:", err);
+        this.clearLobbyRoomCodeInput();
         this.renderer.showErrorAlert("เกิดข้อผิดพลาด", err.message || "ไม่สามารถระบุการเชื่อมต่อห้องเกมได้");
       } finally {
         this.isSubmitting = false;
@@ -297,9 +309,14 @@ export class LobbyController {
       "หมดเวลาการเชื่อมต่อกับเซิร์ฟเวอร์ (Firestore Timeout)"
     );
     if (!isAllowed) {
+      this.clearLobbyRoomCodeInput();
       if (typeof this.renderer.triggerShakeCodeBox === 'function') {
         this.renderer.triggerShakeCodeBox();
       }
+      if (typeof this.renderer.showInvalidRoomModal === 'function') {
+        await this.renderer.showInvalidRoomModal(code);
+      }
+      this.clearLobbyRoomCodeInput();
       return;
     }
 
@@ -563,5 +580,45 @@ export class LobbyController {
     // Perform initial portfolio rendering with user UID
     const stats = this.state.getPortfolioStats();
     this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, user.uid);
+  }
+
+  updateRoomCodeSlots(val = '') {
+    const slotsContainer = document.getElementById('roomCodeSlots');
+    if (!slotsContainer) return;
+    const slots = slotsContainer.querySelectorAll('.code-slot');
+    const cleanVal = (val || '').trim().toUpperCase();
+
+    if (cleanVal.length > 0) {
+      slotsContainer.classList.add('visible-slots');
+      slotsContainer.style.cssText = 'display: flex !important; opacity: 1 !important;';
+    } else {
+      slotsContainer.classList.remove('visible-slots');
+      slotsContainer.style.cssText = 'display: none !important; opacity: 0 !important;';
+    }
+
+    slots.forEach((slot, index) => {
+      const char = cleanVal[index] || '';
+      slot.textContent = char;
+      if (char && cleanVal.length > 0) {
+        slot.classList.add('filled');
+      } else {
+        slot.classList.remove('filled');
+      }
+      if (cleanVal.length > 0 && index === cleanVal.length && cleanVal.length < 6) {
+        slot.classList.add('active-focus');
+      } else {
+        slot.classList.remove('active-focus');
+      }
+    });
+  }
+
+  clearLobbyRoomCodeInput() {
+    if (this.renderer.roomCodeInput) {
+      this.renderer.roomCodeInput.value = '';
+    }
+    this.updateRoomCodeSlots('');
+    if (typeof this.renderer.clearRoomCodeSlots === 'function') {
+      this.renderer.clearRoomCodeSlots();
+    }
   }
 }

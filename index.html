@@ -40,7 +40,15 @@
         <!-- กรอบช่องกรอกรหัส CodeButton.png (หลอดขาว + วงกลมกุญแจสีเขียว) -->
         <div class="lobby-code-box relative flex items-center justify-start">
           <img src="Assets/UI_Lobby/CodeButton.png" class="lobby-code-btn-bg" alt="Code Frame" />
-          <input type="text" id="roomCodeInput" class="lobby-code-input" placeholder="ENTER ROOM CODE HERE!" autocomplete="off" maxlength="15" pattern="[A-Za-z0-9]+" />
+          <input type="text" id="roomCodeInput" class="lobby-code-input" placeholder="ENTER ROOM CODE HERE!" autocomplete="off" maxlength="6" pattern="[A-Za-z0-9]+" />
+          <div id="roomCodeSlots" class="lobby-code-slots">
+            <span class="code-slot" data-index="0"></span>
+            <span class="code-slot" data-index="1"></span>
+            <span class="code-slot" data-index="2"></span>
+            <span class="code-slot" data-index="3"></span>
+            <span class="code-slot" data-index="4"></span>
+            <span class="code-slot" data-index="5"></span>
+          </div>
           <button type="submit" class="lobby-key-submit-btn" aria-label="Confirm Code"></button>
         </div>
 
@@ -63,7 +71,7 @@
           </svg>
         </button>
         <h3 class="apple-modal-title">Select Your Role</h3>
-        <p class="apple-modal-subtitle">Please select a role to enter this game room.</p>
+        <p class="apple-modal-subtitle">โปรดเลือกบทบาทเพื่อเข้าร่วมห้องเกมนี้</p>
         
         <div class="apple-modal-actions">
           <button type="button" id="roleOptGMBtn" class="apple-btn-gm">
@@ -81,14 +89,14 @@
     <div id="roomFullModal" class="apple-modal-overlay" style="display: none;">
       <div class="apple-modal-card">
         <h3 class="apple-modal-title" style="color: #ff453a;">Room Full</h3>
-        <p class="apple-modal-subtitle">This game room has reached its maximum player limit. You can reset this room to clear stale testing sessions.</p>
+        <p class="apple-modal-subtitle">ห้องเกมนี้มีจำนวนผู้เล่นครบตามจำนวนที่กำหนดแล้ว คุณสามารถรีเซ็ตห้องเพื่อล้างเซสชันเก่าได้</p>
         
         <div class="apple-modal-actions flex gap-3">
           <button type="button" id="roomFullResetBtn" class="apple-btn-gm" style="background: #ef4444; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
-            Reset Room
+            รีเซ็ตห้องเกม
           </button>
           <button type="button" id="roomFullOkBtn" class="apple-btn-player" style="background: #334155;">
-            Close
+            ปิด
           </button>
         </div>
       </div>
@@ -98,7 +106,7 @@
     <div id="invalidRoomModal" class="apple-modal-overlay" style="display: none;">
       <div class="apple-modal-card">
         <h3 class="apple-modal-title" style="color: #ff453a;">Invalid Room Code</h3>
-        <p class="apple-modal-subtitle">Room code "<span id="invalidRoomCodeText" class="font-bold text-white uppercase">-</span>" was not found in the system. Please check your room code or contact system administrator.</p>
+        <p class="apple-modal-subtitle">ไม่พบรหัสห้อง "<span id="invalidRoomCodeText" class="font-bold text-white uppercase">-</span>" ในระบบ โปรดตรวจสอบรหัสห้องอีกครั้ง</p>
         
         <div class="apple-modal-actions">
           <button type="button" id="invalidRoomOkBtn" class="apple-btn-gm" style="background: #ff453a; box-shadow: 0 4px 14px rgba(255, 69, 58, 0.35);">
@@ -113,20 +121,20 @@
       <div class="apple-modal-card relative">
         <button type="button" id="gameModeCloseBtn" class="apple-modal-close" aria-label="Close modal">&times;</button>
         <h3 class="apple-modal-title">Select Game Mode</h3>
-        <p class="apple-modal-subtitle">Choose the gameplay mode for all players in this room.</p>
+        <p class="apple-modal-subtitle">เลือกโหมดเกมสำหรับผู้เล่นทุกคนในห้องนี้</p>
         
         <div class="apple-modal-actions flex flex-col gap-3" style="flex-direction: column;">
           <button type="button" id="gameModeBasicBtn" class="apple-btn-basic">
             <div class="flex flex-col items-start text-left">
               <span class="font-black text-sm">Basic Mode</span>
-              <span class="text-[10px] opacity-80 font-normal">Price tracking board & filters only. No Portfolio/Management tabs.</span>
+              <span class="text-[10px] opacity-80 font-normal">บอร์ดติดตามราคาและฟิลเตอร์ตัวกรองเท่านั้น (ไม่มีแท็บพอร์ตและการจัดการ)</span>
             </div>
           </button>
 
           <button type="button" id="gameModeAdvanceBtn" class="apple-btn-advance">
             <div class="flex flex-col items-start text-left">
               <span class="font-black text-sm">Advance Mode</span>
-              <span class="text-[10px] opacity-80 font-normal">Full feature set including Portfolio, Management, Orders, & Finance.</span>
+              <span class="text-[10px] opacity-80 font-normal">ฟีเจอร์เต็มรูปแบบ ทั้งพอร์ตโฟลิโอ คำสั่งซื้อขาย การจัดการ และการเงิน</span>
             </div>
           </button>
         </div>
@@ -148,8 +156,8 @@
           </svg>
         </div>
         <h3 class="apple-modal-title">Waiting for Game Master</h3>
-        <p class="apple-modal-subtitle text-xs text-gray-400 mb-2">Room Code: <span id="waitingRoomCodeBadge" class="text-blue-400 font-bold uppercase">-</span></p>
-        <p class="apple-modal-subtitle" style="margin-bottom: 0;">Please wait while the Game Master selects the game mode...</p>
+        <p class="apple-modal-subtitle text-xs text-gray-400 mb-2">รหัสห้อง: <span id="waitingRoomCodeBadge" class="text-blue-400 font-bold uppercase">-</span></p>
+        <p class="apple-modal-subtitle" style="margin-bottom: 0;">โปรดรอสักครู่ ขณะนี้ GM กำลังเลือกโหมดการเล่น...</p>
       </div>
     </div>
   </div>
@@ -233,15 +241,30 @@
           <span class="filter-title">Sector</span>
           <div class="sector-pills-wrapper">
             <div class="sector-pills" id="sectorPills">
-              <button class="pill active" data-value="ALL">All</button>
-              <button class="pill" data-value="FINCIAL">FINCIAL</button>
-              <button class="pill" data-value="CONSUMP">CONSUMP</button>
-              <button class="pill" data-value="RESOURCE">RESOURCE</button>
-              <button class="pill" data-value="INDUS">INDUS</button>
-              <button class="pill" data-value="TECH">TECH</button>
-              <button class="pill" data-value="PROPCON">PROPCON</button>
-              <button class="pill" data-value="AGRO">AGRO</button>
-              <button class="pill" data-value="SERVICE">SERVICE</button>
+              <button class="pill pill-img-only" data-value="FINCIAL" title="FINANCIAL">
+                <img src="Assets/Fincial_KTFFSF.png" alt="FINCIAL" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="CONSUMP" title="CONSUMPTION">
+                <img src="Assets/KISFCUF.png" alt="CONSUMP" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="RESOURCE" title="RESOURCE">
+                <img src="Assets/Resource_SAAFPTF.png" alt="RESOURCE" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="INDUS" title="INDUSTRIAL">
+                <img src="Assets/Indus_ZIFDTF.png" alt="INDUS" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="TECH" title="TECHNOLOGY">
+                <img src="Assets/Tech_SICFVCOFDTSF.png" alt="TECH" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="PROPCON" title="PROPCON">
+                <img src="Assets/Propcon_ARROF.png" alt="PROPCON" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="AGRO" title="AGRO">
+                <img src="Assets/ABFSUFDPF.png" alt="AGRO" class="pill-icon">
+              </button>
+              <button class="pill pill-img-only" data-value="SERVICE" title="SERVICE">
+                <img src="Assets/Service_TNF.png" alt="SERVICE" class="pill-icon">
+              </button>
             </div>
           </div>
         </div>
@@ -254,17 +277,15 @@
               <span class="sort-label">Price</span>
               <span class="sort-icon">↕</span>
             </button>
-            <button id="sortBetaBtn" class="sort-toggle-btn">
-              <span class="sort-label">Beta</span>
-              <span class="sort-icon">↕</span>
-            </button>
-            <button id="sortSizeBtn" class="sort-toggle-btn">
-              <span class="sort-label">Size</span>
-              <span class="sort-icon">↕</span>
-            </button>
             <button id="sortSectorBtn" class="sort-toggle-btn">
               <span class="sort-label" style="justify-content: center; width: 100%;">Sector</span>
             </button>
+            <div class="inline-flex items-center gap-1.5" id="sizePills">
+              <span class="text-xs font-bold text-gray-400 mr-0.5 ml-1">Size:</span>
+              <button class="pill" data-value="S">S</button>
+              <button class="pill" data-value="M">M</button>
+              <button class="pill" data-value="L">L</button>
+            </div>
             <button id="resetBtn" class="sort-toggle-btn reset-btn">
               <span class="sort-label" style="justify-content: center; width: 100%;">Reset <span class="reset-icon inline-block transition-transform ml-1">↺</span></span>
             </button>
@@ -274,7 +295,13 @@
     </div>
 
     <section class="price-section">
-      <div class="section-title">Price Level</div>
+      <div class="flex items-center justify-between mb-4">
+        <div class="section-title !mb-0">Price Level</div>
+        <div id="gmBatchControls" class="inline-flex items-center gap-2" style="display: none;">
+          <button id="batchIncreasePriceBtn" class="gm-batch-btn" title="Increase all stock prices by 1 step">+1 All</button>
+          <button id="batchDecreasePriceBtn" class="gm-batch-btn" title="Decrease all stock prices by 1 step">-1 All</button>
+        </div>
+      </div>
       <div class="price-grid" id="priceGrid">
         <!-- 1. KTF -->
         <article class="price-card p-2 sm:p-6 w-full bg-black border border-gray-200 rounded-lg shadow" data-sector="FINCIAL" data-price="5000" data-beta="1.20" data-size="M">
@@ -492,7 +519,7 @@
       <div class="danger-zone-card flex flex-col items-start gap-4">
         <div class="danger-zone-info w-full">
           <span class="danger-zone-title block">Danger Zone</span>
-          <p class="danger-zone-desc mt-1">Restart the entire game session. This will reset all stock prices to starting values, reset all player portfolios to 20,000 cash, clear stock/debt holdings, and wipe all pending orders.</p>
+          <p class="danger-zone-desc mt-1">เริ่มต้นเซสชันเกมใหม่ การดำเนินการนี้จะรีเซ็ตราคาหุ้นทั้งหมดกลับสู่ค่าเริ่มต้น รีเซ็ตเงินสดในพอร์ตของผู้เล่นทุกคนเป็น 20,000 บาท ล้างการถือครองหุ้น/ตราสารหนี้ทั้งหมด และล้างคำสั่งซื้อขายที่รอการอนุมัติ</p>
         </div>
         <button id="resetMarketBtn" class="danger-btn whitespace-nowrap">Reset Game</button>
       </div>
@@ -837,7 +864,7 @@
       </div>
       <h3 class="apple-modal-title text-red-500 font-bold">GM Left the Game!</h3>
       <p class="apple-modal-subtitle text-xs text-gray-300 mb-5">
-        The Game Master has left the room. Would you like to take over as the new GM to continue the game?
+        ผู้ควบคุมเกม (GM) ออกจากห้อง คุณต้องการสวมบทบาทเป็น GM คนใหม่เพื่อดำเนินเกมต่อหรือไม่?
       </p>
       <div class="apple-modal-actions flex gap-3 w-full">
         <button type="button" id="gmTransferDeclineBtn" class="apple-btn-player" style="background: #475569; box-shadow: none;">
@@ -858,10 +885,10 @@
         <button id="closeConfirmModalBtn" class="close-modal-btn">&times;</button>
       </header>
       <div class="modal-body confirm-modal-body">
-        <p>Are you sure you want to reset the entire game? This will reset all stock prices, set all players' cash to 20,000, clear all stock/debt holdings, and wipe pending orders. This action cannot be undone.</p>
+        <p>คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตเกมทั้งหมด? การดำเนินการนี้จะรีเซ็ตราคาหุ้น พอร์ตการลงทุน และประวัติการซื้อขายทั้งหมดกลับสู่ค่าเริ่มต้น และไม่สามารถย้อนกลับได้</p>
         <div class="confirm-actions">
-          <button id="cancelResetBtn" class="confirm-btn cancel-btn">Cancel</button>
-          <button id="confirmResetBtn" class="confirm-btn reset-btn-confirm">Reset Game</button>
+          <button id="cancelResetBtn" class="confirm-btn cancel-btn">ยกเลิก</button>
+          <button id="confirmResetBtn" class="confirm-btn reset-btn-confirm">รีเซ็ตเกม</button>
         </div>
       </div>
     </div>

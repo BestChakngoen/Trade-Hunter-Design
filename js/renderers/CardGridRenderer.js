@@ -6,8 +6,6 @@ export class CardGridRenderer {
     this.priceGrid = priceGrid;
     this.sectorPills = sectorPills;
     this.sortPriceBtn = sortPriceBtn;
-    this.sortBetaBtn = sortBetaBtn;
-    this.sortSizeBtn = sortSizeBtn;
     this.sortSectorBtn = sortSectorBtn;
     this.confirmModal = confirmModal;
   }
@@ -164,9 +162,7 @@ export class CardGridRenderer {
 
   updateSortButtonsUI(sortStates) {
     const buttons = [
-      { btn: this.sortPriceBtn, type: 'PRICE', label: 'Price' },
-      { btn: this.sortBetaBtn, type: 'BETA', label: 'Beta' },
-      { btn: this.sortSizeBtn, type: 'SIZE', label: 'Size' }
+      { btn: this.sortPriceBtn, type: 'PRICE', label: 'Price' }
     ];
 
     buttons.forEach(({ btn, type, label }) => {
@@ -197,6 +193,19 @@ export class CardGridRenderer {
     this.sectorPills.querySelectorAll('.pill').forEach(pill => {
       const value = pill.getAttribute('data-value');
       if (selectedSectors.has(value)) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    });
+  }
+
+  updateSizePillsUI(selectedSizes) {
+    const sizePills = document.getElementById('sizePills');
+    if (!sizePills) return;
+    sizePills.querySelectorAll('.pill').forEach(pill => {
+      const value = pill.getAttribute('data-value');
+      if (selectedSizes.has(value)) {
         pill.classList.add('active');
       } else {
         pill.classList.remove('active');

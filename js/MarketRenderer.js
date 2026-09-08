@@ -7,12 +7,12 @@ import { CardGridRenderer } from './renderers/CardGridRenderer.js';
  */
 export class MarketRenderer {
   constructor() {
+    this.activeTab = 'market';
     this.pageShell = document.querySelector('.page-shell');
     this.priceGrid = document.getElementById('priceGrid');
     this.sectorPills = document.getElementById('sectorPills');
+    this.sizePills = document.getElementById('sizePills');
     this.sortPriceBtn = document.getElementById('sortPriceBtn');
-    this.sortBetaBtn = document.getElementById('sortBetaBtn');
-    this.sortSizeBtn = document.getElementById('sortSizeBtn');
     this.sortSectorBtn = document.getElementById('sortSectorBtn');
     this.resetBtn = document.getElementById('resetBtn');
     this.resetMarketBtn = document.getElementById('resetMarketBtn');
@@ -83,8 +83,8 @@ export class MarketRenderer {
       this.priceGrid,
       this.sectorPills,
       this.sortPriceBtn,
-      this.sortBetaBtn,
-      this.sortSizeBtn,
+      null,
+      null,
       this.sortSectorBtn,
       this.confirmModal
     );
@@ -160,6 +160,11 @@ export class MarketRenderer {
       }
     });
 
+    const gmBatchControls = document.getElementById('gmBatchControls');
+    if (gmBatchControls) {
+      gmBatchControls.style.display = isMaster ? 'inline-flex' : 'none';
+    }
+
     const dangerZone = document.querySelector('.danger-zone-section');
     if (dangerZone) {
       dangerZone.style.display = isMaster ? 'block' : 'none';
@@ -172,14 +177,14 @@ export class MarketRenderer {
     const tabMgmtBtn = document.getElementById('tabMgmtBtn');
     const tradeWidget = document.querySelector('.trade-widget-section');
     const marketTabContent = document.getElementById('marketTabContent');
-    const portfolioTabContent = document.getElementById('portfolioTabContent');
+    const portTabContent = document.getElementById('portTabContent');
     const mgmtTabContent = document.getElementById('mgmtTabContent');
 
     if (isBasicMode) {
       // Basic Mode: Hide ALL navigation tabs completely!
       if (mainNavTabs) mainNavTabs.style.setProperty('display', 'none', 'important');
       if (tradeWidget) tradeWidget.style.display = 'none';
-      if (portfolioTabContent) portfolioTabContent.style.display = 'none';
+      if (portTabContent) portTabContent.style.display = 'none';
       if (mgmtTabContent) mgmtTabContent.style.display = 'none';
       if (marketTabContent) marketTabContent.style.display = 'block';
     } else {
@@ -194,20 +199,42 @@ export class MarketRenderer {
         if (tabMgmtBtn) tabMgmtBtn.style.display = 'none';
       }
 
-      // Ensure Market tab is active by default upon joining/entering game
       const tabMarketBtn = document.getElementById('tabMarketBtn');
-      if (tabMarketBtn) {
-        tabMarketBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider";
+
+      if (role === 'game_master' && this.activeTab === 'portfolio') {
+        this.activeTab = 'market';
+      } else if (role !== 'game_master' && this.activeTab === 'management') {
+        this.activeTab = 'market';
       }
-      if (tabPortBtn) {
-        tabPortBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
+
+      const activeClass = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider";
+      const activeMgmtClass = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider relative";
+      const inactiveClass = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
+      const inactiveMgmtClass = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider relative";
+
+      if (this.activeTab === 'management' && role === 'game_master') {
+        if (tabMarketBtn) tabMarketBtn.className = inactiveClass;
+        if (tabPortBtn) tabPortBtn.className = inactiveClass;
+        if (tabMgmtBtn) tabMgmtBtn.className = activeMgmtClass;
+        if (marketTabContent) marketTabContent.style.display = 'none';
+        if (portTabContent) portTabContent.style.display = 'none';
+        if (mgmtTabContent) mgmtTabContent.style.display = 'block';
+      } else if (this.activeTab === 'portfolio' && role !== 'game_master') {
+        if (tabMarketBtn) tabMarketBtn.className = inactiveClass;
+        if (tabPortBtn) tabPortBtn.className = activeClass;
+        if (tabMgmtBtn) tabMgmtBtn.className = inactiveMgmtClass;
+        if (marketTabContent) marketTabContent.style.display = 'none';
+        if (portTabContent) portTabContent.style.display = 'block';
+        if (mgmtTabContent) mgmtTabContent.style.display = 'none';
+      } else {
+        this.activeTab = 'market';
+        if (tabMarketBtn) tabMarketBtn.className = activeClass;
+        if (tabPortBtn) tabPortBtn.className = inactiveClass;
+        if (tabMgmtBtn) tabMgmtBtn.className = inactiveMgmtClass;
+        if (marketTabContent) marketTabContent.style.display = 'block';
+        if (portTabContent) portTabContent.style.display = 'none';
+        if (mgmtTabContent) mgmtTabContent.style.display = 'none';
       }
-      if (tabMgmtBtn) {
-        tabMgmtBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider relative";
-      }
-      if (marketTabContent) marketTabContent.style.display = 'block';
-      if (portfolioTabContent) portfolioTabContent.style.display = 'none';
-      if (mgmtTabContent) mgmtTabContent.style.display = 'none';
     }
   }
 
@@ -252,6 +279,7 @@ export class MarketRenderer {
     
     if (tabMarketBtn) {
       tabMarketBtn.addEventListener('click', () => {
+        this.activeTab = 'market';
         tabMarketBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider";
         if (tabPortBtn) tabPortBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
         if (tabMgmtBtn) tabMgmtBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider relative";
@@ -265,6 +293,7 @@ export class MarketRenderer {
 
     if (tabPortBtn) {
       tabPortBtn.addEventListener('click', () => {
+        this.activeTab = 'portfolio';
         tabPortBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider";
         if (tabMarketBtn) tabMarketBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
         if (tabMgmtBtn) tabMgmtBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider relative";
@@ -278,6 +307,7 @@ export class MarketRenderer {
 
     if (tabMgmtBtn) {
       tabMgmtBtn.addEventListener('click', () => {
+        this.activeTab = 'management';
         tabMgmtBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-active transition-all uppercase tracking-wider relative";
         if (tabMarketBtn) tabMarketBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
         if (tabPortBtn) tabPortBtn.className = "w-1/2 flex-1 py-3 text-center text-xs sm:text-sm font-bold tab-inactive transition-all uppercase tracking-wider";
@@ -394,6 +424,7 @@ export class MarketRenderer {
   calculateBetaColor(beta) { return this.cardGridRenderer.calculateBetaColor(beta); }
   updateSortButtonsUI(sortStates) { this.cardGridRenderer.updateSortButtonsUI(sortStates); }
   updateSectorPillsUI(selectedSectors) { this.cardGridRenderer.updateSectorPillsUI(selectedSectors); }
+  updateSizePillsUI(selectedSizes) { this.cardGridRenderer.updateSizePillsUI(selectedSizes); }
   ensureViewGraphButtons() { this.cardGridRenderer.ensureViewGraphButtons(); }
   openConfirmModal() { this.cardGridRenderer.openConfirmModal(); }
   closeConfirmModal() { this.cardGridRenderer.closeConfirmModal(); }
@@ -407,10 +438,25 @@ export class MarketRenderer {
   bindTimelineEvents(canvas, chartContainer, startPrice, beta) { this.chartRenderer.bindTimelineEvents(canvas, chartContainer, startPrice, beta); }
   toggleCardChart(card, history, startPrice, beta) { this.chartRenderer.toggleCardChart(card, history, startPrice, beta); }
 
-  triggerShakeCodeBox() {
-    // 1. เคลียร์ข้อความในช่องกรอกให้อัตโนมัติและโฟกัสช่องพิมพ์
+  clearRoomCodeSlots() {
     if (this.roomCodeInput) {
       this.roomCodeInput.value = '';
+    }
+    const slotsContainer = document.getElementById('roomCodeSlots');
+    if (slotsContainer) {
+      slotsContainer.classList.remove('visible-slots');
+      slotsContainer.style.cssText = 'display: none !important; opacity: 0 !important;';
+      slotsContainer.querySelectorAll('.code-slot').forEach(slot => {
+        slot.textContent = '';
+        slot.classList.remove('filled', 'active-focus');
+      });
+    }
+  }
+
+  triggerShakeCodeBox() {
+    // 1. เคลียร์ข้อความในช่องกรอกให้อัตโนมัติ ล้าง 6 ช่องสล็อต และโฟกัสช่องพิมพ์
+    this.clearRoomCodeSlots();
+    if (this.roomCodeInput) {
       this.roomCodeInput.focus();
     }
 
@@ -435,6 +481,7 @@ export class MarketRenderer {
   }
 
   showInvalidRoomModal(code) {
+    this.clearRoomCodeSlots();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -453,6 +500,7 @@ export class MarketRenderer {
       const handleOk = () => {
         okBtn.removeEventListener('click', handleOk);
         modal.style.display = 'none';
+        this.clearRoomCodeSlots();
         if (this.roomCodeInput) {
           this.roomCodeInput.focus();
         }

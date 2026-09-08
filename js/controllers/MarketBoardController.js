@@ -19,17 +19,52 @@ export class MarketBoardController {
       const value = pill.getAttribute('data-value');
       const selected = this.state.selectedSectors;
       
-      // Single-select logic: Only one sector active at a time
-      const isAlreadyActive = selected.has(value) && value !== 'ALL';
+      // Single Group Filter: Clear Size filter and Sort states
+      this.state.selectedSizes.clear();
+      Object.keys(this.state.sortStates).forEach(key => {
+        this.state.sortStates[key].enabled = false;
+      });
+
+      const isAlreadyActive = selected.has(value);
       selected.clear();
 
-      if (value === 'ALL' || isAlreadyActive) {
-        selected.add('ALL');
-      } else {
+      if (!isAlreadyActive) {
         selected.add(value);
       }
       
       this.renderer.updateSectorPillsUI(selected);
+      this.renderer.updateSizePillsUI(this.state.selectedSizes);
+      this.renderer.updateSortButtonsUI(this.state.sortStates);
+      this.updateViewGrid();
+    });
+  }
+
+  bindSizeFilter() {
+    if (!this.renderer.sizePills) return;
+
+    this.renderer.sizePills.addEventListener('click', (e) => {
+      const pill = e.target.closest('.pill');
+      if (!pill) return;
+      
+      const value = pill.getAttribute('data-value');
+      const selected = this.state.selectedSizes;
+      
+      // Single Group Filter: Clear Sector filter and Sort states
+      this.state.selectedSectors.clear();
+      Object.keys(this.state.sortStates).forEach(key => {
+        this.state.sortStates[key].enabled = false;
+      });
+
+      const isAlreadyActive = selected.has(value);
+      selected.clear();
+
+      if (!isAlreadyActive) {
+        selected.add(value);
+      }
+      
+      this.renderer.updateSectorPillsUI(this.state.selectedSectors);
+      this.renderer.updateSizePillsUI(selected);
+      this.renderer.updateSortButtonsUI(this.state.sortStates);
       this.updateViewGrid();
     });
   }
@@ -37,6 +72,7 @@ export class MarketBoardController {
   initOneTimeScrollbars() {
     const scrollConfigs = [
       { id: 'sectorPills', key: 'scrolled_sectorPills' },
+      { id: 'sizePills', key: 'scrolled_sizePills' },
       { id: 'sortToggles', key: 'scrolled_sortToggles' },
       { id: 'holdingsTableContainer', key: 'scrolled_holdingsTable' },
       { id: 'pendingOrdersTableContainer', key: 'scrolled_pendingOrdersTable' },
@@ -152,7 +188,17 @@ export class MarketBoardController {
       const sortStates = this.state.sortStates;
       const isAlreadyEnabled = sortStates[type] ? sortStates[type].enabled : false;
 
-      // Multi-Criteria Sorting: Each button toggles independently without disabling others
+      // Single Group Filter: Clear Sector and Size filters when using Sort By
+      this.state.selectedSectors.clear();
+      this.state.selectedSizes.clear();
+
+      // Single-Criteria Sorting: Disable all other sort criteria when selecting a new one
+      Object.keys(sortStates).forEach(key => {
+        if (key !== type) {
+          sortStates[key].enabled = false;
+        }
+      });
+
       if (type === 'SECTOR') {
         sortStates.SECTOR.enabled = !isAlreadyEnabled;
       } else {
@@ -170,13 +216,13 @@ export class MarketBoardController {
         }
       }
 
+      this.renderer.updateSectorPillsUI(this.state.selectedSectors);
+      this.renderer.updateSizePillsUI(this.state.selectedSizes);
       this.renderer.updateSortButtonsUI(sortStates);
       this.updateViewGrid();
     };
 
     if (this.renderer.sortPriceBtn) this.renderer.sortPriceBtn.addEventListener('click', (e) => handleSortClick('PRICE', e));
-    if (this.renderer.sortBetaBtn) this.renderer.sortBetaBtn.addEventListener('click', (e) => handleSortClick('BETA', e));
-    if (this.renderer.sortSizeBtn) this.renderer.sortSizeBtn.addEventListener('click', (e) => handleSortClick('SIZE', e));
     if (this.renderer.sortSectorBtn) this.renderer.sortSectorBtn.addEventListener('click', (e) => handleSortClick('SECTOR', e));
   }
 
@@ -195,6 +241,7 @@ export class MarketBoardController {
       this.state.resetFilters();
       this.renderer.updateSortButtonsUI(this.state.sortStates);
       this.renderer.updateSectorPillsUI(this.state.selectedSectors);
+      this.renderer.updateSizePillsUI(this.state.selectedSizes);
       this.renderer.clearAllCardAnimations(this.state.originalCards);
       this.updateViewGrid();
     });
@@ -239,11 +286,76 @@ export class MarketBoardController {
       if (updatedStocks) {
         try {
           await this.firebaseService.updateStocksBoard(this.state.roomCode, updatedStocks);
+          const updatedStock = updatedStocks.find(s => s.name === symbol);
+          const newPrice = updatedStock ? updatedStock.value.toLocaleString() : '';
+          this.renderer.showTopToast(
+            isUp ? "STOCK PRICE INCREASED" : "STOCK PRICE DECREASED",
+            `ปรับราคาหุ้น ${symbol} ${isUp ? 'เพิ่มขึ้นเป็น' : 'ลดลงเหลือ'} ${newPrice} บาท`,
+            isUp ? "success" : "warning"
+          );
         } catch (error) {
           console.error("Failed to update stock step in database:", error);
         }
       }
     });
+
+    this.bindBatchPriceControls();
+  }
+
+  bindBatchPriceControls() {
+    const incBtn = document.getElementById('batchIncreasePriceBtn');
+    const decBtn = document.getElementById('batchDecreasePriceBtn');
+
+    const handleBatchChange = async (isUp) => {
+      if (this.state.role !== 'game_master' || this.state.isSpectating) return;
+
+      const [boardSnap, roomSnap] = await Promise.all([
+        this.firebaseService.getBoardSnapshot(this.state.roomCode),
+        this.firebaseService.getRoomStateSnapshot(this.state.roomCode)
+      ]);
+      const boardData = boardSnap ? boardSnap.val() : null;
+      const roomData = roomSnap ? roomSnap.val() : null;
+
+      if (boardData || roomData) {
+        this.state.pushUndoSnapshot({
+          stocks: boardData ? boardData.stocks : this.state.boardStocks,
+          members: roomData ? roomData.members : null,
+          pendingOrders: roomData ? roomData.pendingOrders : null
+        });
+        const isGM = (this.state.role === 'game_master');
+        this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
+      }
+
+      // Collect target stock symbols that are currently filtered & visible on the board
+      const visibleCards = this.state.getFilteredAndSortedCards();
+      const targetSymbols = new Set();
+      visibleCards.forEach(card => {
+        const iconEl = card.querySelector('.card-icon');
+        if (iconEl && iconEl.textContent) {
+          targetSymbols.add(iconEl.textContent.trim());
+        }
+      });
+
+      const updatedStocks = isUp
+        ? this.state.getBatchUpdatedStocksForUp(targetSymbols)
+        : this.state.getBatchUpdatedStocksForDown(targetSymbols);
+
+      if (updatedStocks) {
+        try {
+          await this.firebaseService.updateStocksBoard(this.state.roomCode, updatedStocks);
+          this.renderer.showTopToast(
+            isUp ? "BATCH PRICE INCREASED" : "BATCH PRICE DECREASED",
+            `ปรับราคาหุ้นกลุ่มที่แสดงอยู่ (+1 / -1 ช่อง) จำนวน ${targetSymbols.size} หุ้น`,
+            isUp ? "success" : "warning"
+          );
+        } catch (error) {
+          console.error("Failed to update batch stock step in database:", error);
+        }
+      }
+    };
+
+    if (incBtn) incBtn.addEventListener('click', () => handleBatchChange(true));
+    if (decBtn) decBtn.addEventListener('click', () => handleBatchChange(false));
   }
 
   bindHistoryButtons() {
@@ -283,7 +395,7 @@ export class MarketBoardController {
 
             const isGM = (this.state.role === 'game_master');
             this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
-            this.renderer.showTopToast("ACTION UNDONE", "Reverted last room action", "info");
+            this.renderer.showTopToast("ACTION UNDONE", "ยกเลิกการกระทำล่าสุดของห้องเกมเรียบร้อยแล้ว", "info");
           }
         } catch (error) {
           console.error("Failed to undo room action:", error);
@@ -324,7 +436,7 @@ export class MarketBoardController {
 
             const isGM = (this.state.role === 'game_master');
             this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
-            this.renderer.showTopToast("ACTION REDONE", "Re-applied next room action", "info");
+            this.renderer.showTopToast("ACTION REDONE", "ทำซ้ำการกระทำถัดไปของห้องเกมเรียบร้อยแล้ว", "info");
           }
         } catch (error) {
           console.error("Failed to redo room action:", error);
@@ -425,7 +537,7 @@ export class MarketBoardController {
 
           this.updateViewGrid();
           closeConfirm();
-          this.renderer.showTopToast("GAME RESET", "Reset entire game session back to starting state", "warning");
+          this.renderer.showTopToast("GAME RESET", "รีเซ็ตเซสชันเกมทั้งหมดกลับสู่ค่าเริ่มต้นเรียบร้อยแล้ว", "warning");
         } catch (error) {
           console.error("Failed to reset game in database:", error);
         }

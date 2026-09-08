@@ -1,0 +1,25 @@
+/* ==========================================================================
+   FILTER & SORT WRAP STYLES (css/filter-wrap.css)
+   ปรับแต่งส่วนตัวกรอง Sector และ Sort By ให้แสดงผลเรียงซ้อนขึ้นบรรทัดใหม่เมื่อพื้นที่ไม่เพียงพอ
+   ========================================================================== */
+
+.sector-pills-wrapper,
+.sort-toggles-wrapper {
+  overflow: visible !important;
+}
+
+.sector-pills,
+.sort-toggles {
+  flex-wrap: wrap !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  padding-bottom: 0 !important;
+  scrollbar-width: none !important;
+}
+
+.sector-pills::-webkit-scrollbar,
+.sort-toggles::-webkit-scrollbar {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
