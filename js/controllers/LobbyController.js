@@ -2,10 +2,11 @@
  * LobbyController - Manages Game Room Joining, Creation, and Player Role Initialization.
  */
 export class LobbyController {
-  constructor(state, renderer, firebaseService) {
+  constructor(state, renderer, firebaseService, sessionLockService = null) {
     this.state = state;
     this.renderer = renderer;
     this.firebaseService = firebaseService;
+    this.sessionLockService = sessionLockService;
     this.isSubmitting = false;
   }
 
@@ -134,11 +135,18 @@ export class LobbyController {
       modal.style.display = 'flex';
       let roomUnsub = null;
 
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          handleClose();
+        }
+      };
+
       const cleanup = () => {
         if (typeof roomUnsub === 'function') {
           roomUnsub();
           roomUnsub = null;
         }
+        document.removeEventListener('keydown', handleKeyDown);
         btnGM.removeEventListener('click', handleGM);
         btnPlayer.removeEventListener('click', handlePlayer);
         btnClose.removeEventListener('click', handleClose);
@@ -162,6 +170,7 @@ export class LobbyController {
         resolve(null);
       };
 
+      document.addEventListener('keydown', handleKeyDown);
       btnGM.addEventListener('click', handleGM);
       btnPlayer.addEventListener('click', handlePlayer);
       btnClose.addEventListener('click', handleClose);
@@ -220,12 +229,20 @@ export class LobbyController {
         reject(new Error('GM_CANCELLED_GAME_MODE'));
       };
 
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          handleClose();
+        }
+      };
+
       const cleanup = () => {
+        document.removeEventListener('keydown', handleKeyDown);
         btnBasic.removeEventListener('click', handleBasic);
         btnAdvance.removeEventListener('click', handleAdvance);
         if (btnClose) btnClose.removeEventListener('click', handleClose);
       };
 
+      document.addEventListener('keydown', handleKeyDown);
       btnBasic.addEventListener('click', handleBasic);
       btnAdvance.addEventListener('click', handleAdvance);
       if (btnClose) btnClose.addEventListener('click', handleClose);
@@ -359,24 +376,46 @@ export class LobbyController {
     const members = roomData ? (roomData.members || {}) : {};
     const memberUids = Object.keys(members);
 
-    // Determine user role and display name
+    // Determine user role, display name, and capacity
     let role = null;
     let displayName = null;
+    let maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
 
     if (roomExists && members[user.uid]) {
       // Re-joining player uses their existing role and name
       role = members[user.uid].role;
       displayName = members[user.uid].displayName || (role === 'game_master' ? 'GM' : 'Player_1');
     } else {
-      // Check max capacity if room already exists (Default 5 players max)
-      const maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
-      if (roomExists && !members[user.uid] && memberUids.length >= maxPlayers) {
-        const roomFullAction = await this.renderer.showRoomFullModal();
-        if (roomFullAction === 'reset') {
-          await this.firebaseService.deleteRoomData(code);
-          return this.joinOrCreateRoom(code);
+      // Check max capacity if room already exists (Default 5 players max, expandable up to 8 max)
+      if (roomExists && !members[user.uid]) {
+        if (memberUids.length >= 8) {
+          const roomFullAction = await this.renderer.showRoomFullModal("ห้องเกมนี้มีผู้เล่นครบตามจำนวนสูงสุดแล้ว (จำกัดสูงสุด 8 คน)");
+          if (roomFullAction === 'reset') {
+            await this.firebaseService.deleteRoomData(code);
+            return this.joinOrCreateRoom(code);
+          }
+          return;
         }
-        return;
+
+        if (memberUids.length >= 5) {
+          const confirmExpand = await this.renderer.showConfirmAlert(
+            "แจ้งเตือนผู้เล่น",
+            "ห้องนี้มีผู้เล่นครบ 5 คน หากเข้าร่วมเพิ่มอาจกระทบประสบการณ์ในการเล่นเกม",
+            "เข้าร่วมต่อ",
+            "ยกเลิก"
+          );
+          if (!confirmExpand || !confirmExpand.isConfirmed) {
+            return;
+          }
+          maxPlayers = Math.min(8, Math.max(maxPlayers, memberUids.length + 1));
+          try {
+            await this.firebaseService.updateRoom(code, {
+              'roomSettings/maxPlayers': maxPlayers
+            });
+          } catch (err) {
+            console.warn("Could not expand room maxPlayers:", err);
+          }
+        }
       }
 
       // Check if room already has GM
@@ -418,8 +457,6 @@ export class LobbyController {
 
     // 3. ATOMICALLY REGISTER ROLE IN FIREBASE IMMEDIATELY
     // Register role in Firebase so other clients see GM in real-time right away!
-    const maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
-
     if (!roomExists) {
       // Build initial board configuration from master steps
       const initialBoardStocks = gameSetting.stocks.map(s => {
@@ -546,6 +583,12 @@ export class LobbyController {
 
     this.state.setGameMode(gameMode);
     this.state.setRoomCode(code);
+    window.history.pushState({ page: 'in_game' }, '');
+
+    // Register tab session & IP lock to kick older tabs on this machine
+    if (this.sessionLockService) {
+      await this.sessionLockService.registerSession(code, this.firebaseService, user.uid);
+    }
 
     // Configure player/GM cleanup on disconnect
     this.firebaseService.configureDisconnectCleanup(code, user.uid, role === 'game_master');

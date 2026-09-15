@@ -43,22 +43,22 @@ export class PortfolioRenderer {
       }
       
       const stockDetails = {
-        KTF: { icon: 'Assets/Fincial_KTFFSF.png', sector: 'FINCIAL' },
-        ABF: { icon: 'Assets/ABFSUFDPF.png', sector: 'AGRO' },
-        ZIF: { icon: 'Assets/Indus_ZIFDTF.png', sector: 'INDUS' },
-        FSF: { icon: 'Assets/Fincial_KTFFSF.png', sector: 'FINCIAL' },
-        SICF: { icon: 'Assets/Tech_SICFVCOFDTSF.png', sector: 'TECH' },
-        SUF: { icon: 'Assets/ABFSUFDPF.png', sector: 'AGRO' },
-        SAAF: { icon: 'Assets/Resource_SAAFPTF.png', sector: 'RESOURCE' },
-        VCOF: { icon: 'Assets/Tech_SICFVCOFDTSF.png', sector: 'TECH' },
-        ARROF: { icon: 'Assets/Propcon_ARROF.png', sector: 'PROPCON' },
-        KISF: { icon: 'Assets/KISFCUF.png', sector: 'CONSUMP' },
-        TNF: { icon: 'Assets/Service_TNF.png', sector: 'SERVICE' },
-        DTSF: { icon: 'Assets/Tech_SICFVCOFDTSF.png', sector: 'TECH' },
-        DPF: { icon: 'Assets/ABFSUFDPF.png', sector: 'AGRO' },
-        DTF: { icon: 'Assets/Indus_ZIFDTF.png', sector: 'INDUS' },
-        PTF: { icon: 'Assets/Resource_SAAFPTF.png', sector: 'RESOURCE' },
-        CUF: { icon: 'Assets/KISFCUF.png', sector: 'CONSUMP' }
+        KTF: { icon: 'Assets/Sector_icons/Fincial_KTFFSF.png', sector: 'FINCIAL' },
+        ABF: { icon: 'Assets/Sector_icons/ABFSUFDPF.png', sector: 'AGRO' },
+        ZIF: { icon: 'Assets/Sector_icons/Indus_ZIFDTF.png', sector: 'INDUS' },
+        FSF: { icon: 'Assets/Sector_icons/Fincial_KTFFSF.png', sector: 'FINCIAL' },
+        SICF: { icon: 'Assets/Sector_icons/Tech_SICFVCOFDTSF.png', sector: 'TECH' },
+        SUF: { icon: 'Assets/Sector_icons/ABFSUFDPF.png', sector: 'AGRO' },
+        SAAF: { icon: 'Assets/Sector_icons/Resource_SAAFPTF.png', sector: 'RESOURCE' },
+        VCOF: { icon: 'Assets/Sector_icons/Tech_SICFVCOFDTSF.png', sector: 'TECH' },
+        ARROF: { icon: 'Assets/Sector_icons/Propcon_ARROF.png', sector: 'PROPCON' },
+        KISF: { icon: 'Assets/Sector_icons/KISFCUF.png', sector: 'CONSUMP' },
+        TNF: { icon: 'Assets/Sector_icons/Service_TNF.png', sector: 'SERVICE' },
+        DTSF: { icon: 'Assets/Sector_icons/Tech_SICFVCOFDTSF.png', sector: 'TECH' },
+        DPF: { icon: 'Assets/Sector_icons/ABFSUFDPF.png', sector: 'AGRO' },
+        DTF: { icon: 'Assets/Sector_icons/Indus_ZIFDTF.png', sector: 'INDUS' },
+        PTF: { icon: 'Assets/Sector_icons/Resource_SAAFPTF.png', sector: 'RESOURCE' },
+        CUF: { icon: 'Assets/Sector_icons/KISFCUF.png', sector: 'CONSUMP' }
       };
 
       let html = '';
@@ -77,17 +77,17 @@ export class PortfolioRenderer {
         
         html += `
           <tr class="hover:bg-gray-900 transition-colors">
-            <td class="p-3 text-center">
-              <div class="flex items-center justify-center gap-2">
+            <td class="p-3 text-left table-col-left">
+              <div class="flex items-center gap-2">
                 <img src="${details.icon}" class="w-5 h-5 object-contain flex-shrink-0" alt="${symbol}">
                 <div class="font-bold text-white text-sm sm:text-base">${symbol}</div>
               </div>
             </td>
-            <td class="font-extrabold text-blue-400 font-mono text-sm sm:text-base text-center">${holding.volume.toLocaleString('en-US')}</td>
-            <td class="text-center">${holding.avgPrice.toLocaleString('en-US')}</td>
-            <td class="text-center">${marketPrice.toLocaleString('en-US')}</td>
-            <td class="font-semibold text-white text-center">${amount.toLocaleString('en-US')}</td>
-            <td class="font-bold ${pnlColorClass} text-center">${sign}${pnl.toLocaleString('en-US')} (${sign}${pnlPct.toFixed(2)}%)</td>
+            <td class="font-extrabold text-blue-400 font-mono text-sm sm:text-base text-right table-col-right">${holding.volume.toLocaleString('en-US')}</td>
+            <td class="text-right table-col-right font-mono">${holding.avgPrice.toLocaleString('en-US')}</td>
+            <td class="text-right table-col-right font-mono">${marketPrice.toLocaleString('en-US')}</td>
+            <td class="font-semibold text-white text-right table-col-right font-mono">${amount.toLocaleString('en-US')}</td>
+            <td class="font-bold ${pnlColorClass} text-right table-col-right font-mono">${sign}${pnl.toLocaleString('en-US')} (${sign}${pnlPct.toFixed(2)}%)</td>
           </tr>
         `;
       });
@@ -144,12 +144,12 @@ export class PortfolioRenderer {
       
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-order-id="${order.id}">
-          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center gap-2 h-full"><button class="gm-approve-btn">Approve</button><button class="gm-reject-btn">Reject</button></div></td>
-          <td class="p-3 font-semibold text-white align-middle">${order.username}</td>
-          <td class="p-3 ${actionColor} align-middle">${order.type}</td>
-          <td class="p-3 font-bold text-yellow-500 align-middle">${order.symbol}</td>
-          <td class="p-3 align-middle">${(order.volume || 1).toLocaleString('en-US')}</td>
-          <td class="p-3 text-gray-400 align-middle">${formattedProposedPrice}</td>
+          <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center gap-2 h-full"><button class="gm-approve-btn">Approve</button><button class="gm-reject-btn">Reject</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${order.username}</td>
+          <td class="p-3 ${actionColor} align-middle text-left table-col-left">${order.type}</td>
+          <td class="p-3 font-bold text-yellow-500 align-middle text-left table-col-left">${order.symbol}</td>
+          <td class="p-3 align-middle text-right table-col-right font-mono">${(order.volume || 1).toLocaleString('en-US')}</td>
+          <td class="p-3 text-gray-400 align-middle text-right table-col-right font-mono">${formattedProposedPrice}</td>
         </tr>
       `;
     });
@@ -207,10 +207,10 @@ export class PortfolioRenderer {
       
       html += `
         <tr class="hover:bg-gray-900 transition-colors">
-          <td class="${actionColor} align-middle">${order.type}</td>
-          <td class="font-bold text-white align-middle">${order.symbol}</td>
-          <td class="align-middle">${orderPrice.toLocaleString('en-US')}</td>
-          <td class="align-middle">
+          <td class="${actionColor} align-middle text-left table-col-left">${order.type}</td>
+          <td class="font-bold text-white align-middle text-left table-col-left">${order.symbol}</td>
+          <td class="align-middle text-right table-col-right font-mono">${orderPrice.toLocaleString('en-US')}</td>
+          <td class="align-middle text-center table-col-center">
             <span class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
               PENDING
             </span>
@@ -246,9 +246,9 @@ export class PortfolioRenderer {
 
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
-          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center"><button type="button" class="gm-salary-btn" data-uid="${uid}" title="Pay 10,000 Salary">Salary 10,000</button></div></td>
-          <td class="p-3 font-semibold text-white align-middle">${member.displayName || 'Player'}</td>
-          <td class="p-3 text-emerald-400 font-semibold align-middle">${formattedCash}</td>
+          <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center"><button type="button" class="gm-salary-btn" data-uid="${uid}" title="Pay 10,000 Salary">Salary 10,000</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${member.displayName || 'Player'}</td>
+          <td class="p-3 text-emerald-400 font-semibold align-middle text-right table-col-right font-mono">${formattedCash}</td>
         </tr>
       `;
     });
@@ -322,9 +322,9 @@ export class PortfolioRenderer {
 
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
-          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center"><button type="button" class="gm-dividend-btn ${dividendBtnState}" data-uid="${uid}" title="Pay ${formattedDividend} Dividend">Dividend ${formattedDividend}</button></div></td>
-          <td class="p-3 font-semibold text-white align-middle">${member.displayName || 'Player'}</td>
-          <td class="p-3 align-middle">${holdingsSummaryText}</td>
+          <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center"><button type="button" class="gm-dividend-btn ${dividendBtnState}" data-uid="${uid}" title="Pay ${formattedDividend} Dividend">Dividend ${formattedDividend}</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${member.displayName || 'Player'}</td>
+          <td class="p-3 align-middle text-left table-col-left">${holdingsSummaryText}</td>
         </tr>
       `;
     });
@@ -356,12 +356,12 @@ export class PortfolioRenderer {
 
       html += `
         <tr class="border-b border-gray-800 hover:bg-gray-850">
-          <td class="p-3 text-center align-middle"><div class="flex items-center justify-center gap-3 h-full"><button type="button" class="debt-invest-btn" data-key="${item.key}">Invest</button><button type="button" class="debt-redeem-btn ${canRedeem ? '' : 'opacity-40'}" data-key="${item.key}">Redeem</button></div></td>
-          <td class="p-3 font-semibold text-white align-middle">${item.name}</td>
-          <td class="p-3 text-gray-300 font-mono align-middle">${formattedUnitPrice}</td>
-          <td class="p-3 font-bold ${item.volume > 0 ? 'text-indigo-400' : 'text-gray-500'} align-middle">${item.volume}</td>
-          <td class="p-3 font-semibold text-white align-middle">${formattedTotalVal}</td>
-          <td class="p-3 text-white font-semibold align-middle">+${formattedInterest} / unit</td>
+          <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center gap-3 h-full"><button type="button" class="debt-invest-btn" data-key="${item.key}">Invest</button><button type="button" class="debt-redeem-btn ${canRedeem ? '' : 'opacity-40'}" data-key="${item.key}">Redeem</button></div></td>
+          <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${item.name}</td>
+          <td class="p-3 text-gray-300 font-mono align-middle text-right table-col-right">${formattedUnitPrice}</td>
+          <td class="p-3 font-bold ${item.volume > 0 ? 'text-indigo-400' : 'text-gray-500'} align-middle text-right table-col-right font-mono">${item.volume}</td>
+          <td class="p-3 font-semibold text-white align-middle text-right table-col-right font-mono">${formattedTotalVal}</td>
+          <td class="p-3 text-white font-semibold align-middle text-right table-col-right font-mono">+${formattedInterest} / unit</td>
         </tr>
       `;
     });

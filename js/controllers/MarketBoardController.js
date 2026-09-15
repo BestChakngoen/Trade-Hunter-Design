@@ -490,6 +490,12 @@ export class MarketBoardController {
       if (e.target === this.renderer.confirmModal) closeConfirm();
     });
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.renderer.confirmModal && this.renderer.confirmModal.classList.contains('show')) {
+        closeConfirm();
+      }
+    });
+
     const confirmResetBtn = document.getElementById('confirmResetBtn');
     if (confirmResetBtn) {
       confirmResetBtn.addEventListener('click', async () => {

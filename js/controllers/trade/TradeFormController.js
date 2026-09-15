@@ -111,6 +111,13 @@ export class TradeFormController {
       });
     });
 
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeDropdown();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
     document.addEventListener('click', () => {
       closeDropdown();
     });
@@ -178,6 +185,15 @@ export class TradeFormController {
         item.style.setProperty('display', 'flex', 'important');
         ownedCount++;
         if (!firstOwnedItem) firstOwnedItem = item;
+
+        const ownedVol = Number(userPortfolio[val].volume || 0);
+        let qtyBadge = item.querySelector('.dropdown-owned-badge');
+        if (!qtyBadge) {
+          qtyBadge = document.createElement('span');
+          qtyBadge.className = 'dropdown-owned-badge text-blue-400 font-bold text-xs ml-2';
+          item.appendChild(qtyBadge);
+        }
+        qtyBadge.textContent = `(${ownedVol.toLocaleString('en-US')})`;
       } else {
         item.style.setProperty('display', 'none', 'important');
       }
@@ -216,7 +232,7 @@ export class TradeFormController {
       tradeTabBuy.classList.add('active');
       tradeTabSell.classList.remove('active');
       submitOrderBtn.className = "submit-order-btn buy-theme mt-4";
-      submitOrderBtn.textContent = "SUBMIT BUY ORDER";
+      submitOrderBtn.textContent = "Place Buy Order";
       onOrderTypeChange('BUY');
     });
 
@@ -225,7 +241,7 @@ export class TradeFormController {
       tradeTabSell.classList.add('active');
       tradeTabBuy.classList.remove('active');
       submitOrderBtn.className = "submit-order-btn sell-theme mt-4";
-      submitOrderBtn.textContent = "SUBMIT SELL ORDER";
+      submitOrderBtn.textContent = "Place Sell Order";
       onOrderTypeChange('SELL');
     });
   }

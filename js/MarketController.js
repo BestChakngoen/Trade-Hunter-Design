@@ -2,6 +2,7 @@ import { LobbyController } from './controllers/LobbyController.js';
 import { TradeController } from './controllers/TradeController.js';
 import { MarketBoardController } from './controllers/MarketBoardController.js';
 import { TradeService } from './services/TradeService.js';
+import { SessionLockService } from './services/SessionLockService.js';
 
 /**
  * MarketController - Main Facade Controller coordinating Lobby, Trading, and Market Board modules.
@@ -13,8 +14,11 @@ export class MarketController {
     this.renderer.state = state;
     this.firebaseService = firebaseService;
 
+    // Multi-tab / Machine exclusivity service
+    this.sessionLockService = new SessionLockService();
+
     // Sub-controllers following Single Responsibility Principle
-    this.lobbyController = new LobbyController(state, renderer, firebaseService);
+    this.lobbyController = new LobbyController(state, renderer, firebaseService, this.sessionLockService);
     this.tradeController = new TradeController(state, renderer, firebaseService);
     this.marketBoardController = new MarketBoardController(state, renderer, firebaseService);
 
@@ -34,6 +38,11 @@ export class MarketController {
     this.renderer.ensureViewGraphButtons();
     this.renderer.applyBetaColors(this.state.originalCards);
     this.renderer.showLobby();
+
+    // Initialize machine & multi-tab session exclusivity listener
+    if (this.sessionLockService) {
+      this.sessionLockService.init((reason, newUserId) => this.handleKickedSession(reason, newUserId));
+    }
 
     // 1. Bind Lobby Flow
     this.lobbyController.bindLobbyEntrance((code) => {
@@ -59,7 +68,7 @@ export class MarketController {
     }
 
     // 3. Tab Navigation & Trade Form Events
-    this.renderer.bindTabEvents((tab) => {
+    this.renderer.bindTabEvents(async (tab) => {
       if (tab === 'portfolio') {
         const stats = this.state.getPortfolioStats();
         const user = this.firebaseService.getCurrentUser();
@@ -74,11 +83,14 @@ export class MarketController {
         if (this.tradeController.refreshDropdownOptions) {
           this.tradeController.refreshDropdownOptions();
         }
+      } else if (tab === 'management') {
+        await this.refreshManagementView();
       }
     });
 
     this.tradeController.bindTradeFormEvents();
     this.bindLeaveRoomButton();
+    this.bindGlobalProtectionEvents();
   }
 
   bindLeaveRoomButton() {
@@ -100,35 +112,7 @@ export class MarketController {
       const currentUid = currentUser ? currentUser.uid : null;
 
       this.unsubscribeAll();
-
-      if (isGM) {
-        if (roomCode && currentUid) {
-          try {
-            const roomSnap = await this.firebaseService.getRoomStateSnapshot(roomCode);
-            const roomData = roomSnap ? roomSnap.val() : null;
-            const members = roomData ? (roomData.members || {}) : {};
-            const otherMembers = Object.keys(members).filter(uid => uid !== currentUid);
-
-            await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
-
-            if (otherMembers.length > 0) {
-              await this.firebaseService.triggerGMTransfer(roomCode);
-            } else {
-              await this.firebaseService.deleteRoomData(roomCode);
-            }
-          } catch (e) {
-            console.error("Failed to handle GM leave:", e);
-          }
-        }
-      } else {
-        if (roomCode && currentUid) {
-          try {
-            await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
-          } catch (e) {
-            console.error("Failed to remove player node on leave:", e);
-          }
-        }
-      }
+      await this.removeMemberAndTransferIfNeeded(roomCode, currentUid, isGM);
 
       this.state.reset();
       this.renderer.showLobby();
@@ -273,7 +257,7 @@ export class MarketController {
     });
 
     if (user) {
-      this.roomListenerUnsubscribe = this.firebaseService.listenToRoom(code, (roomData) => {
+      this.roomListenerUnsubscribe = this.firebaseService.listenToRoom(code, async (roomData) => {
         if (!roomData) {
           if (this.state.roomCode) {
             this.handleRoomExpired();
@@ -317,8 +301,17 @@ export class MarketController {
                 if (claimRes && claimRes.claimed) {
                   this.state.setRole('game_master');
                   this.state.portfolio = null;
+                  this.state.isSpectating = false;
                   this.renderer.hideGMTransferModal();
                   this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
+                  if (this.renderer.spectatorToggleBtn) {
+                    this.renderer.spectatorToggleBtn.style.display = 'block';
+                  }
+                  this.renderer.updateSpectatorButtonUI(false);
+                  this.firebaseService.configureDisconnectCleanup(code, currentUid, true);
+
+                  // Refresh Management view immediately upon inheriting GM
+                  await this.refreshManagementView();
                   
                   // Switch tab automatically to Market page as default upon taking over GM
                   const tabMarketBtn = document.getElementById('tabMarketBtn');
@@ -358,6 +351,18 @@ export class MarketController {
           });
         }
         this.prevMemberUids = currentMemberUids;
+
+        // Dynamic room capacity reduction on member departure (floor at 5 max players)
+        const currentMemberCount = currentMemberUids.size;
+        const currentMaxPlayers = (roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
+        if (currentMaxPlayers > 5 && currentMemberCount < currentMaxPlayers) {
+          const targetMax = Math.max(5, currentMemberCount);
+          if (this.state.role === 'game_master') {
+            this.firebaseService.updateRoom(code, {
+              'roomSettings/maxPlayers': targetMax
+            });
+          }
+        }
 
         if (roomData.roomSettings && roomData.roomSettings.gameMode) {
           this.state.setGameMode(roomData.roomSettings.gameMode);
@@ -457,48 +462,7 @@ export class MarketController {
           }
           this.prevGMOrderIds = currentGMOrderIds;
 
-          if (this.renderer.gmPendingOrdersSection) {
-            this.renderer.gmPendingOrdersSection.style.display = 'block';
-          }
-          if (this.renderer.gmPlayerSalarySection) {
-            this.renderer.gmPlayerSalarySection.style.display = 'block';
-          }
-          if (this.renderer.gmPlayerDividendSection) {
-            this.renderer.gmPlayerDividendSection.style.display = 'block';
-          }
-          if (this.renderer.gmPlayerDebtInterestSection) {
-            this.renderer.gmPlayerDebtInterestSection.style.display = 'block';
-          }
-          this.renderer.updateGMPendingOrdersUI(
-            orders,
-            async (orderId) => {
-              await this.tradeController.approvePlayerOrder(orderId);
-            },
-            async (orderId) => {
-              await this.tradeController.rejectPlayerOrder(orderId);
-            }
-          );
-          this.renderer.updateGMPlayerSalaryUI(
-            roomData.members,
-            async (playerUid) => {
-              await this.tradeController.payPlayerSalary(playerUid);
-            }
-          );
-          this.renderer.updateGMPlayerDividendUI(
-            roomData.members,
-            this.state.boardStocks,
-            this.state.masterStocks,
-            this.state.originalCards,
-            async (playerUid) => {
-              await this.tradeController.payPlayerDividend(playerUid);
-            }
-          );
-          this.renderer.updateGMPlayerDebtInterestUI(
-            roomData.members,
-            async (playerUid) => {
-              await this.tradeController.payPlayerDebtInterest(playerUid);
-            }
-          );
+          await this.refreshManagementView(roomData);
         } else {
           if (this.renderer.gmPendingOrdersSection) {
             this.renderer.gmPendingOrdersSection.style.display = 'none';
@@ -594,6 +558,9 @@ export class MarketController {
   }
 
   unsubscribeAll() {
+    if (this.sessionLockService) {
+      this.sessionLockService.cleanup();
+    }
     if (this.roomTimerInterval) {
       clearInterval(this.roomTimerInterval);
       this.roomTimerInterval = null;
@@ -609,5 +576,178 @@ export class MarketController {
       this.roomListenerUnsubscribe();
       this.roomListenerUnsubscribe = null;
     }
+  }
+
+  /**
+   * Helper to remove member node and handle GM succession or room cleanup.
+   */
+  async removeMemberAndTransferIfNeeded(roomCode, currentUid, isGM) {
+    if (!roomCode || !currentUid) return;
+
+    if (isGM) {
+      try {
+        const roomSnap = await this.firebaseService.getRoomStateSnapshot(roomCode);
+        const roomData = roomSnap ? roomSnap.val() : null;
+        const members = roomData ? (roomData.members || {}) : {};
+        const otherMembers = Object.keys(members).filter(uid => uid !== currentUid);
+
+        await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
+
+        if (otherMembers.length > 0) {
+          await this.firebaseService.triggerGMTransfer(roomCode);
+        } else {
+          await this.firebaseService.deleteRoomData(roomCode);
+        }
+      } catch (e) {
+        console.error("[MarketController] Failed to handle GM leave:", e);
+      }
+    } else {
+      try {
+        await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
+      } catch (e) {
+        console.error("[MarketController] Failed to remove player node on leave:", e);
+      }
+    }
+  }
+
+  /**
+   * Handles automatic eviction when a newer tab/session is activated on the same machine/IP.
+   */
+  async handleKickedSession(reason, newUserId = null) {
+    if (this.isBeingKicked) return;
+    this.isBeingKicked = true;
+
+    try {
+      const roomCode = this.state.roomCode;
+      const currentUser = this.firebaseService.getCurrentUser();
+      const currentUid = currentUser ? currentUser.uid : null;
+      const isGM = (this.state.role === 'game_master');
+
+      this.unsubscribeAll();
+
+      // Update room member count in Firebase: remove kicked tab's member if not identical to new session
+      if (roomCode && currentUid && (!newUserId || currentUid !== newUserId)) {
+        await this.removeMemberAndTransferIfNeeded(roomCode, currentUid, isGM);
+      }
+
+      this.state.reset();
+      this.renderer.showLobby();
+      await this.renderer.showErrorAlert(
+        "SESSION DISCONNECTED",
+        reason || "มีการเข้าเล่นจากแท็บใหม่ในเครื่องนี้ เซสชันของแท็บนี้ถูกปิดลงโดยอัตโนมัติ"
+      );
+    } catch (e) {
+      console.error("[MarketController] Error handling kicked session:", e);
+    } finally {
+      this.isBeingKicked = false;
+    }
+  }
+
+  async refreshManagementView(roomData = null) {
+    if (this.state.role !== 'game_master' || this.state.isSpectating) return;
+
+    if (!roomData) {
+      if (!this.state.roomCode) return;
+      try {
+        const snap = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
+        roomData = snap && snap.exists() ? snap.val() : null;
+      } catch (err) {
+        console.warn("Could not fetch room snapshot for management view:", err);
+      }
+    }
+    if (!roomData) return;
+
+    const orders = roomData.pendingOrders || {};
+
+    if (this.renderer.gmPendingOrdersSection) {
+      this.renderer.gmPendingOrdersSection.style.display = 'block';
+    }
+    if (this.renderer.gmPlayerSalarySection) {
+      this.renderer.gmPlayerSalarySection.style.display = 'block';
+    }
+    if (this.renderer.gmPlayerDividendSection) {
+      this.renderer.gmPlayerDividendSection.style.display = 'block';
+    }
+    if (this.renderer.gmPlayerDebtInterestSection) {
+      this.renderer.gmPlayerDebtInterestSection.style.display = 'block';
+    }
+
+    this.renderer.updateGMPendingOrdersUI(
+      orders,
+      async (orderId) => {
+        await this.tradeController.approvePlayerOrder(orderId);
+      },
+      async (orderId) => {
+        await this.tradeController.rejectPlayerOrder(orderId);
+      }
+    );
+    this.renderer.updateGMPlayerSalaryUI(
+      roomData.members,
+      async (playerUid) => {
+        await this.tradeController.payPlayerSalary(playerUid);
+      }
+    );
+    this.renderer.updateGMPlayerDividendUI(
+      roomData.members,
+      this.state.boardStocks,
+      this.state.masterStocks,
+      this.state.originalCards,
+      async (playerUid) => {
+        await this.tradeController.payPlayerDividend(playerUid);
+      }
+    );
+    this.renderer.updateGMPlayerDebtInterestUI(
+      roomData.members,
+      async (playerUid) => {
+        await this.tradeController.payPlayerDebtInterest(playerUid);
+      }
+    );
+  }
+
+  bindGlobalProtectionEvents() {
+    // 1. Prevent accidental reload via keyboard shortcuts (F5, Ctrl+R, Cmd+R)
+    window.addEventListener('keydown', async (e) => {
+      if ((e.key === 'F5') || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'))) {
+        if (this.state.roomCode) {
+          e.preventDefault();
+          const result = await this.renderer.showConfirmAlert(
+            "รีเฟรชหน้าเว็บ?",
+            "คุณต้องการโหลดหน้านี้ใหม่หรือไม่? ข้อมูลหรือสถานะการเล่นปัจจุบันอาจมีการเปลี่ยนแปลง",
+            "รีเฟรช",
+            "ยกเลิก"
+          );
+          if (result && result.isConfirmed) {
+            window.location.reload();
+          }
+        }
+      }
+    });
+
+    // 2. Prevent accidental reload / tab close via browser controls
+    window.addEventListener('beforeunload', (e) => {
+      if (this.state.roomCode) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    // 3. Prevent mobile back button / swipe back gesture navigation
+    window.addEventListener('popstate', async () => {
+      if (this.state.roomCode) {
+        window.history.pushState({ page: 'in_game' }, '');
+        const res = await this.renderer.showConfirmAlert(
+          "ออกจากห้องเกม?",
+          "คุณต้องการออกจากห้องเกมนี้ใช่หรือไม่?",
+          "ออกจากห้อง",
+          "อยู่ในเกมต่อ"
+        );
+        if (res && res.isConfirmed) {
+          const leaveBtn = document.getElementById('leaveRoomBtn');
+          if (leaveBtn) {
+            leaveBtn.click();
+          }
+        }
+      }
+    });
   }
 }

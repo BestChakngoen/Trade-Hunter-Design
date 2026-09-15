@@ -55,9 +55,12 @@ html, body {
   background-position: center top !important;
   background-repeat: no-repeat !important;
   background-attachment: scroll !important;
-  min-height: 100% !important;
-  min-height: 100svh !important;
-  min-height: 100dvh !important;
+  height: 100% !important;
+  height: 100svh !important;
+  height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
   box-sizing: border-box !important;
 }
 

@@ -46,6 +46,8 @@
 .summary-value {
   font-size: 20px;                  /* 👈 ขนาดตัวอักษรยอดเงินสรุป */
   font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 /* --------------------------------------------------------------------------
@@ -114,7 +116,6 @@
 .gm-salary-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: center !important;
   font-size: 13px;                  /* 👈 ขนาดตัวอักษรข้อมูลในตาราง */
 }
 
@@ -122,9 +123,8 @@
 .gm-pending-orders-table th, .gm-pending-orders-table td,
 .player-pending-orders-table th, .player-pending-orders-table td,
 .gm-salary-table th, .gm-salary-table td {
-  padding: 14px 20px !important;       /* 👈 ความห่างช่องตารางสบายตาไม่ชิดขอบ [บน-ล่าง] [ซ้าย-ขวา] */
+  padding: 14px 18px !important;       /* 👈 ความห่างช่องตารางสบายตาไม่ชิดขอบ [บน-ล่าง] [ซ้าย-ขวา] */
   vertical-align: middle !important;  /* 👈 จัดแนวกึ่งกลางแนวตั้ง */
-  text-align: center !important;      /* 👈 จัดเรียงข้อมูลในตารางไว้ตรงกลาง */
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -147,6 +147,26 @@
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* 🎯 Financial Data Column Alignments (มาตรฐานการแสดงผลตัวเลขการเงินสากล) */
+.table-col-left,
+.holdings-table th.table-col-left,
+.holdings-table td.table-col-left {
+  text-align: left !important;
+}
+
+.table-col-right,
+.holdings-table th.table-col-right,
+.holdings-table td.table-col-right {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
+}
+
+.table-col-center,
+.holdings-table th.table-col-center,
+.holdings-table td.table-col-center {
   text-align: center !important;
 }
 

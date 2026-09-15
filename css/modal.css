@@ -17,7 +17,7 @@
   height: 100%;
   background: rgba(8, 10, 18, 0.85); /* 👈 สีฉากบังหน้าจอ (สีดำมืดใส) */
   backdrop-filter: blur(12px);       /* 👈 เอฟเฟกต์เบลอฉากด้านหลัง (Glassmorphism Blur) */
-  z-index: 1000;                     /* ความสูงชั้นลอย */
+  z-index: 60;                     /* ความสูงชั้นลอยตาม Disciplined Scale */
   justify-content: center;
   align-items: center;
   opacity: 0;
@@ -27,6 +27,50 @@
 /* เมื่อโมดอลแสดงผล (Show) */
 .modal.show {
   opacity: 1;
+}
+
+/* Header ของกล่องยืนยัน */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.confirm-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* ปุ่มปิด Modal มาตรฐาน (Hit Target 44x44px) */
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  touch-action: manipulation;
+  transition: color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.close-modal-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.close-modal-btn:active {
+  transform: scale(0.92);
 }
 
 /* ตัวกล่องเนื้อหาโมดอลตรงกลางหน้าจอ */
@@ -106,7 +150,7 @@
 .apple-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,18 +179,19 @@
 
 .apple-modal-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 30px;
-  height: 30px;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   border: none;
-  color: rgba(235, 235, 245, 0.6);
+  color: rgba(235, 235, 245, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -283,14 +328,50 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.apple-btn-advance:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-  transform: scale(1.02);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+/* --------------------------------------------------------------------------
+   4. 🚫 No Bounce / No Pop Animations for Modals & SweetAlert2
+   -------------------------------------------------------------------------- */
+.swal2-popup,
+.swal2-modal,
+.swal2-show {
+  animation: none !important;
+  transform: none !important;
 }
 
-.apple-btn-advance:active {
-  transform: scale(0.97);
+.swal2-icon {
+  animation: none !important;
+  transform: none !important;
+}
+
+.apple-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(25px) saturate(190%);
+  -webkit-backdrop-filter: blur(25px) saturate(190%);
+  animation: appleFadeIn 0.2s ease-out;
+}
+
+.apple-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: rgba(30, 30, 35, 0.78);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 0.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  padding: 28px 24px 24px 24px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  text-align: center;
+  animation: appleFadeIn 0.2s ease-out;
+  transform: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 @keyframes appleFadeIn {
@@ -298,11 +379,27 @@
   to { opacity: 1; }
 }
 
-@keyframes appleScaleUp {
-  from { opacity: 0; transform: scale(0.92) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+.modal-content {
+  transform: none !important;
+  transition: opacity 0.2s ease;
 }
 
 .confirm-btn:active {
   transform: translateY(0) scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apple-modal-overlay,
+  .apple-modal-card,
+  .modal,
+  .modal-content,
+  .apple-btn-gm,
+  .apple-btn-player,
+  .apple-btn-basic,
+  .apple-btn-advance,
+  .confirm-btn {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -57,7 +57,7 @@ html, body {
   background-size: auto !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
-  z-index: 99999 !important;
+  z-index: 50 !important;
   overflow: hidden !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -204,31 +204,24 @@ html, body {
 @keyframes lobbyShakeChildElements {
   0%, 100% {
     transform: translateX(0) !important;
-    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5)) !important;
   }
   15% {
-    transform: translateX(-30px) !important;
-    filter: drop-shadow(0 0 35px #ef4444) !important;
+    transform: translateX(-18px) !important;
   }
   30% {
-    transform: translateX(30px) !important;
-    filter: drop-shadow(0 0 40px #f87171) !important;
+    transform: translateX(18px) !important;
   }
   45% {
-    transform: translateX(-20px) !important;
-    filter: drop-shadow(0 0 30px #ef4444) !important;
+    transform: translateX(-12px) !important;
   }
   60% {
-    transform: translateX(20px) !important;
-    filter: drop-shadow(0 0 25px #f87171) !important;
+    transform: translateX(12px) !important;
   }
   75% {
-    transform: translateX(-10px) !important;
-    filter: drop-shadow(0 0 20px #ef4444) !important;
+    transform: translateX(-6px) !important;
   }
   90% {
-    transform: translateX(10px) !important;
-    filter: drop-shadow(0 0 15px #ef4444) !important;
+    transform: translateX(6px) !important;
   }
 }
 
@@ -360,5 +353,16 @@ html, body {
 
   #lobbyForm {
     gap: 4px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-code-box.shake-code-box .lobby-code-btn-bg,
+  .lobby-code-box.shake-code-box .lobby-code-input,
+  .lobby-code-input::placeholder,
+  .lobby-joy-btn {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

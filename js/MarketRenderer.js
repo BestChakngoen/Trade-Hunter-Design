@@ -510,7 +510,7 @@ export class MarketRenderer {
     });
   }
 
-  showRoomFullModal() {
+  showRoomFullModal(customMessage = null) {
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -519,8 +519,14 @@ export class MarketRenderer {
     const resetBtn = document.getElementById('roomFullResetBtn');
 
     if (!modal) {
-      alert("Room Full\nThis game room has reached its maximum player limit.");
+      alert(customMessage || "Room Full\nThis game room has reached its maximum player limit (8 players max).");
       return Promise.resolve('close');
+    }
+
+    const sub = modal.querySelector('.apple-modal-subtitle');
+    const defaultText = "ห้องเกมนี้มีจำนวนผู้เล่นครบตามจำนวนสูงสุดแล้ว (จำกัดสูงสุด 8 คน) คุณสามารถรีเซ็ตห้องเพื่อล้างเซสชันเก่าได้";
+    if (sub) {
+      sub.textContent = customMessage || defaultText;
     }
 
     return new Promise((resolve) => {
@@ -529,6 +535,7 @@ export class MarketRenderer {
         if (okBtn) okBtn.removeEventListener('click', handleOk);
         if (resetBtn) resetBtn.removeEventListener('click', handleReset);
         modal.style.display = 'none';
+        if (sub) sub.textContent = defaultText;
         resolve(action);
       };
       const handleOk = () => cleanup('close');

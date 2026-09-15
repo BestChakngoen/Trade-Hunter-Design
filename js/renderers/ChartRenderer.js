@@ -298,22 +298,8 @@ export class ChartRenderer {
     canvas.addEventListener('mousemove', (e) => handleMove(e.clientX));
     canvas.addEventListener('mouseleave', () => handleEnd());
     
-    // Touch events for Mobile support
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches[0]) {
-        e.preventDefault(); 
-        handleMove(e.touches[0].clientX);
-      }
-    }, { passive: false });
-    
-    canvas.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches[0]) {
-        e.preventDefault();
-        handleMove(e.touches[0].clientX);
-      }
-    }, { passive: false });
-    
-    canvas.addEventListener('touchend', () => handleEnd());
+    // Mobile Touch: Long-press / touch inspection removed to enable smooth, uninterrupted screen scrolling
+    canvas.style.touchAction = 'pan-y';
   }
 
   toggleCardChart(card, history, startPrice, beta) {

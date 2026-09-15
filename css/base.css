@@ -10,11 +10,15 @@
   background-color: #f8fafc;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   color: #0f172a;
   background-color: #f8fafc;
   background: #f8fafc;
-  min-height: 100vh;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   margin: 0;
 }
