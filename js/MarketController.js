@@ -3,6 +3,7 @@ import { TradeController } from './controllers/TradeController.js';
 import { MarketBoardController } from './controllers/MarketBoardController.js';
 import { TradeService } from './services/TradeService.js';
 import { SessionLockService } from './services/SessionLockService.js';
+import { SoundService } from './services/SoundService.js';
 
 /**
  * MarketController - Main Facade Controller coordinating Lobby, Trading, and Market Board modules.
@@ -13,6 +14,9 @@ export class MarketController {
     this.renderer = renderer;
     this.renderer.state = state;
     this.firebaseService = firebaseService;
+
+    // Audio & Sound FX Service
+    this.soundService = new SoundService();
 
     // Multi-tab / Machine exclusivity service
     this.sessionLockService = new SessionLockService();
@@ -160,6 +164,21 @@ export class MarketController {
           });
         }
       });
+
+      // Play Raise_price or Down_price sound for everyone when prices update
+      if (changedStocks.length > 0 && this.soundService) {
+        const upCount = changedStocks.filter(s => s.isUp).length;
+        const downCount = changedStocks.filter(s => !s.isUp).length;
+        if (upCount > downCount) {
+          this.soundService.playRaisePrice();
+        } else if (downCount > upCount) {
+          this.soundService.playDownPrice();
+        } else if (changedStocks[0].isUp) {
+          this.soundService.playRaisePrice();
+        } else {
+          this.soundService.playDownPrice();
+        }
+      }
 
       // Real-time Toast Notifications for non-GM Players when stock prices are updated by GM
       if (this.state.role !== 'game_master' && changedStocks.length > 0) {
@@ -397,12 +416,14 @@ export class MarketController {
           if (myLastOrder && myLastOrder.timestamp && myLastOrder.timestamp !== this.prevProcessedTimestamp) {
             this.prevProcessedTimestamp = myLastOrder.timestamp;
             if (myLastOrder.status === 'APPROVED') {
+              if (this.soundService) this.soundService.playApprove();
               this.renderer.showTopToast(
                 "ORDER APPROVED",
                 `คำสั่ง ${myLastOrder.type} หุ้น ${myLastOrder.symbol} (${myLastOrder.volume || 1} หุ้น) ได้รับการอนุมัติแล้ว`,
                 "approved"
               );
             } else if (myLastOrder.status === 'REJECTED') {
+              if (this.soundService) this.soundService.playReject();
               this.renderer.showTopToast(
                 "ORDER REJECTED",
                 `คำสั่ง ${myLastOrder.type} หุ้น ${myLastOrder.symbol} (${myLastOrder.volume || 1} หุ้น) ถูกปฏิเสธโดย GM`,
@@ -415,6 +436,7 @@ export class MarketController {
           const mySalary = lastSalaryMap[currentUid];
           if (mySalary && mySalary.timestamp && mySalary.timestamp !== this.prevSalaryTimestamp) {
             this.prevSalaryTimestamp = mySalary.timestamp;
+            if (this.soundService) this.soundService.playReceiveMoney();
             this.renderer.showTopToast(
               "SALARY RECEIVED",
               `คุณได้รับเงินเดือนจำนวน ${Number(mySalary.amount || 10000).toLocaleString()} บาทจาก GM`,
@@ -426,6 +448,7 @@ export class MarketController {
           const myDividend = lastDividendMap[currentUid];
           if (myDividend && myDividend.timestamp && myDividend.timestamp !== this.prevDividendTimestamp) {
             this.prevDividendTimestamp = myDividend.timestamp;
+            if (this.soundService) this.soundService.playReceiveMoney();
             this.renderer.showTopToast(
               "DIVIDEND RECEIVED",
               `คุณได้รับเงินปันผลหุ้นจำนวน ${Number(myDividend.amount || 0).toLocaleString('en-US')} บาทจาก GM`,
@@ -437,6 +460,7 @@ export class MarketController {
           const myDebtInterest = lastDebtInterestMap[currentUid];
           if (myDebtInterest && myDebtInterest.timestamp && myDebtInterest.timestamp !== this.prevDebtInterestTimestamp) {
             this.prevDebtInterestTimestamp = myDebtInterest.timestamp;
+            if (this.soundService) this.soundService.playReceiveMoney();
             this.renderer.showTopToast(
               "DEBT INTEREST RECEIVED",
               `คุณได้รับดอกเบี้ยเงินกู้จำนวน ${Number(myDebtInterest.amount || 0).toLocaleString('en-US')} บาทจาก GM`,
@@ -452,6 +476,7 @@ export class MarketController {
             currentGMOrderIds.forEach(orderId => {
               if (!this.prevGMOrderIds.has(orderId)) {
                 const newOrder = orders[orderId];
+                if (this.soundService) this.soundService.playWarning();
                 this.renderer.showTopToast(
                   "NEW ORDER RECEIVED",
                   `${newOrder.username || 'ผู้เล่น'} ได้ส่งคำสั่ง ${newOrder.type} หุ้น ${newOrder.symbol}`,
