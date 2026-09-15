@@ -167,6 +167,13 @@
 
 .pill.pill-img-only:not(.active) {
   opacity: var(--sector-inactive-opacity) !important;
+  transform: scale(1) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.pill.pill-img-only:not(.active) .pill-icon {
+  transform: scale(1) !important;
 }
 
 .pill .pill-icon {
@@ -180,16 +187,18 @@
 }
 
 /* ✨ HOVER & ACTIVE ANIMATIONS */
-.pill.pill-img-only:not(.active):hover {
-  transform: scale(var(--sector-hover-scale)) !important;
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  opacity: 1 !important;
-}
+@media (hover: hover) and (pointer: fine) {
+  .pill.pill-img-only:not(.active):hover {
+    transform: scale(var(--sector-hover-scale)) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+  }
 
-.pill.pill-img-only:not(.active):hover .pill-icon {
-  transform: scale(var(--sector-hover-scale)) !important;
+  .pill.pill-img-only:not(.active):hover .pill-icon {
+    transform: scale(var(--sector-hover-scale)) !important;
+  }
 }
 
 .pill.pill-img-only.active {

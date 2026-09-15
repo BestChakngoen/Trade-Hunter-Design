@@ -35,6 +35,9 @@ export class MarketBoardController {
       this.renderer.updateSectorPillsUI(selected);
       this.renderer.updateSizePillsUI(this.state.selectedSizes);
       this.renderer.updateSortButtonsUI(this.state.sortStates);
+      if (typeof pill.blur === 'function') {
+        pill.blur();
+      }
       this.updateViewGrid();
     });
   }
@@ -65,6 +68,9 @@ export class MarketBoardController {
       this.renderer.updateSectorPillsUI(this.state.selectedSectors);
       this.renderer.updateSizePillsUI(selected);
       this.renderer.updateSortButtonsUI(this.state.sortStates);
+      if (typeof pill.blur === 'function') {
+        pill.blur();
+      }
       this.updateViewGrid();
     });
   }

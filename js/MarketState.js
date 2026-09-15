@@ -81,19 +81,6 @@ export class MarketState {
     this.gameMode = mode;
   }
 
-  setMasterStocks(stocks) {
-    this.masterStocks = {};
-    if (Array.isArray(stocks)) {
-      stocks.forEach(s => {
-        if (s && s.name) {
-          this.masterStocks[s.name] = s;
-        }
-      });
-    } else if (stocks && typeof stocks === 'object') {
-      this.masterStocks = stocks;
-    }
-  }
-
   // Push room state snapshot (stocks, members portfolio/cash, pendingOrders) to Undo stack
   pushUndoSnapshot(roomData) {
     if (!roomData) return;

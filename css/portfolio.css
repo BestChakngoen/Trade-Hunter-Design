@@ -166,7 +166,9 @@
 
 .table-col-center,
 .holdings-table th.table-col-center,
-.holdings-table td.table-col-center {
+.holdings-table td.table-col-center,
+.gm-pending-orders-table th.table-col-center,
+.gm-pending-orders-table td.table-col-center {
   text-align: center !important;
 }
 

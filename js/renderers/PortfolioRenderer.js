@@ -83,10 +83,10 @@ export class PortfolioRenderer {
                 <div class="font-bold text-white text-sm sm:text-base">${symbol}</div>
               </div>
             </td>
-            <td class="font-extrabold text-blue-400 font-mono text-sm sm:text-base text-right table-col-right">${holding.volume.toLocaleString('en-US')}</td>
-            <td class="text-right table-col-right font-mono">${holding.avgPrice.toLocaleString('en-US')}</td>
-            <td class="text-right table-col-right font-mono">${marketPrice.toLocaleString('en-US')}</td>
-            <td class="font-semibold text-white text-right table-col-right font-mono">${amount.toLocaleString('en-US')}</td>
+            <td class="font-extrabold text-blue-400 font-mono text-sm sm:text-base text-center table-col-center">${holding.volume.toLocaleString('en-US')}</td>
+            <td class="text-center table-col-center font-mono">${holding.avgPrice.toLocaleString('en-US')}</td>
+            <td class="text-center table-col-center font-mono">${marketPrice.toLocaleString('en-US')}</td>
+            <td class="font-semibold text-white text-center table-col-center font-mono">${amount.toLocaleString('en-US')}</td>
             <td class="font-bold ${pnlColorClass} text-right table-col-right font-mono">${sign}${pnl.toLocaleString('en-US')} (${sign}${pnlPct.toFixed(2)}%)</td>
           </tr>
         `;
@@ -148,8 +148,8 @@ export class PortfolioRenderer {
           <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${order.username}</td>
           <td class="p-3 ${actionColor} align-middle text-left table-col-left">${order.type}</td>
           <td class="p-3 font-bold text-yellow-500 align-middle text-left table-col-left">${order.symbol}</td>
-          <td class="p-3 align-middle text-right table-col-right font-mono">${(order.volume || 1).toLocaleString('en-US')}</td>
-          <td class="p-3 text-gray-400 align-middle text-right table-col-right font-mono">${formattedProposedPrice}</td>
+          <td class="p-3 align-middle text-center table-col-center font-mono">${(order.volume || 1).toLocaleString('en-US')}</td>
+          <td class="p-3 text-gray-400 align-middle text-center table-col-center font-mono">${formattedProposedPrice}</td>
         </tr>
       `;
     });
@@ -248,7 +248,7 @@ export class PortfolioRenderer {
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
           <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center"><button type="button" class="gm-salary-btn" data-uid="${uid}" title="Pay 10,000 Salary">Salary 10,000</button></div></td>
           <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${member.displayName || 'Player'}</td>
-          <td class="p-3 text-emerald-400 font-semibold align-middle text-right table-col-right font-mono">${formattedCash}</td>
+          <td class="p-3 text-emerald-400 font-semibold align-middle text-center table-col-center font-mono">${formattedCash}</td>
         </tr>
       `;
     });
@@ -324,7 +324,7 @@ export class PortfolioRenderer {
         <tr class="border-b border-gray-800 hover:bg-gray-850" data-player-uid="${uid}">
           <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center"><button type="button" class="gm-dividend-btn ${dividendBtnState}" data-uid="${uid}" title="Pay ${formattedDividend} Dividend">Dividend ${formattedDividend}</button></div></td>
           <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${member.displayName || 'Player'}</td>
-          <td class="p-3 align-middle text-left table-col-left">${holdingsSummaryText}</td>
+          <td class="p-3 align-middle text-center table-col-center">${holdingsSummaryText}</td>
         </tr>
       `;
     });
@@ -358,10 +358,10 @@ export class PortfolioRenderer {
         <tr class="border-b border-gray-800 hover:bg-gray-850">
           <td class="p-3 text-center align-middle table-col-center"><div class="flex items-center justify-center gap-3 h-full"><button type="button" class="debt-invest-btn" data-key="${item.key}">Invest</button><button type="button" class="debt-redeem-btn ${canRedeem ? '' : 'opacity-40'}" data-key="${item.key}">Redeem</button></div></td>
           <td class="p-3 font-semibold text-white align-middle text-left table-col-left">${item.name}</td>
-          <td class="p-3 text-gray-300 font-mono align-middle text-right table-col-right">${formattedUnitPrice}</td>
-          <td class="p-3 font-bold ${item.volume > 0 ? 'text-indigo-400' : 'text-gray-500'} align-middle text-right table-col-right font-mono">${item.volume}</td>
-          <td class="p-3 font-semibold text-white align-middle text-right table-col-right font-mono">${formattedTotalVal}</td>
-          <td class="p-3 text-white font-semibold align-middle text-right table-col-right font-mono">+${formattedInterest} / unit</td>
+          <td class="p-3 text-gray-300 font-mono align-middle text-center table-col-center">${formattedUnitPrice}</td>
+          <td class="p-3 font-bold ${item.volume > 0 ? 'text-indigo-400' : 'text-gray-500'} align-middle text-center table-col-center font-mono">${item.volume}</td>
+          <td class="p-3 font-semibold text-white align-middle text-center table-col-center font-mono">${formattedTotalVal}</td>
+          <td class="p-3 text-white font-semibold align-middle text-center table-col-center font-mono">+${formattedInterest} / unit</td>
         </tr>
       `;
     });
