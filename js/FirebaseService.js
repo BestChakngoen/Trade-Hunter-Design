@@ -235,10 +235,29 @@ export class FirebaseService {
         return;
       }
 
+      // Preserve player profile before promoting to GM so it can be restored later
+      const originalProfile = {
+        displayName: members[userId].displayName || userName || 'Player',
+        portfolio: members[userId].portfolio ? JSON.parse(JSON.stringify(members[userId].portfolio)) : { cash: 20000 },
+        timestamp: Date.now()
+      };
+      members[userId].backupPlayerProfile = originalProfile;
+
       // Promote player to GM
       members[userId].role = 'game_master';
       members[userId].displayName = 'GM';
-      delete members[userId].portfolio;
+      members[userId].portfolio = null;
+
+      // Also update savedMembers if sessionToken is present
+      if (currentData.savedMembers && members[userId].sessionToken) {
+        const sTok = members[userId].sessionToken;
+        if (currentData.savedMembers[sTok]) {
+          currentData.savedMembers[sTok].role = 'game_master';
+          currentData.savedMembers[sTok].displayName = 'GM';
+          currentData.savedMembers[sTok].backupPlayerProfile = originalProfile;
+          currentData.savedMembers[sTok].portfolio = null;
+        }
+      }
 
       // Clear any pending orders associated with this player
       if (currentData.pendingOrders) {
@@ -265,6 +284,133 @@ export class FirebaseService {
       result,
       claimed: claimSuccess && result.committed
     };
+  }
+
+  // Realtime Database: Directly transfer GM role to a selected player & restore former GM's player profile
+  async transferGMRoleDirectly(roomCode, currentGmUid, targetPlayerUid) {
+    const roomRef = this.getRoomRef(roomCode);
+    let transferSuccess = false;
+    let formerGmRestoredProfile = null;
+    let targetPlayerOriginalProfile = null;
+
+    const result = await runTransaction(roomRef, (currentData) => {
+      if (currentData === null) return currentData;
+      const members = currentData.members || {};
+
+      // Validate current GM and target player exist
+      if (!members[currentGmUid] || members[currentGmUid].role !== 'game_master') {
+        return;
+      }
+      if (!members[targetPlayerUid] || members[targetPlayerUid].role !== 'player') {
+        return;
+      }
+
+      // 1. Backup target player's profile and elevate target to GM
+      const targetBackup = {
+        displayName: members[targetPlayerUid].displayName || 'Player',
+        portfolio: members[targetPlayerUid].portfolio ? JSON.parse(JSON.stringify(members[targetPlayerUid].portfolio)) : { cash: 20000 },
+        timestamp: Date.now()
+      };
+      targetPlayerOriginalProfile = targetBackup;
+      members[targetPlayerUid].backupPlayerProfile = targetBackup;
+      members[targetPlayerUid].role = 'game_master';
+      members[targetPlayerUid].displayName = 'GM';
+      members[targetPlayerUid].portfolio = null;
+
+      // Clear pending orders of target player
+      if (currentData.pendingOrders) {
+        Object.keys(currentData.pendingOrders).forEach(orderId => {
+          const order = currentData.pendingOrders[orderId];
+          if (order && (order.uid === targetPlayerUid || order.userUid === targetPlayerUid)) {
+            delete currentData.pendingOrders[orderId];
+          }
+        });
+      }
+
+      // 2. Restore former GM back to player mode
+      if (members[currentGmUid].backupPlayerProfile) {
+        // Rollback to their saved original profile
+        const backup = members[currentGmUid].backupPlayerProfile;
+        members[currentGmUid].role = 'player';
+        members[currentGmUid].displayName = backup.displayName || 'Player';
+        members[currentGmUid].portfolio = backup.portfolio ? JSON.parse(JSON.stringify(backup.portfolio)) : { cash: 20000 };
+        delete members[currentGmUid].backupPlayerProfile;
+        formerGmRestoredProfile = backup;
+      } else {
+        // Original GM who wasn't a player before
+        const existingNames = new Set(
+          Object.values(members)
+            .filter(m => m && m.role === 'player' && m.displayName)
+            .map(m => m.displayName)
+        );
+        let nextIdx = 1;
+        while (existingNames.has(`Player_${nextIdx}`)) nextIdx++;
+        const newName = `Player_${nextIdx}`;
+
+        members[currentGmUid].role = 'player';
+        members[currentGmUid].displayName = newName;
+        members[currentGmUid].portfolio = { cash: 20000 };
+        formerGmRestoredProfile = { displayName: newName, portfolio: { cash: 20000 } };
+      }
+
+      // 3. Update savedMembers persistent snapshots if node exists
+      if (currentData.savedMembers) {
+        const targetSession = members[targetPlayerUid].sessionToken;
+        if (targetSession && currentData.savedMembers[targetSession]) {
+          currentData.savedMembers[targetSession].role = 'game_master';
+          currentData.savedMembers[targetSession].displayName = 'GM';
+          currentData.savedMembers[targetSession].backupPlayerProfile = targetBackup;
+          currentData.savedMembers[targetSession].portfolio = null;
+        }
+
+        const gmSession = members[currentGmUid].sessionToken;
+        if (gmSession && currentData.savedMembers[gmSession]) {
+          currentData.savedMembers[gmSession].role = 'player';
+          currentData.savedMembers[gmSession].displayName = members[currentGmUid].displayName;
+          currentData.savedMembers[gmSession].portfolio = members[currentGmUid].portfolio;
+          delete currentData.savedMembers[gmSession].backupPlayerProfile;
+        }
+      }
+
+      // 4. Update handover event notification
+      currentData.gmHandoverEvent = {
+        fromUid: currentGmUid,
+        toUid: targetPlayerUid,
+        toName: targetBackup.displayName,
+        timestamp: Date.now()
+      };
+
+      currentData.gmTransferRequest = {
+        active: false,
+        claimedBy: targetPlayerUid,
+        claimedByName: targetBackup.displayName,
+        timestamp: Date.now()
+      };
+
+      transferSuccess = true;
+      return currentData;
+    });
+
+    return {
+      success: transferSuccess && result.committed,
+      formerGmRestoredProfile,
+      targetPlayerOriginalProfile
+    };
+  }
+
+  // Realtime Database: Save or update player snapshot in savedMembers
+  async saveMemberSnapshot(roomCode, sessionToken, data) {
+    if (!roomCode || !sessionToken || !data) return;
+    const snapRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/savedMembers/${sessionToken}`);
+    await update(snapRef, data);
+  }
+
+  // Realtime Database: Retrieve player snapshot from savedMembers
+  async getMemberSnapshot(roomCode, sessionToken) {
+    if (!roomCode || !sessionToken) return null;
+    const snapRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/savedMembers/${sessionToken}`);
+    const snapshot = await get(snapRef);
+    return snapshot.exists() ? snapshot.val() : null;
   }
 
   // Realtime Database: Delete room and board data when empty
@@ -378,7 +524,13 @@ export class FirebaseService {
         joinedAt: Date.now()
       };
       if (targetRole === 'player') {
-        memberObj.portfolio = { cash: 20000 };
+        memberObj.portfolio = userObj.portfolio ? JSON.parse(JSON.stringify(userObj.portfolio)) : { cash: 20000 };
+      }
+      if (userObj.sessionToken) {
+        memberObj.sessionToken = userObj.sessionToken;
+      }
+      if (userObj.backupPlayerProfile) {
+        memberObj.backupPlayerProfile = userObj.backupPlayerProfile;
       }
 
       currentData.members[userObj.uid] = memberObj;

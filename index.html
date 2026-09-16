@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Findice Dashboard</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/gm-transfer.css" />
   <!-- SweetAlert2 for Premium UI Alert -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.12.0/dist/sweetalert2.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.12.0/dist/sweetalert2.all.min.js"></script>
@@ -518,14 +519,17 @@
       </div>
     </section>
 
-    <!-- Danger Zone for Board Game Restart -->
+    <!-- Danger Zone for GM Actions & Board Game Restart -->
     <section class="danger-zone-section">
       <div class="danger-zone-card flex flex-col items-start gap-4">
         <div class="danger-zone-info w-full">
           <span class="danger-zone-title block">Danger Zone</span>
-          <p class="danger-zone-desc mt-1">เริ่มต้นเซสชันเกมใหม่ การดำเนินการนี้จะรีเซ็ตราคาหุ้นทั้งหมดกลับสู่ค่าเริ่มต้น รีเซ็ตเงินสดในพอร์ตของผู้เล่นทุกคนเป็น 20,000 บาท ล้างการถือครองหุ้น/ตราสารหนี้ทั้งหมด และล้างคำสั่งซื้อขายที่รอการอนุมัติ</p>
+          <p class="danger-zone-desc mt-1">เริ่มต้นเซสชันเกมใหม่ หรือส่งมอบสิทธิ์การควบคุมเกม (GM) ให้กับผู้เล่นคนอื่นในห้องแบบเจาะจงรายคน หากคุณเคยเป็นผู้เล่นมาก่อน ระบบจะโหลดข้อมูลพอร์ตเดิมของคุณกลับมาโดยอัตโนมัติ</p>
         </div>
-        <button id="resetMarketBtn" class="danger-btn whitespace-nowrap">Reset Game</button>
+        <div class="danger-zone-actions flex flex-col w-full gap-3">
+          <button id="openTransferGmModalBtn" class="transfer-gm-btn w-full whitespace-nowrap">ส่งมอบตำแหน่ง GM</button>
+          <button id="resetMarketBtn" class="danger-btn w-full whitespace-nowrap">Reset Game</button>
+        </div>
       </div>
     </section>
     </div> <!-- Close marketTabContent -->
@@ -881,19 +885,54 @@
     </div>
   </div>
 
-  <!-- Custom Confirmation Dialog Modal -->
-  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-    <div class="modal-content confirm-modal-content">
-      <header class="modal-header">
-        <h3 id="confirmModalTitle" class="confirm-modal-title">⚠️ Reset Entire Game?</h3>
-        <button id="closeConfirmModalBtn" class="close-modal-btn" aria-label="Close dialog">&times;</button>
-      </header>
-      <div class="modal-body confirm-modal-body">
-        <p>คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตเกมทั้งหมด? การดำเนินการนี้จะรีเซ็ตราคาหุ้น พอร์ตการลงทุน และประวัติการซื้อขายทั้งหมดกลับสู่ค่าเริ่มต้น และไม่สามารถย้อนกลับได้</p>
-        <div class="confirm-actions">
-          <button id="cancelResetBtn" class="confirm-btn cancel-btn">ยกเลิก</button>
-          <button id="confirmResetBtn" class="confirm-btn reset-btn-confirm">รีเซ็ตเกม</button>
-        </div>
+  <!-- Direct GM Role Transfer Selection Modal -->
+  <div id="gmDirectTransferModal" class="apple-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="gmDirectTransferTitle" style="display: none;">
+    <div class="apple-modal-card gm-transfer-modal-card flex flex-col items-center relative">
+      <div class="apple-modal-icon mb-3" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b;">
+        <svg xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: 28px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      </div>
+      <h3 id="gmDirectTransferTitle" class="apple-modal-title text-amber-400 font-bold">ส่งมอบตำแหน่ง GM</h3>
+      <p class="apple-modal-subtitle text-xs text-gray-300 mb-4 text-center">
+        เลือกผู้เล่นในห้องที่คุณต้องการส่งมอบหน้าที่ผู้ควบคุมเกม (GM) ให้โดยตรง:
+      </p>
+      
+      <!-- Player Selection List -->
+      <div id="gmTransferPlayerList" class="gm-transfer-player-list w-full mb-5">
+        <!-- Dynamically rendered list of player cards -->
+      </div>
+
+      <div class="apple-modal-actions flex gap-3 w-full">
+        <button type="button" id="cancelDirectTransferBtn" class="apple-btn-player" style="background: #475569; box-shadow: none;">
+          ยกเลิก
+        </button>
+        <button type="button" id="confirmDirectTransferBtn" class="apple-btn-gm" style="background: #f59e0b; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);" disabled>
+          ยืนยันการส่งมอบ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apple-Style Reset Game Alert Modal Card -->
+  <div id="confirmModal" class="apple-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" style="display: none;">
+    <div class="apple-modal-card flex flex-col items-center relative">
+      <div class="apple-modal-icon mb-3" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+        <svg xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: 28px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h3 id="confirmModalTitle" class="apple-modal-title text-red-500 font-bold">รีเซ็ตเกมทั้งหมด?</h3>
+      <p class="apple-modal-subtitle text-xs text-gray-300 mb-5 text-center">
+        คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตเกมทั้งหมด? การดำเนินการนี้จะรีเซ็ตราคาหุ้น พอร์ตการลงทุน และประวัติการซื้อขายทั้งหมดกลับสู่ค่าเริ่มต้น และไม่สามารถย้อนกลับได้
+      </p>
+      <div class="apple-modal-actions flex gap-3 w-full">
+        <button type="button" id="cancelResetBtn" class="apple-btn-player" style="background: #475569; box-shadow: none;">
+          ยกเลิก
+        </button>
+        <button type="button" id="confirmResetBtn" class="apple-btn-gm" style="background: #ef4444; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
+          รีเซ็ตเกม
+        </button>
       </div>
     </div>
   </div>

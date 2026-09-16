@@ -56,6 +56,14 @@ export class MarketRenderer {
     this.gmTransferClaimBtn = document.getElementById('gmTransferClaimBtn');
     this.gmTransferDeclineBtn = document.getElementById('gmTransferDeclineBtn');
 
+    // Direct GM Handover Modal (Danger Zone)
+    this.openTransferGmModalBtn = document.getElementById('openTransferGmModalBtn');
+    this.gmDirectTransferModal = document.getElementById('gmDirectTransferModal');
+    this.gmTransferPlayerList = document.getElementById('gmTransferPlayerList');
+    this.confirmDirectTransferBtn = document.getElementById('confirmDirectTransferBtn');
+    this.cancelDirectTransferBtn = document.getElementById('cancelDirectTransferBtn');
+    this.closeDirectTransferModalBtn = document.getElementById('closeDirectTransferModalBtn');
+
     // Role & Room Controller Elements
     this.roleController = document.getElementById('roleController');
     this.userRoleBadge = document.getElementById('userRoleBadge');
@@ -577,6 +585,93 @@ export class MarketRenderer {
     const modal = this.gmTransferModal;
     if (modal) {
       modal.style.display = 'none';
+    }
+  }
+
+  showDirectTransferModal(players = [], onConfirm = null) {
+    const modal = this.gmDirectTransferModal;
+    const listContainer = this.gmTransferPlayerList;
+    const confirmBtn = this.confirmDirectTransferBtn;
+    const cancelBtn = this.cancelDirectTransferBtn;
+    const closeBtn = this.closeDirectTransferModalBtn;
+    if (!modal || !listContainer) return;
+
+    let selectedUid = null;
+    listContainer.innerHTML = '';
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.5';
+      confirmBtn.style.cursor = 'not-allowed';
+    }
+
+    if (players.length === 0) {
+      listContainer.innerHTML = `<div class="gm-transfer-empty">ไม่มีผู้เล่นอื่นในห้องขณะนี้ (ต้องการผู้เล่นอย่างน้อย 1 คนเพื่อส่งมอบตำแหน่ง)</div>`;
+    } else {
+      players.forEach(player => {
+        const item = document.createElement('div');
+        item.className = 'gm-transfer-player-item';
+        item.dataset.uid = player.uid;
+
+        const cashFormatted = (player.cash || 0).toLocaleString('en-US');
+        const initial = (player.displayName || 'P').charAt(0).toUpperCase();
+
+        item.innerHTML = `
+          <div class="gm-transfer-player-info">
+            <div class="gm-transfer-avatar">${initial}</div>
+            <div>
+              <div class="gm-transfer-player-name">${player.displayName || 'Player'}</div>
+              <div class="gm-transfer-player-stats">Cash: ${cashFormatted} ฿</div>
+            </div>
+          </div>
+          <div class="gm-transfer-radio-indicator"></div>
+        `;
+
+        item.addEventListener('click', () => {
+          listContainer.querySelectorAll('.gm-transfer-player-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedUid = player.uid;
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+          }
+        });
+
+        listContainer.appendChild(item);
+      });
+    }
+
+    modal.style.display = 'flex';
+
+    const handleConfirm = () => {
+      if (!selectedUid) return;
+      cleanup();
+      modal.style.display = 'none';
+      if (typeof onConfirm === 'function') {
+        const selectedPlayer = players.find(p => p.uid === selectedUid);
+        onConfirm(selectedUid, selectedPlayer);
+      }
+    };
+
+    const handleClose = () => {
+      cleanup();
+      modal.style.display = 'none';
+    };
+
+    const cleanup = () => {
+      if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
+      if (cancelBtn) cancelBtn.removeEventListener('click', handleClose);
+      if (closeBtn) closeBtn.removeEventListener('click', handleClose);
+    };
+
+    if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
+    if (cancelBtn) cancelBtn.addEventListener('click', handleClose);
+    if (closeBtn) closeBtn.addEventListener('click', handleClose);
+  }
+
+  hideDirectTransferModal() {
+    if (this.gmDirectTransferModal) {
+      this.gmDirectTransferModal.style.display = 'none';
     }
   }
 

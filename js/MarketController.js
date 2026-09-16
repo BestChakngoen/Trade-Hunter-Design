@@ -4,6 +4,8 @@ import { MarketBoardController } from './controllers/MarketBoardController.js';
 import { TradeService } from './services/TradeService.js';
 import { SessionLockService } from './services/SessionLockService.js';
 import { SoundService } from './services/SoundService.js';
+import { PlayerSessionService } from './services/PlayerSessionService.js';
+import { GMHandoverService } from './services/GMHandoverService.js';
 
 /**
  * MarketController - Main Facade Controller coordinating Lobby, Trading, and Market Board modules.
@@ -21,8 +23,11 @@ export class MarketController {
     // Multi-tab / Machine exclusivity service
     this.sessionLockService = new SessionLockService();
 
+    // Player Persistent Session Service
+    this.playerSessionService = new PlayerSessionService();
+
     // Sub-controllers following Single Responsibility Principle
-    this.lobbyController = new LobbyController(state, renderer, firebaseService, this.sessionLockService);
+    this.lobbyController = new LobbyController(state, renderer, firebaseService, this.sessionLockService, this.playerSessionService);
     this.tradeController = new TradeController(state, renderer, firebaseService);
     this.marketBoardController = new MarketBoardController(state, renderer, firebaseService);
 
@@ -94,6 +99,7 @@ export class MarketController {
 
     this.tradeController.bindTradeFormEvents();
     this.bindLeaveRoomButton();
+    this.bindGMHandoverButton();
     this.bindGlobalProtectionEvents();
   }
 
@@ -106,7 +112,7 @@ export class MarketController {
       const title = "Leave Room";
       const message = isGM 
         ? "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? ในฐานะ GM การออกจากห้องอาจส่งมอบสิทธิ์ให้ผู้เล่นคนอื่น หรือปิดเซสชันห้องเกมสำหรับทุกคน"
-        : "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? ข้อมูลพอร์ตโฟลิโอปัจจุบันของคุณจะถูกล้างออกจากห้องนี้";
+        : "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? (หากห้องยังไม่หมดอายุหรือยังมีผู้เล่นในห้อง คุณสามารถกลับเข้ามาเล่นต่อด้วยข้อมูลเดิมได้)";
 
       const result = await this.renderer.showConfirmAlert(title, message, "YES", "NO");
       if (!result || !result.isConfirmed) return;
@@ -120,6 +126,59 @@ export class MarketController {
 
       this.state.reset();
       this.renderer.showLobby();
+    });
+  }
+
+  bindGMHandoverButton() {
+    if (!this.renderer.openTransferGmModalBtn) return;
+
+    this.renderer.openTransferGmModalBtn.addEventListener('click', async () => {
+      const code = this.state.roomCode;
+      if (!code) return;
+
+      const roomSnap = await this.firebaseService.getRoomStateSnapshot(code);
+      if (!roomSnap || !roomSnap.exists()) return;
+      const roomData = roomSnap.val();
+      const members = roomData.members || {};
+      const currentUser = this.firebaseService.getCurrentUser();
+      const currentUid = currentUser ? currentUser.uid : null;
+
+      const eligiblePlayers = GMHandoverService.getEligiblePlayers(members, currentUid);
+
+      this.renderer.showDirectTransferModal(eligiblePlayers, async (targetUid, targetPlayer) => {
+        const hasBackup = Boolean(members[currentUid]?.backupPlayerProfile);
+        const confirmResult = await this.renderer.showConfirmAlert(
+          "ยืนยันการส่งมอบตำแหน่ง GM",
+          `คุณต้องการส่งมอบสิทธิ์ GM ให้กับ "${targetPlayer.displayName}" หรือไม่? ${hasBackup ? '(ข้อมูลพอร์ตเดิมของคุณจะถูกโหลดกลับมา)' : ''}`,
+          "ยืนยันส่งมอบ",
+          "ยกเลิก"
+        );
+
+        if (!confirmResult || !confirmResult.isConfirmed) return;
+
+        try {
+          const res = await this.firebaseService.transferGMRoleDirectly(code, currentUid, targetUid);
+          if (res && res.success) {
+            this.renderer.showTopToast(
+              "GM HANDOVER SUCCESS",
+              `ส่งมอบตำแหน่ง GM ให้กับ "${targetPlayer.displayName}" สำเร็จแล้ว!`,
+              "success"
+            );
+            if (res.formerGmRestoredProfile) {
+              this.renderer.showTopToast(
+                "DATA RESTORED",
+                `โหลดข้อมูลเดิมของ ${res.formerGmRestoredProfile.displayName} เรียบร้อยแล้ว`,
+                "approved"
+              );
+            }
+          } else {
+            this.renderer.showErrorAlert("Transfer Failed", "ไม่สามารถส่งมอบตำแหน่งได้ กรุณาลองใหม่อีกครั้ง");
+          }
+        } catch (err) {
+          console.error("[MarketController] Error transferring GM role:", err);
+          this.renderer.showErrorAlert("Error", "เกิดข้อผิดพลาดในการส่งมอบตำแหน่ง GM");
+        }
+      });
     });
   }
 
@@ -389,9 +448,31 @@ export class MarketController {
 
         if (roomData.members && roomData.members[currentUid]) {
           const memberData = roomData.members[currentUid];
+          const prevRole = this.state.role;
           this.state.updatePortfolioFromMemberData(memberData);
 
-          this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
+          // Detect live role transitions between GM and Player
+          if (prevRole === 'game_master' && memberData.role === 'player') {
+            this.state.isSpectating = false;
+            this.renderer.updateControlsVisibility('player', memberData.displayName, this.state.gameMode);
+            if (this.renderer.spectatorToggleBtn) this.renderer.spectatorToggleBtn.style.display = 'none';
+            this.renderer.updateSpectatorButtonUI(false);
+            this.firebaseService.configureDisconnectCleanup(code, currentUid, false);
+            this.renderer.showTopToast("ROLE RESTORED", `คุณได้กลับสู่บทบาทผู้เล่น (${memberData.displayName}) และข้อมูลพอร์ตเดิมได้รับการกู้คืนแล้ว`, "approved");
+          } else if (prevRole === 'player' && memberData.role === 'game_master') {
+            this.renderer.updateControlsVisibility('game_master', 'GM', this.state.gameMode);
+            if (this.renderer.spectatorToggleBtn) this.renderer.spectatorToggleBtn.style.display = 'block';
+            this.firebaseService.configureDisconnectCleanup(code, currentUid, true);
+            await this.refreshManagementView();
+            this.renderer.showTopToast("GM ASSIGNED", "คุณได้รับการส่งมอบตำแหน่งเป็นผู้ควบคุมเกม (GM) เรียบร้อยแล้ว!", "approved");
+          } else {
+            this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
+          }
+
+          // Keep savedMembers snapshot continuously synchronized with latest portfolio
+          if (memberData.role === 'player' && memberData.portfolio && memberData.sessionToken && this.playerSessionService) {
+            this.playerSessionService.syncPlayerToFirebase(code, this.firebaseService, memberData.sessionToken, memberData);
+          }
 
           const stats = this.state.getPortfolioStats();
           this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, orders, currentUid);

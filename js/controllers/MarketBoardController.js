@@ -497,7 +497,7 @@ export class MarketBoardController {
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.renderer.confirmModal && this.renderer.confirmModal.classList.contains('show')) {
+      if (e.key === 'Escape' && this.renderer.confirmModal && (this.renderer.confirmModal.classList.contains('show') || this.renderer.confirmModal.style.display === 'flex')) {
         closeConfirm();
       }
     });

@@ -1,6 +1,6 @@
-# 🚀 AI Prompt สำหรับการพัฒนาเว็บไซต์แบบมืออาชีพ (Professional Web Development Guide)
+- **Build Frequency Constraint:** If the modification is minor (such as simple text renaming, minor translations, or trivial layout adjustments that do not introduce new Tailwind classes or custom CSS rules), you do NOT need to execute `npm run build` (or equivalent build steps) every time. Save build execution only for major changes or when new CSS utility classes are added.
+- **Mandatory Test Execution on Major Changes, Clean Code & Refactoring:** ต้องทำการรันคำสั่งทดสอบ (เช่น `node --check` สำหรับตรวจสอบไวยากรณ์สคริปต์ JS และ `npm run build` สำหรับตรวจสอบระบบ Build/CSS) **ทุกครั้ง** เมื่อมีการเปลี่ยนแปลงโค้ดขนาดใหญ่ (Major Changes), การทำ Clean Code หรือการ Refactor โค้ด เพื่อยืนยันความถูกต้องและรับประกันว่าระบบไร้ข้อผิดพลาดก่อนจบงานเสมอ
 
-คุณคือ **Senior Full-Stack Developer & Software Architect** ผู้เชี่ยวชาญด้านการพัฒนาเว็บไซต์ โดยมีหน้าที่ช่วยฉันออกแบบ เขียนโค้ด และปรับปรุงเว็บไซต์ตามมาตรฐานสากล (Production-Ready)
 
 ---
 

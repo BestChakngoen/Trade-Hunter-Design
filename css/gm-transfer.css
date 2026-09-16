@@ -1,0 +1,193 @@
+/* ==========================================================================
+   GM Handover & Danger Zone Transfer Styles
+   ========================================================================== */
+
+.danger-zone-actions {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.danger-zone-actions .transfer-gm-btn,
+.danger-zone-actions .danger-btn,
+.transfer-gm-btn {
+  width: 100% !important;
+  min-width: 100% !important;
+  height: 48px !important;
+  text-align: center !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 24px !important;
+  border-radius: 12px !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  border: none !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
+}
+
+.danger-zone-actions .danger-btn {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3) !important;
+}
+
+.danger-zone-actions .danger-btn:hover {
+  background: #b91c1c !important;
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45) !important;
+  transform: translateY(-1px) !important;
+}
+
+.danger-zone-actions .danger-btn:active {
+  background: #991b1b !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25) !important;
+}
+
+.transfer-gm-btn,
+.danger-zone-actions .transfer-gm-btn {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3) !important;
+}
+
+.transfer-gm-btn:hover,
+.danger-zone-actions .transfer-gm-btn:hover {
+  background: #b45309 !important;
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45) !important;
+  transform: translateY(-1px) !important;
+}
+
+.transfer-gm-btn:active,
+.danger-zone-actions .transfer-gm-btn:active {
+  background: #92400e !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Direct GM Transfer Selection Modal (Matching Apple Alert Modal Design)
+   -------------------------------------------------------------------------- */
+.gm-transfer-modal-card {
+  max-width: 420px !important;
+  width: 92% !important;
+}
+
+.gm-transfer-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.gm-transfer-player-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.gm-transfer-player-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.gm-transfer-player-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.gm-transfer-player-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.gm-transfer-player-item.selected {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+
+.gm-transfer-player-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gm-transfer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #ffffff;
+}
+
+.gm-transfer-player-item.selected .gm-transfer-avatar {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+}
+
+.gm-transfer-player-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.gm-transfer-player-stats {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.gm-transfer-radio-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.gm-transfer-player-item.selected .gm-transfer-radio-indicator {
+  border-color: #f59e0b;
+  background: #f59e0b;
+}
+
+.gm-transfer-radio-indicator::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: none;
+}
+
+.gm-transfer-player-item.selected .gm-transfer-radio-indicator::after {
+  display: block;
+}
+
+.gm-transfer-empty {
+  text-align: center;
+  padding: 24px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}

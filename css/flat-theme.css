@@ -276,19 +276,61 @@ html, body {
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.85), 0 0 28px rgba(239, 68, 68, 0.4) !important;
 }
 
+.danger-zone-actions .danger-btn,
+.danger-zone-actions .transfer-gm-btn,
+.danger-btn,
+.transfer-gm-btn {
+  width: 100% !important;
+  min-width: 100% !important;
+  height: 48px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 0 24px !important;
+  border-radius: 12px !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  border: none !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
+}
+
 .danger-btn {
   background: #dc2626 !important;
-  color: var(--text-secondary-bright) !important;
-  border-radius: 10px !important;
-  font-weight: 700 !important;
-  box-shadow: none !important;
-  transition: background-color 0.2s ease !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3) !important;
 }
 
 .danger-btn:hover {
   background: #b91c1c !important;
-  transform: none !important;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45) !important;
+}
+
+.danger-btn:active {
+  background: #991b1b !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25) !important;
+}
+
+.transfer-gm-btn {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3) !important;
+}
+
+.transfer-gm-btn:hover {
+  background: #b45309 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45) !important;
+}
+
+.transfer-gm-btn:active {
+  background: #92400e !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25) !important;
 }
 
 /* 9. ⚡ Crisp Flat Price Flashing Animations */

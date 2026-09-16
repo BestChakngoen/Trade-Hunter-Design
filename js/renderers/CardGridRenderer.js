@@ -216,17 +216,13 @@ export class CardGridRenderer {
   openConfirmModal() {
     if (!this.confirmModal) return;
     this.confirmModal.style.display = 'flex';
-    setTimeout(() => {
-      this.confirmModal.classList.add('show');
-    }, 10);
+    this.confirmModal.classList.add('show');
   }
 
   closeConfirmModal() {
     if (!this.confirmModal) return;
     this.confirmModal.classList.remove('show');
-    setTimeout(() => {
-      this.confirmModal.style.display = 'none';
-    }, 300);
+    this.confirmModal.style.display = 'none';
   }
 
   showErrorAlert(title, text) {

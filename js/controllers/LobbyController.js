@@ -1,12 +1,15 @@
+import { PlayerSessionService } from '../services/PlayerSessionService.js';
+
 /**
  * LobbyController - Manages Game Room Joining, Creation, and Player Role Initialization.
  */
 export class LobbyController {
-  constructor(state, renderer, firebaseService, sessionLockService = null) {
+  constructor(state, renderer, firebaseService, sessionLockService = null, playerSessionService = null) {
     this.state = state;
     this.renderer = renderer;
     this.firebaseService = firebaseService;
     this.sessionLockService = sessionLockService;
+    this.playerSessionService = playerSessionService || new PlayerSessionService();
     this.isSubmitting = false;
   }
 
@@ -38,6 +41,15 @@ export class LobbyController {
           slotsContainer.querySelectorAll('.code-slot').forEach(slot => slot.classList.remove('active-focus'));
         }
       });
+
+      // Automatically pre-fill last active room code if available
+      if (this.playerSessionService) {
+        const lastCode = this.playerSessionService.getLastActiveRoomCode();
+        if (lastCode && !this.renderer.roomCodeInput.value) {
+          this.renderer.roomCodeInput.value = lastCode;
+          this.updateRoomCodeSlots(lastCode);
+        }
+      }
     }
 
     const triggerShakeIfEmpty = (e) => {
@@ -360,6 +372,9 @@ export class LobbyController {
       // Purge expired or ended rooms completely!
       if (memberUids.length === 0 || isExpired || isEnded) {
         await this.firebaseService.deleteRoomData(code);
+        if (this.playerSessionService) {
+          this.playerSessionService.clearRoomSession(code);
+        }
         roomExists = false;
         roomData = null;
       } else {
@@ -381,10 +396,46 @@ export class LobbyController {
     let displayName = null;
     let maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
 
-    if (roomExists && members[user.uid]) {
+    // Check persistent session token for returning player recovery
+    const sessionToken = this.playerSessionService ? this.playerSessionService.getOrCreateSessionToken(code) : null;
+    let savedMember = (roomExists && roomData && roomData.savedMembers && sessionToken) ? roomData.savedMembers[sessionToken] : null;
+
+    let restoredPortfolio = null;
+    let restoredBackupProfile = null;
+    let isRestoredPlayer = false;
+
+    if (roomExists && savedMember) {
+      if (savedMember.role === 'player') {
+        role = 'player';
+        displayName = savedMember.displayName || 'Player';
+        restoredPortfolio = savedMember.portfolio || { cash: 20000 };
+        restoredBackupProfile = savedMember.backupPlayerProfile || null;
+        isRestoredPlayer = true;
+      } else if (savedMember.role === 'game_master') {
+        const hasGM = memberUids.some(uid => members[uid] && members[uid].role === 'game_master');
+        if (!hasGM) {
+          role = 'game_master';
+          displayName = 'GM';
+          isRestoredPlayer = true;
+        } else if (savedMember.backupPlayerProfile) {
+          // If GM position was claimed while away, restore their original player portfolio!
+          role = 'player';
+          displayName = savedMember.backupPlayerProfile.displayName || savedMember.displayName || 'Player';
+          restoredPortfolio = savedMember.backupPlayerProfile.portfolio || { cash: 20000 };
+          isRestoredPlayer = true;
+        }
+      }
+    }
+
+    if (isRestoredPlayer) {
+      console.log(`[Lobby] Found saved player session for ${displayName}:`, { role, restoredPortfolio });
+    } else if (roomExists && members[user.uid]) {
       // Re-joining player uses their existing role and name
       role = members[user.uid].role;
       displayName = members[user.uid].displayName || (role === 'game_master' ? 'GM' : 'Player_1');
+      restoredPortfolio = members[user.uid].portfolio || null;
+      restoredBackupProfile = members[user.uid].backupPlayerProfile || null;
+      isRestoredPlayer = true;
     } else {
       // Check max capacity if room already exists (Default 5 players max, expandable up to 8 max)
       if (roomExists && !members[user.uid]) {
@@ -481,10 +532,14 @@ export class LobbyController {
       const initialMemberObj = {
         role: role,
         displayName: displayName,
-        joinedAt: now
+        joinedAt: now,
+        sessionToken: sessionToken || null
       };
       if (role === 'player') {
-        initialMemberObj.portfolio = { cash: 20000 };
+        initialMemberObj.portfolio = restoredPortfolio || { cash: 20000 };
+      }
+      if (restoredBackupProfile) {
+        initialMemberObj.backupPlayerProfile = restoredBackupProfile;
       }
 
       // Double check if room was created by another client while promptRoleSelection modal was open
@@ -493,7 +548,10 @@ export class LobbyController {
         await this.firebaseService.joinRoomWithTransaction(code, {
           uid: user.uid,
           role: role,
-          displayName: displayName
+          displayName: displayName,
+          portfolio: restoredPortfolio,
+          sessionToken: sessionToken,
+          backupPlayerProfile: restoredBackupProfile
         }, maxPlayers);
       } else {
         await this.firebaseService.createRoom(code, {
@@ -509,19 +567,25 @@ export class LobbyController {
     } else {
       if (members[user.uid]) {
         // Re-joining player
+        const updates = {};
+        if (sessionToken && !members[user.uid].sessionToken) {
+          updates[`members/${user.uid}/sessionToken`] = sessionToken;
+        }
         if (!members[user.uid].portfolio && role === 'player') {
-          await this.firebaseService.updateRoom(code, {
-            [`members/${user.uid}/portfolio`]: {
-              cash: 20000
-            }
-          });
+          updates[`members/${user.uid}/portfolio`] = restoredPortfolio || { cash: 20000 };
+        }
+        if (Object.keys(updates).length > 0) {
+          await this.firebaseService.updateRoom(code, updates);
         }
       } else {
         // Atomic transaction to handle high concurrency joining & GM demotion
         const txnRes = await this.firebaseService.joinRoomWithTransaction(code, {
           uid: user.uid,
           role: role,
-          displayName: displayName
+          displayName: displayName,
+          portfolio: restoredPortfolio,
+          sessionToken: sessionToken,
+          backupPlayerProfile: restoredBackupProfile
         }, maxPlayers);
 
         if (!txnRes || (txnRes.result && !txnRes.result.committed)) {
@@ -549,6 +613,28 @@ export class LobbyController {
 
     this.state.setRole(role);
     this.state.setPlayerName(displayName);
+
+    if (restoredPortfolio && role === 'player') {
+      this.state.portfolio = JSON.parse(JSON.stringify(restoredPortfolio));
+    }
+    if (this.playerSessionService && sessionToken) {
+      this.playerSessionService.saveRoomSession(code, {
+        sessionToken,
+        role,
+        displayName,
+        uid: user.uid
+      });
+      await this.playerSessionService.syncPlayerToFirebase(code, this.firebaseService, sessionToken, {
+        displayName,
+        role,
+        portfolio: restoredPortfolio || (role === 'player' ? { cash: 20000 } : null),
+        backupPlayerProfile: restoredBackupProfile
+      });
+    }
+
+    if (isRestoredPlayer) {
+      this.renderer.showTopToast("DATA RESTORED", `โหลดข้อมูลเดิมของ ${displayName} เรียบร้อยแล้ว`, "success");
+    }
 
     // 4. GAME MODE SELECTION (Now GM is officially registered in Firebase, other clients see GM instantly!)
     const freshSnap = await this.firebaseService.getRoomStateSnapshot(code);
