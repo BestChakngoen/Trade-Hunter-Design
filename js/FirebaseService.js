@@ -433,20 +433,11 @@ export class FirebaseService {
       const userRef = this.getUserInBoardRef(roomCode, userId);
       await set(userRef, null);
 
-      // Purge all pending orders submitted by this player and dynamically shrink room capacity (floor at 5)
+      // Purge all pending orders submitted by this player
       const roomSnapshot = await this.getRoomStateSnapshot(roomCode);
       if (roomSnapshot && roomSnapshot.exists()) {
         const roomData = roomSnapshot.val();
-        const members = roomData.members || {};
-        const remainingCount = Object.keys(members).filter(id => id !== userId).length;
-        const currentMax = (roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
-        const newMax = Math.max(5, remainingCount);
-
         const updates = {};
-        if (newMax < currentMax) {
-          updates['roomSettings/maxPlayers'] = newMax;
-        }
-
         const pendingOrders = roomData.pendingOrders || {};
         Object.entries(pendingOrders).forEach(([orderId, order]) => {
           if (order && order.uid === userId) {
@@ -463,7 +454,7 @@ export class FirebaseService {
   }
 
   // Realtime Database: Join room atomically with transaction to handle high concurrency
-  async joinRoomWithTransaction(roomCode, userObj, maxPlayers = 5) {
+  async joinRoomWithTransaction(roomCode, userObj) {
     const roomRef = this.getRoomRef(roomCode);
     let assignedRole = userObj.role;
 
@@ -473,27 +464,14 @@ export class FirebaseService {
       }
 
       const members = currentData.members || {};
-      const memberUids = Object.keys(members);
       
       // Rejoining player
       if (members[userObj.uid]) {
         return currentData;
       }
-      // Concurrency Limit Check (Default 5 max players, expandable up to 8)
-      const currentSettingMax = (currentData.roomSettings && currentData.roomSettings.maxPlayers) ? currentData.roomSettings.maxPlayers : maxPlayers;
-      const effectiveMax = Math.min(8, Math.max(5, currentSettingMax));
-      if (memberUids.length >= effectiveMax || memberUids.length >= 8) {
-        return; // Abort transaction (returns committed: false)
-      }
 
       if (!currentData.members) {
         currentData.members = {};
-      }
-      if (!currentData.roomSettings) {
-        currentData.roomSettings = { maxPlayers: 5 };
-      }
-      if (memberUids.length + 1 > (currentData.roomSettings.maxPlayers || 5)) {
-        currentData.roomSettings.maxPlayers = Math.min(8, memberUids.length + 1);
       }
 
       // Check if GM already exists in members

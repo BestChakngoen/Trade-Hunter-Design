@@ -16,6 +16,8 @@ export class MarketRenderer {
     this.sortSectorBtn = document.getElementById('sortSectorBtn');
     this.resetBtn = document.getElementById('resetBtn');
     this.resetMarketBtn = document.getElementById('resetMarketBtn');
+    this.resetRoomDataBtn = document.getElementById('resetRoomDataBtn');
+    this.confirmResetRoomModal = document.getElementById('confirmResetRoomModal');
     this.stockChartCanvas = document.getElementById('stockChart');
     
     // Lobby Screen Elements
@@ -129,21 +131,15 @@ export class MarketRenderer {
     }
   }
 
-  updateRoomMembersDisplay(memberCount, maxPlayers = 5) {
+  updateRoomMembersDisplay(memberCount) {
     if (!this.roomMembersBadge) return;
-    if (memberCount >= maxPlayers) {
-      this.roomMembersBadge.textContent = `${memberCount}/${maxPlayers} (FULL)`;
-      this.roomMembersBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-red-400';
-    } else {
-      this.roomMembersBadge.textContent = `${memberCount}/${maxPlayers}`;
-      this.roomMembersBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-purple-400';
-    }
+    this.roomMembersBadge.textContent = `${memberCount}`;
+    this.roomMembersBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-purple-400';
   }
 
-  updateRoomMembersUI(members = {}, roomSettings = {}) {
+  updateRoomMembersUI(members = {}) {
     const memberCount = Object.keys(members || {}).length;
-    const maxPlayers = (roomSettings && roomSettings.maxPlayers) ? roomSettings.maxPlayers : 5;
-    this.updateRoomMembersDisplay(memberCount, maxPlayers);
+    this.updateRoomMembersDisplay(memberCount);
   }
 
   updateControlsVisibility(role, playerName, gameMode = 'advance') {
@@ -436,6 +432,16 @@ export class MarketRenderer {
   ensureViewGraphButtons() { this.cardGridRenderer.ensureViewGraphButtons(); }
   openConfirmModal() { this.cardGridRenderer.openConfirmModal(); }
   closeConfirmModal() { this.cardGridRenderer.closeConfirmModal(); }
+  openConfirmResetRoomModal() {
+    if (!this.confirmResetRoomModal) return;
+    this.confirmResetRoomModal.style.display = 'flex';
+    this.confirmResetRoomModal.classList.add('show');
+  }
+  closeConfirmResetRoomModal() {
+    if (!this.confirmResetRoomModal) return;
+    this.confirmResetRoomModal.classList.remove('show');
+    this.confirmResetRoomModal.style.display = 'none';
+  }
   showErrorAlert(title, text) { this.cardGridRenderer.showErrorAlert(title, text); }
   showSuccessAlert(title, text) { this.cardGridRenderer.showSuccessAlert(title, text); }
   showConfirmAlert(title, text, confirmText, cancelText) { return this.cardGridRenderer.showConfirmAlert(title, text, confirmText, cancelText); }

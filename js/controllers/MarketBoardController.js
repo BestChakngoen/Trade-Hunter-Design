@@ -555,6 +555,43 @@ export class MarketBoardController {
         }
       });
     }
+
+    // Reset Room Data (Purge room data and return everyone to lobby)
+    if (this.renderer.resetRoomDataBtn) {
+      this.renderer.resetRoomDataBtn.addEventListener('click', () => {
+        if (this.state.role !== 'game_master' || this.state.isSpectating) return;
+        this.renderer.openConfirmResetRoomModal();
+      });
+    }
+
+    const closeResetRoomConfirm = () => this.renderer.closeConfirmResetRoomModal();
+    const cancelResetRoomBtn = document.getElementById('cancelResetRoomBtn');
+    if (cancelResetRoomBtn) cancelResetRoomBtn.addEventListener('click', closeResetRoomConfirm);
+
+    if (this.renderer.confirmResetRoomModal) {
+      this.renderer.confirmResetRoomModal.addEventListener('click', (e) => {
+        if (e.target === this.renderer.confirmResetRoomModal) closeResetRoomConfirm();
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.renderer.confirmResetRoomModal && (this.renderer.confirmResetRoomModal.classList.contains('show') || this.renderer.confirmResetRoomModal.style.display === 'flex')) {
+        closeResetRoomConfirm();
+      }
+    });
+
+    const confirmResetRoomBtn = document.getElementById('confirmResetRoomBtn');
+    if (confirmResetRoomBtn) {
+      confirmResetRoomBtn.addEventListener('click', async () => {
+        if (this.state.role !== 'game_master' || this.state.isSpectating) return;
+        try {
+          closeResetRoomConfirm();
+          await this.firebaseService.deleteRoomData(this.state.roomCode);
+        } catch (error) {
+          console.error("Failed to reset room data in database:", error);
+        }
+      });
+    }
   }
 
   bindSpectatorEvents() {

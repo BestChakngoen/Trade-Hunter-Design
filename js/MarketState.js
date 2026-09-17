@@ -19,7 +19,16 @@ export function calculateExponentialBetaPrice(currentPrice, beta = 1.0, directio
   const effectiveBeta = Number(beta) || 1.0;
   const logReturn = direction * effectiveBeta * baseReturn;
   const rawNextPrice = currentPrice * Math.exp(logReturn);
-  return normalizePriceToHundreds(rawNextPrice);
+  let nextPrice = normalizePriceToHundreds(rawNextPrice);
+
+  // Ensure price moves by at least 100 in the target direction when rounded
+  if (direction > 0 && nextPrice <= currentPrice) {
+    nextPrice = currentPrice + 100;
+  } else if (direction < 0 && nextPrice >= currentPrice) {
+    nextPrice = Math.max(100, currentPrice - 100);
+  }
+
+  return nextPrice;
 }
 
 export class MarketState {

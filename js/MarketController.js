@@ -347,9 +347,11 @@ export class MarketController {
         if (!roomData.expiresAt) {
           if (this.state.role === 'game_master') {
             const expiresAt = Date.now() + (3 * 60 * 60 * 1000);
+            this.roomExpiresAt = expiresAt;
             this.firebaseService.updateRoom(code, { expiresAt });
           }
         } else {
+          this.roomExpiresAt = roomData.expiresAt;
           this.startRoomCountdownTimer(roomData.expiresAt);
         }
 
@@ -429,18 +431,6 @@ export class MarketController {
           });
         }
         this.prevMemberUids = currentMemberUids;
-
-        // Dynamic room capacity reduction on member departure (floor at 5 max players)
-        const currentMemberCount = currentMemberUids.size;
-        const currentMaxPlayers = (roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
-        if (currentMaxPlayers > 5 && currentMemberCount < currentMaxPlayers) {
-          const targetMax = Math.max(5, currentMemberCount);
-          if (this.state.role === 'game_master') {
-            this.firebaseService.updateRoom(code, {
-              'roomSettings/maxPlayers': targetMax
-            });
-          }
-        }
 
         if (roomData.roomSettings && roomData.roomSettings.gameMode) {
           this.state.setGameMode(roomData.roomSettings.gameMode);
@@ -623,7 +613,7 @@ export class MarketController {
     this.roomTimerInterval = setInterval(updateTimer, 1000);
   }
 
-  async handleRoomExpired() {
+  async handleRoomExpired(customTitle = null, customMessage = null) {
     if (this.isHandlingExpiry) return;
     this.isHandlingExpiry = true;
 
@@ -638,10 +628,16 @@ export class MarketController {
     const roomCode = this.state.roomCode;
     this.unsubscribeAll();
 
+    const isExplicitReset = this.roomExpiresAt && Date.now() < this.roomExpiresAt;
+    const title = customTitle || (isExplicitReset ? "ROOM RESET" : "SESSION EXPIRED");
+    const message = customMessage || (isExplicitReset 
+      ? "ห้องเกมนี้ถูกรีเซ็ตข้อมูลทั้งหมดโดย GM ระบบกำลังนำท่านกลับสู่หน้าล็อบบี้..." 
+      : "The 3-hour room session limit has expired. Returning to lobby...");
+
     // 1. Display Modal Alert without OK button with 3.5s auto dismiss
     this.renderer.showAutoDismissModal(
-      "SESSION EXPIRED",
-      "The 3-hour room session limit has expired. Returning to lobby...",
+      title,
+      message,
       3500
     );
 

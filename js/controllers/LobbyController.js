@@ -437,38 +437,6 @@ export class LobbyController {
       restoredBackupProfile = members[user.uid].backupPlayerProfile || null;
       isRestoredPlayer = true;
     } else {
-      // Check max capacity if room already exists (Default 5 players max, expandable up to 8 max)
-      if (roomExists && !members[user.uid]) {
-        if (memberUids.length >= 8) {
-          const roomFullAction = await this.renderer.showRoomFullModal("ห้องเกมนี้มีผู้เล่นครบตามจำนวนสูงสุดแล้ว (จำกัดสูงสุด 8 คน)");
-          if (roomFullAction === 'reset') {
-            await this.firebaseService.deleteRoomData(code);
-            return this.joinOrCreateRoom(code);
-          }
-          return;
-        }
-
-        if (memberUids.length >= 5) {
-          const confirmExpand = await this.renderer.showConfirmAlert(
-            "แจ้งเตือนผู้เล่น",
-            "ห้องนี้มีผู้เล่นครบ 5 คน หากเข้าร่วมเพิ่มอาจกระทบประสบการณ์ในการเล่นเกม",
-            "เข้าร่วมต่อ",
-            "ยกเลิก"
-          );
-          if (!confirmExpand || !confirmExpand.isConfirmed) {
-            return;
-          }
-          maxPlayers = Math.min(8, Math.max(maxPlayers, memberUids.length + 1));
-          try {
-            await this.firebaseService.updateRoom(code, {
-              'roomSettings/maxPlayers': maxPlayers
-            });
-          } catch (err) {
-            console.warn("Could not expand room maxPlayers:", err);
-          }
-        }
-      }
-
       // Check if room already has GM
       const hasGM = memberUids.some(uid => members[uid] && members[uid].role === 'game_master');
       if (hasGM) {
@@ -552,7 +520,7 @@ export class LobbyController {
           portfolio: restoredPortfolio,
           sessionToken: sessionToken,
           backupPlayerProfile: restoredBackupProfile
-        }, maxPlayers);
+        });
       } else {
         await this.firebaseService.createRoom(code, {
           maxPlayers,
@@ -586,10 +554,10 @@ export class LobbyController {
           portfolio: restoredPortfolio,
           sessionToken: sessionToken,
           backupPlayerProfile: restoredBackupProfile
-        }, maxPlayers);
+        });
 
         if (!txnRes || (txnRes.result && !txnRes.result.committed)) {
-          await this.renderer.showRoomFullModal();
+          await this.renderer.showErrorAlert("เข้าห้องไม่สำเร็จ", "ไม่สามารถเข้าร่วมห้องได้ในขณะนี้ โปรดลองใหม่อีกครั้ง");
           return;
         }
 
