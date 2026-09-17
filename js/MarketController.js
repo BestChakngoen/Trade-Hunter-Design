@@ -270,17 +270,19 @@ export class MarketController {
           ? Array.from(this.renderer.priceGrid.querySelectorAll('.price-card')).find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol) 
           : null;
 
-        const startPrice = this.state.getStartPrice(symbol, currentVal);
-        const direction = (prevVal !== undefined && prevVal !== currentVal) ? (currentVal > prevVal ? 'up' : 'down') : null;
+        const prevPrice = prevVal !== undefined ? prevVal : (stock.oldValue !== undefined ? stock.oldValue : currentVal);
+        const direction = (prevPrice !== undefined && prevPrice !== null && prevPrice !== currentVal)
+          ? (currentVal > prevPrice ? 'up' : 'down')
+          : null;
 
         if (card) {
           card.setAttribute('data-price', currentVal);
-          this.renderer.updateCardValue(card, currentVal, direction, startPrice);
+          this.renderer.updateCardValue(card, currentVal, direction, prevPrice);
         }
 
         if (liveCard && liveCard !== card) {
           liveCard.setAttribute('data-price', currentVal);
-          this.renderer.updateCardValue(liveCard, currentVal, direction, startPrice);
+          this.renderer.updateCardValue(liveCard, currentVal, direction, prevPrice);
         }
 
         const targetCard = liveCard || card;
@@ -434,6 +436,21 @@ export class MarketController {
 
         if (roomData.roomSettings && roomData.roomSettings.gameMode) {
           this.state.setGameMode(roomData.roomSettings.gameMode);
+        }
+
+        // Check if player was evicted/removed from room (e.g. by GM Room Reset)
+        if (this.state.role === 'player' && (!roomData.members || !roomData.members[currentUid])) {
+          this.unsubscribeAll();
+          if (this.playerSessionService && code) {
+            this.playerSessionService.clearRoomSession(code);
+          }
+          this.state.reset();
+          this.renderer.showLobby();
+          this.renderer.showErrorAlert(
+            "ออกจากห้อง",
+            "ห้องเกมได้รับการรีเซ็ตโดย GM ระบบได้นำท่านกลับสู่หน้าล็อบบี้แล้ว"
+          );
+          return;
         }
 
         if (roomData.members && roomData.members[currentUid]) {

@@ -4,28 +4,31 @@ import { TradeService } from './services/TradeService.js';
  * Normalizes stock price to full hundreds (e.g. 5238 -> 5200, 5265 -> 5300)
  */
 export function normalizePriceToHundreds(price) {
-  if (typeof price !== 'number' || isNaN(price)) return price;
-  return Math.max(100, Math.round(price / 100) * 100);
+  if (price === null || price === undefined) return 100;
+  const cleanPrice = typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : Number(price);
+  if (isNaN(cleanPrice) || cleanPrice < 100) return 100;
+  return Math.max(100, Math.round(cleanPrice / 100) * 100);
 }
 
 /**
  * Calculates next price using exponential movement scaled by Beta volatility.
- * @param {number} currentPrice - Current price S_t
+ * @param {number|string} currentPrice - Current price S_t
  * @param {number} beta - Stock Beta factor
  * @param {number} direction - Direction: +1 for Up, -1 for Down
  * @param {number} baseReturn - Base step return rate (default 0.05 = 5%)
  */
 export function calculateExponentialBetaPrice(currentPrice, beta = 1.0, direction = 1, baseReturn = 0.05) {
+  const cleanPrice = normalizePriceToHundreds(currentPrice);
   const effectiveBeta = Number(beta) || 1.0;
   const logReturn = direction * effectiveBeta * baseReturn;
-  const rawNextPrice = currentPrice * Math.exp(logReturn);
+  const rawNextPrice = cleanPrice * Math.exp(logReturn);
   let nextPrice = normalizePriceToHundreds(rawNextPrice);
 
   // Ensure price moves by at least 100 in the target direction when rounded
-  if (direction > 0 && nextPrice <= currentPrice) {
-    nextPrice = currentPrice + 100;
-  } else if (direction < 0 && nextPrice >= currentPrice) {
-    nextPrice = Math.max(100, currentPrice - 100);
+  if (direction > 0 && nextPrice <= cleanPrice) {
+    nextPrice = cleanPrice + 100;
+  } else if (direction < 0 && nextPrice >= cleanPrice) {
+    nextPrice = Math.max(100, cleanPrice - 100);
   }
 
   return nextPrice;
@@ -339,16 +342,18 @@ export class MarketState {
     const master = this.masterStocks[symbol];
     if (!master) return null;
 
-    const nextStep = currentStock.step + 1;
+    const currentStep = (typeof currentStock.step === 'number' && !isNaN(currentStock.step)) ? currentStock.step : 0;
+    const nextStep = currentStep + 1;
     const beta = this.getStockBeta(symbol);
+    const curVal = normalizePriceToHundreds(currentStock.value);
     
     // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
-    const nextValue = calculateExponentialBetaPrice(currentStock.value, beta, 1, 0.16);
-    if (nextValue < 0) return null;
+    const nextValue = calculateExponentialBetaPrice(curVal, beta, 1, 0.16);
+    if (isNaN(nextValue) || nextValue < 100) return null;
 
     const updatedStocks = boardStocksArray.map(s => {
       if (s.name === symbol) {
-        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
+        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
         const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
         const newHistory = [...currentHistory, nextValue];
         this.priceHistory[symbol] = newHistory;
@@ -357,7 +362,7 @@ export class MarketState {
           ...s,
           step: nextStep,
           value: nextValue,
-          oldValue: currentStock.value,
+          oldValue: curVal,
           history: newHistory,
           updatedAt: Date.now()
         };
@@ -378,20 +383,22 @@ export class MarketState {
     const master = this.masterStocks[symbol];
     if (!master) return null;
 
-    let prevStep = currentStock.step - 1;
+    const currentStep = (typeof currentStock.step === 'number' && !isNaN(currentStock.step)) ? currentStock.step : 0;
+    let prevStep = currentStep - 1;
     if (prevStep < 0) {
       prevStep = 0; // Clamp to lowest step 0 instead of wrapping
     }
 
     const beta = this.getStockBeta(symbol);
+    const curVal = normalizePriceToHundreds(currentStock.value);
     
     // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
-    const nextValue = Math.max(100, calculateExponentialBetaPrice(currentStock.value, beta, -1, 0.16));
-    if (nextValue < 0) return null; // Prevent value dropping below 0
+    const nextValue = Math.max(100, calculateExponentialBetaPrice(curVal, beta, -1, 0.16));
+    if (isNaN(nextValue) || nextValue < 100) return null;
 
     const updatedStocks = boardStocksArray.map(s => {
       if (s.name === symbol) {
-        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
+        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
         const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
         const newHistory = [...currentHistory, nextValue];
         this.priceHistory[symbol] = newHistory;
@@ -400,7 +407,7 @@ export class MarketState {
           ...s,
           step: prevStep,
           value: nextValue,
-          oldValue: currentStock.value,
+          oldValue: curVal,
           history: newHistory,
           updatedAt: Date.now()
         };
@@ -425,13 +432,15 @@ export class MarketState {
       const master = this.masterStocks[symbol];
       if (!master) return s;
 
-      const nextStep = s.step + 1;
+      const currentStep = (typeof s.step === 'number' && !isNaN(s.step)) ? s.step : 0;
+      const nextStep = currentStep + 1;
       const beta = this.getStockBeta(symbol);
-      const nextValue = calculateExponentialBetaPrice(s.value, beta, 1, 0.16);
-      if (nextValue < 0) return s;
+      const curVal = normalizePriceToHundreds(s.value);
+      const nextValue = calculateExponentialBetaPrice(curVal, beta, 1, 0.16);
+      if (isNaN(nextValue) || nextValue < 100) return s;
 
       hasChanges = true;
-      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
+      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
       const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
       const newHistory = [...currentHistory, nextValue];
       this.priceHistory[symbol] = newHistory;
@@ -440,7 +449,7 @@ export class MarketState {
         ...s,
         step: nextStep,
         value: nextValue,
-        oldValue: s.value,
+        oldValue: curVal,
         history: newHistory,
         updatedAt: Date.now()
       };
@@ -463,17 +472,19 @@ export class MarketState {
       const master = this.masterStocks[symbol];
       if (!master) return s;
 
-      let prevStep = s.step - 1;
+      const currentStep = (typeof s.step === 'number' && !isNaN(s.step)) ? s.step : 0;
+      let prevStep = currentStep - 1;
       if (prevStep < 0) {
         prevStep = 0;
       }
 
       const beta = this.getStockBeta(symbol);
-      const nextValue = Math.max(100, calculateExponentialBetaPrice(s.value, beta, -1, 0.16));
-      if (nextValue < 0) return s;
+      const curVal = normalizePriceToHundreds(s.value);
+      const nextValue = Math.max(100, calculateExponentialBetaPrice(curVal, beta, -1, 0.16));
+      if (isNaN(nextValue) || nextValue < 100) return s;
 
       hasChanges = true;
-      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : s.value;
+      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
       const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
       const newHistory = [...currentHistory, nextValue];
       this.priceHistory[symbol] = newHistory;
@@ -482,7 +493,7 @@ export class MarketState {
         ...s,
         step: prevStep,
         value: nextValue,
-        oldValue: s.value,
+        oldValue: curVal,
         history: newHistory,
         updatedAt: Date.now()
       };

@@ -18,13 +18,29 @@ export class CardGridRenderer {
     });
   }
 
-  setPriceBoxStyle(priceBox, valueEl, currentPrice, startPrice) {
+  setPriceBoxStyle(priceBox, valueEl, currentPrice, prevPrice, direction = null) {
     if (!priceBox) return;
-    const basePrice = (startPrice !== undefined && startPrice !== null) ? startPrice : currentPrice;
+
+    let isUp = false;
+    let isDown = false;
+
+    if (direction === 'up') {
+      isUp = true;
+    } else if (direction === 'down') {
+      isDown = true;
+    } else if (prevPrice !== undefined && prevPrice !== null && !isNaN(prevPrice)) {
+      const cur = Number(currentPrice);
+      const prev = Number(prevPrice);
+      if (cur > prev) {
+        isUp = true;
+      } else if (cur < prev) {
+        isDown = true;
+      }
+    }
 
     priceBox.classList.remove('price-up', 'price-down', 'price-neutral');
 
-    if (currentPrice > basePrice) {
+    if (isUp) {
       priceBox.classList.add('price-up');
       priceBox.style.setProperty('background-color', 'rgba(16, 185, 129, 0.18)', 'important');
       priceBox.style.setProperty('border', '1.5px solid rgba(16, 185, 129, 0.5)', 'important');
@@ -33,7 +49,7 @@ export class CardGridRenderer {
         valueEl.style.setProperty('color', '#34d399', 'important');
         valueEl.style.setProperty('text-shadow', '0 0 10px rgba(52, 211, 153, 0.5)', 'important');
       }
-    } else if (currentPrice < basePrice) {
+    } else if (isDown) {
       priceBox.classList.add('price-down');
       priceBox.style.setProperty('background-color', 'rgba(239, 68, 68, 0.18)', 'important');
       priceBox.style.setProperty('border', '1.5px solid rgba(239, 68, 68, 0.5)', 'important');
@@ -54,13 +70,13 @@ export class CardGridRenderer {
     }
   }
 
-  updateCardValue(card, price, direction, startPrice) {
+  updateCardValue(card, price, direction, prevPrice) {
     const valueEl = card.querySelector('.card-value');
     const priceBox = card.querySelector('.price-box');
     if (!valueEl) return;
     
     valueEl.textContent = price.toLocaleString('en-US');
-    this.setPriceBoxStyle(priceBox, valueEl, price, startPrice);
+    this.setPriceBoxStyle(priceBox, valueEl, price, prevPrice, direction);
 
     valueEl.classList.remove('flash-up', 'flash-down');
     void valueEl.offsetWidth; // Reflow to restart keyframe animation
@@ -96,22 +112,12 @@ export class CardGridRenderer {
       const stock = boardStocks ? boardStocks[symbol] : null;
       const currentPrice = stock ? stock.value : parseFloat(card.getAttribute('data-price') || 0);
 
-      // Resolve baseline starting price
-      let startPrice = initialPrices ? initialPrices[symbol] : undefined;
-      if (startPrice === undefined && stock) {
-        startPrice = stock.startValue !== undefined ? stock.startValue : (Array.isArray(stock.history) && stock.history.length > 0 ? stock.history[0] : undefined);
-      }
-      if (startPrice === undefined && masterStocks && masterStocks[symbol]) {
-        const master = masterStocks[symbol];
-        if (Array.isArray(master.steps) && master.startStep > 0) {
-          startPrice = master.steps[master.startStep - 1];
-        }
-      }
-      if (startPrice === undefined) {
-        startPrice = currentPrice;
-      }
+      // Determine previous price: if stock.oldValue exists and is valid, use it; otherwise fallback to currentPrice (neutral)
+      let prevPrice = (stock && stock.oldValue !== undefined && stock.oldValue !== null)
+        ? stock.oldValue
+        : currentPrice;
 
-      this.setPriceBoxStyle(priceBox, valueEl, currentPrice, startPrice);
+      this.setPriceBoxStyle(priceBox, valueEl, currentPrice, prevPrice);
     });
   }
 

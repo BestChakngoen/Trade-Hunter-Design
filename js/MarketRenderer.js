@@ -421,7 +421,7 @@ export class MarketRenderer {
 
   // Card Grid Delegations
   renderGrid(cards) { this.cardGridRenderer.renderGrid(cards); }
-  updateCardValue(card, price, direction, startPrice) { this.cardGridRenderer.updateCardValue(card, price, direction, startPrice); }
+  updateCardValue(card, price, direction, prevPrice) { this.cardGridRenderer.updateCardValue(card, price, direction, prevPrice); }
   clearAllCardAnimations(cards) { this.cardGridRenderer.clearAllCardAnimations(cards); }
   applyBetaColors(cards) { this.cardGridRenderer.applyBetaColors(cards); }
   applyPriceColors(cards, boardStocks, masterStocks, initialPrices) { this.cardGridRenderer.applyPriceColors(cards, boardStocks, masterStocks, initialPrices); }
