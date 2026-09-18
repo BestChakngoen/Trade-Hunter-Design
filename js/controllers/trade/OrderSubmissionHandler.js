@@ -35,6 +35,13 @@ export class OrderSubmissionHandler {
     const user = this.firebaseService.getCurrentUser();
     if (!stock || !user) return;
 
+    // Server-Side Verification: Check if player actually exists in active room on server
+    const memberCheck = await this.firebaseService.verifyPlayerExistsOnServer(this.state.roomCode, user.uid);
+    if (!memberCheck.exists) {
+      this.renderer.showErrorAlert("ไม่พบข้อมูลผู้เล่น", "ไม่พบข้อมูลผู้เล่นของคุณในห้องเกมนี้บนเซิร์ฟเวอร์ หรือห้องเกมได้รับการรีเซ็ตแล้ว");
+      return;
+    }
+
     const currentPrice = stock.value;
     const currentCash = this.state.portfolio.cash;
     const currentStocks = { ...this.state.portfolio.stocks };
@@ -125,6 +132,13 @@ export class OrderSubmissionHandler {
     const user = this.firebaseService.getCurrentUser();
     if (!user) {
       this.renderer.showErrorAlert("Authentication Error", "คุณต้องเข้าสู่ระบบก่อนส่งคำสั่งซื้อขาย");
+      return;
+    }
+
+    // Server-Side Verification: Check if player actually exists in active room on server
+    const memberCheck = await this.firebaseService.verifyPlayerExistsOnServer(this.state.roomCode, user.uid);
+    if (!memberCheck.exists) {
+      this.renderer.showErrorAlert("ไม่พบข้อมูลผู้เล่น", "ไม่พบข้อมูลผู้เล่นของคุณในห้องเกมนี้บนเซิร์ฟเวอร์ หรือห้องเกมได้รับการรีเซ็ตแล้ว");
       return;
     }
 

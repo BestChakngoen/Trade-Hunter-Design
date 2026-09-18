@@ -107,15 +107,19 @@ export class FirebaseService {
   }
 
   // Realtime Database: Initialize or Update Game Room data
-  async createRoom(roomCode, roomSettings, members) {
+  async createRoom(roomCode, roomSettings, members, clientIp = 'unknown') {
     const roomRef = this.getRoomRef(roomCode);
     const now = Date.now();
     const maxPlayers = (roomSettings && roomSettings.maxPlayers) ? roomSettings.maxPlayers : 5;
     const gameMode = (roomSettings && roomSettings.gameMode !== undefined && roomSettings.gameMode !== null) ? roomSettings.gameMode : null;
 
     await set(roomRef, {
+      status: 'ACTIVE',
+      isReset: false,
       createdAt: now,
       lastJoinedAt: now,
+      lastActiveAt: now,
+      creatorIp: clientIp || 'unknown',
       roomSettings: {
         maxPlayers,
         gameMode
@@ -126,7 +130,11 @@ export class FirebaseService {
 
   async updateRoom(roomCode, updateData) {
     const roomRef = this.getRoomRef(roomCode);
-    await update(roomRef, updateData);
+    const payload = { ...updateData };
+    if (!payload.lastActiveAt) {
+      payload.lastActiveAt = Date.now();
+    }
+    await update(roomRef, payload);
   }
 
   async setRoomGameMode(roomCode, gameMode) {
@@ -684,7 +692,7 @@ export class FirebaseService {
   }
 
   // Realtime Database: Join room atomically with transaction to handle high concurrency
-  async joinRoomWithTransaction(roomCode, userObj) {
+  async joinRoomWithTransaction(roomCode, userObj, clientIp = 'unknown') {
     const roomRef = this.getRoomRef(roomCode);
     let assignedRole = userObj.role;
 
@@ -697,6 +705,10 @@ export class FirebaseService {
       
       // Rejoining player
       if (members[userObj.uid]) {
+        if (clientIp && clientIp !== 'unknown') {
+          currentData.members[userObj.uid].ip = clientIp;
+        }
+        currentData.lastActiveAt = Date.now();
         return currentData;
       }
 
@@ -729,7 +741,8 @@ export class FirebaseService {
       const memberObj = {
         role: targetRole,
         displayName: targetName,
-        joinedAt: Date.now()
+        joinedAt: Date.now(),
+        ip: clientIp || userObj.ip || 'unknown'
       };
       if (targetRole === 'player') {
         memberObj.portfolio = userObj.portfolio ? JSON.parse(JSON.stringify(userObj.portfolio)) : { cash: 20000 };
@@ -741,8 +754,11 @@ export class FirebaseService {
         memberObj.backupPlayerProfile = userObj.backupPlayerProfile;
       }
 
+      currentData.status = 'ACTIVE';
+      currentData.isReset = false;
       currentData.members[userObj.uid] = memberObj;
       currentData.lastJoinedAt = Date.now();
+      currentData.lastActiveAt = Date.now();
 
       return currentData;
     });
@@ -751,6 +767,75 @@ export class FirebaseService {
       result,
       assignedRole
     };
+  }
+
+  // Realtime Database: Reset room state and kick everyone out to lobby atomically
+  async resetRoomWithKickAll(roomCode, resetStocks) {
+    if (!roomCode) return;
+    const roomRef = this.getRoomRef(roomCode);
+    const boardRef = this.getBoardRef(roomCode);
+    const now = Date.now();
+
+    await update(roomRef, {
+      status: 'RESET',
+      isReset: true,
+      resetAt: now,
+      lastActiveAt: now,
+      members: null,
+      savedMembers: null,
+      pendingOrders: null,
+      gmTransferRequest: null,
+      lastProcessedOrder: null,
+      lastSalaryReceived: null,
+      lastDividendReceived: null,
+      lastDebtInterestReceived: null,
+      stocks: resetStocks || null
+    });
+
+    if (resetStocks) {
+      await set(boardRef, { stocks: resetStocks });
+    }
+  }
+
+  // Realtime Database: Check if member node exists under room
+  async checkMemberExists(roomCode, userId) {
+    if (!roomCode || !userId) return false;
+    try {
+      const memberRef = this.getUserInBoardRef(roomCode, userId);
+      const snapshot = await get(memberRef);
+      return snapshot.exists();
+    } catch (e) {
+      console.error("Failed to check member existence on server:", e);
+      return false;
+    }
+  }
+
+  // Realtime Database: Verify player existence and active room status on server
+  async verifyPlayerExistsOnServer(roomCode, userId, sessionToken = null) {
+    if (!roomCode) return { exists: false, reason: 'NO_ROOM_CODE' };
+    try {
+      const roomSnap = await this.getRoomStateSnapshot(roomCode);
+      if (!roomSnap || !roomSnap.exists()) {
+        return { exists: false, reason: 'ROOM_NOT_FOUND' };
+      }
+      const roomData = roomSnap.val();
+      if (roomData.isReset || roomData.status === 'RESET') {
+        return { exists: false, reason: 'ROOM_RESET', roomData };
+      }
+      const hasMember = Boolean(userId && roomData.members && roomData.members[userId]);
+      const hasSavedMember = Boolean(sessionToken && roomData.savedMembers && roomData.savedMembers[sessionToken]);
+      return {
+        exists: hasMember || hasSavedMember,
+        hasMember,
+        hasSavedMember,
+        memberData: hasMember ? roomData.members[userId] : null,
+        savedMemberData: hasSavedMember ? roomData.savedMembers[sessionToken] : null,
+        roomData
+      };
+    } catch (e) {
+      console.error("Failed to verify player on server:", e);
+      return { exists: false, reason: 'SERVER_ERROR', error: e.message };
+    }
   }
 
   // Register User session lock for tab/device exclusivity per user

@@ -1,5 +1,18 @@
-- **Build Frequency Constraint:** If the modification is minor (such as simple text renaming, minor translations, or trivial layout adjustments that do not introduce new Tailwind classes or custom CSS rules), you do NOT need to execute `npm run build` (or equivalent build steps) every time. Save build execution only for major changes or when new CSS utility classes are added.
-- **Mandatory Test Execution on Major Changes, Clean Code & Refactoring:** ต้องทำการรันคำสั่งทดสอบ (เช่น `node --check` สำหรับตรวจสอบไวยากรณ์สคริปต์ JS และ `npm run build` สำหรับตรวจสอบระบบ Build/CSS) **ทุกครั้ง** เมื่อมีการเปลี่ยนแปลงโค้ดขนาดใหญ่ (Major Changes), การทำ Clean Code หรือการ Refactor โค้ด เพื่อยืนยันความถูกต้องและรับประกันว่าระบบไร้ข้อผิดพลาดก่อนจบงานเสมอ
+กฎเกณฑ์การสั่ง Build และการทดสอบระบบ (Build & Testing Rules)
+
+**การลดความถี่การ Build สำหรับงานขนาดเล็ก (Minor Changes Pass) ⚡
+- ข้อกำหนด: หากเป็นการแก้ไขเพียงเล็กน้อย (เช่น เปลี่ยนข้อความ แก้คำแปล หรือปรับ Layout โดยไม่มีการเพิ่ม Tailwind classes หรือ CSS rules ใหม่) ไม่จำเป็นต้องสั่ง npm run build ทุกครั้ง
+- เป้าหมาย: เพื่อประหยัดเวลาและลดภาระประมวลผลที่ไม่จำเป็น
+
+**การทดสอบอย่างเคร่งครัดเมื่อมีการเปลี่ยนแปลงใหญ่ (Major Changes & Refactoring Mandatory Testing) 🛠️
+- ข้อกำหนด: เมื่อมีการแก้ไขโค้ดขนาดใหญ่ ทำ Clean Code หรือ Refactor โค้ด ต้องทำการรันคำสั่งทดสอบระบบทุกครั้งก่อนจบงาน ได้แก่:
+- node --check เพื่อตรวจสอบไวยากรณ์สคริปต์ JavaScript
+- npm run build เพื่อตรวจสอบระบบ Build และ CSS Utility Classes ใหม่
+
+**ขั้นตอนการตรวจสอบผลลัพธ์การทำงาน (Execution & Result Verification Check) 🔍
+- ตรวจสอบเทียบกับแผน (Plan Matching): ตรวจสอบว่าผลลัพธ์หลังแก้ไขตรงตามวัตถุประสงค์ที่วางไว้หรือไม่
+- ตรวจสอบความสะอาดของระบบ (Build & Syntax Health): ยืนยันว่าไม่มีข้อผิดพลาด (Syntax Error/Build Error) ปรากฏใน Terminal
+- ตรวจสอบภาพรวมงาน (Regression Check): ตรวจสอบว่าฟังก์ชันเดิมยังคงทำงานได้ปกติ และไม่มี Side Effect กระทบกับส่วนอื่นของระบบ
 
 
 ---

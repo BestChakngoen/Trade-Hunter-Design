@@ -177,6 +177,7 @@ export class PlayerSessionService {
         role: memberData.role || 'player',
         portfolio: memberData.portfolio || { cash: 20000 },
         backupPlayerProfile: memberData.backupPlayerProfile || null,
+        ip: memberData.ip || 'unknown',
         lastActiveAt: Date.now()
       };
       await firebaseService.saveMemberSnapshot(roomCode, sessionToken, savedPayload);

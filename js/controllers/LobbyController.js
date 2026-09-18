@@ -351,7 +351,17 @@ export class LobbyController {
 
     const now = Date.now();
 
-    // 2. Fetch room status & inspect stale/expired state from Firebase Realtime Database
+    // 2. Detect Client Public IP for access tracking
+    let clientIp = 'unknown';
+    if (this.sessionLockService) {
+      try {
+        clientIp = (await this.sessionLockService.fetchPublicIp()) || 'unknown';
+      } catch (e) {
+        console.warn("[Lobby] Failed to fetch public IP:", e);
+      }
+    }
+
+    // 3. Fetch room status & inspect stale/expired state from Firebase Realtime Database
     let roomExists = false;
     let roomData = null;
 
@@ -368,19 +378,11 @@ export class LobbyController {
       const expiresAt = roomData.expiresAt;
       const isExpired = Boolean(expiresAt && expiresAt <= now);
       const isEnded = Boolean(roomData.isEnd);
+      const isReset = Boolean(roomData.isReset || roomData.status === 'RESET');
 
-      // Safe Purge: Never delete a room if it has active members playing!
-      // Only purge if room has 0 active members AND (it has expired, ended, or has no creation timestamp)
+      // Safe Purge: If room is marked as RESET, or has 0 members and (isExpired, isEnded, or has no members):
       const hasNoMembers = memberUids.length === 0;
-      if (hasNoMembers && (isExpired || isEnded || !roomData.createdAt)) {
-        await this.firebaseService.deleteRoomData(code);
-        if (this.playerSessionService) {
-          this.playerSessionService.clearRoomSession(code);
-        }
-        roomExists = false;
-        roomData = null;
-      } else if (hasNoMembers) {
-        // Abandoned room with 0 members
+      if (isReset || hasNoMembers || (isExpired && hasNoMembers) || (isEnded && hasNoMembers)) {
         await this.firebaseService.deleteRoomData(code);
         if (this.playerSessionService) {
           this.playerSessionService.clearRoomSession(code);
@@ -388,7 +390,7 @@ export class LobbyController {
         roomExists = false;
         roomData = null;
       } else {
-        // Room has active players - preserve it and prevent client clock skew from killing active games!
+        // Room has active players - preserve it!
         roomExists = true;
       }
     }
@@ -410,6 +412,14 @@ export class LobbyController {
     // Check persistent session token for returning player recovery
     const sessionToken = this.playerSessionService ? this.playerSessionService.getOrCreateSessionToken(code) : null;
     let savedMember = (roomExists && roomData && roomData.savedMembers && sessionToken) ? roomData.savedMembers[sessionToken] : null;
+
+    // Server-Side Verification: If room exists but session token is not recognized on server and player UID is not in members:
+    if (roomExists && sessionToken && !savedMember && (!members || !members[user.uid])) {
+      console.log(`[Lobby] Player session ${sessionToken} not found on server for room ${code}. Clearing local session.`);
+      if (this.playerSessionService) {
+        this.playerSessionService.clearRoomSession(code);
+      }
+    }
 
     let restoredPortfolio = null;
     let restoredBackupProfile = null;
@@ -512,6 +522,7 @@ export class LobbyController {
         role: role,
         displayName: displayName,
         joinedAt: now,
+        ip: clientIp,
         sessionToken: sessionToken || null
       };
       if (role === 'player') {
@@ -530,15 +541,16 @@ export class LobbyController {
           displayName: displayName,
           portfolio: restoredPortfolio,
           sessionToken: sessionToken,
-          backupPlayerProfile: restoredBackupProfile
-        });
+          backupPlayerProfile: restoredBackupProfile,
+          ip: clientIp
+        }, clientIp);
       } else {
         await this.firebaseService.createRoom(code, {
           maxPlayers,
           gameMode: null
         }, {
           [user.uid]: initialMemberObj
-        });
+        }, clientIp);
         await this.firebaseService.updateRoom(code, { expiresAt });
       }
 
@@ -547,6 +559,12 @@ export class LobbyController {
       if (members[user.uid]) {
         // Re-joining player
         const updates = {};
+        if (clientIp && clientIp !== 'unknown') {
+          updates[`members/${user.uid}/ip`] = clientIp;
+          if (sessionToken && roomData.savedMembers && roomData.savedMembers[sessionToken]) {
+            updates[`savedMembers/${sessionToken}/ip`] = clientIp;
+          }
+        }
         if (sessionToken && !members[user.uid].sessionToken) {
           updates[`members/${user.uid}/sessionToken`] = sessionToken;
         }
@@ -564,8 +582,9 @@ export class LobbyController {
           displayName: displayName,
           portfolio: restoredPortfolio,
           sessionToken: sessionToken,
-          backupPlayerProfile: restoredBackupProfile
-        });
+          backupPlayerProfile: restoredBackupProfile,
+          ip: clientIp
+        }, clientIp);
 
         if (!txnRes || (txnRes.result && !txnRes.result.committed)) {
           await this.renderer.showErrorAlert("เข้าห้องไม่สำเร็จ", "ไม่สามารถเข้าร่วมห้องได้ในขณะนี้ โปรดลองใหม่อีกครั้ง");
@@ -601,13 +620,15 @@ export class LobbyController {
         sessionToken,
         role,
         displayName,
-        uid: user.uid
+        uid: user.uid,
+        ip: clientIp
       });
       await this.playerSessionService.syncPlayerToFirebase(code, this.firebaseService, sessionToken, {
         displayName,
         role,
         portfolio: restoredPortfolio || (role === 'player' ? { cash: 20000 } : null),
-        backupPlayerProfile: restoredBackupProfile
+        backupPlayerProfile: restoredBackupProfile,
+        ip: clientIp
       });
     }
 

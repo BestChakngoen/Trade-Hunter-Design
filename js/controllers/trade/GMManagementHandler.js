@@ -56,6 +56,8 @@ export class GMManagementHandler {
             this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username || 'ผู้เล่น'} มีหุ้น ${order.symbol} ไม่เพียงพอสำหรับคำสั่ง SELL`);
           } else if (result.failureReason === 'ORDER_NOT_FOUND') {
             this.renderer.showErrorAlert("Notice", "คำสั่งนี้ได้รับการประมวลผลหรือถูกยกเลิกไปแล้ว");
+          } else if (result.failureReason === 'MEMBER_NOT_FOUND') {
+            this.renderer.showErrorAlert("Approval Failed", "ไม่พบข้อมูลผู้เล่นของผู้ส่งคำสั่งนี้ในห้องเกมบนเซิร์ฟเวอร์");
           } else {
             this.renderer.showErrorAlert("Approval Failed", "ไม่สามารถอนุมัติคำสั่งซื้อขายได้");
           }

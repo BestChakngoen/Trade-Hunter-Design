@@ -29,7 +29,7 @@ export class MarketController {
     // Sub-controllers following Single Responsibility Principle
     this.lobbyController = new LobbyController(state, renderer, firebaseService, this.sessionLockService, this.playerSessionService);
     this.tradeController = new TradeController(state, renderer, firebaseService);
-    this.marketBoardController = new MarketBoardController(state, renderer, firebaseService);
+    this.marketBoardController = new MarketBoardController(state, renderer, firebaseService, this, this.playerSessionService);
 
     this.boardListenerUnsubscribe = null;
     this.roomListenerUnsubscribe = null;
@@ -345,6 +345,22 @@ export class MarketController {
           return;
         }
 
+        // 1. Check if room was reset: Kick all participants to lobby & suppress GM takeover modal
+        if (roomData.isReset || roomData.status === 'RESET') {
+          this.renderer.hideGMTransferModal();
+          this.unsubscribeAll();
+          if (this.playerSessionService && code) {
+            this.playerSessionService.clearRoomSession(code);
+          }
+          this.state.reset();
+          this.renderer.showLobby();
+          this.renderer.showErrorAlert(
+            "ห้องเกมได้รับการรีเซ็ต",
+            "ห้องเกมนี้ถูกรีเซ็ตข้อมูลทั้งหมดโดย GM ระบบได้นำผู้เล่นทุกคนกลับสู่หน้าล็อบบี้แล้ว"
+          );
+          return;
+        }
+
         // 3-Hour Room Session Expiration Check & Timer Initialization
         if (!roomData.expiresAt) {
           if (this.state.role === 'game_master') {
@@ -366,16 +382,17 @@ export class MarketController {
         // Update real-time room members count & capacity status badge
         this.renderer.updateRoomMembersUI(roomData.members, roomData.roomSettings);
 
-        // GM Disconnect / Takeover Transfer Election Handler
+        // GM Disconnect / Takeover Transfer Election Handler (Suppressed during room reset)
         const members = roomData.members || {};
         const hasGM = Object.values(members).some(m => m && m.role === 'game_master');
         const transferReq = roomData.gmTransferRequest;
+        const isResetState = Boolean(roomData.isReset || roomData.status === 'RESET');
 
-        if (!hasGM && Object.keys(members).length > 0 && (!transferReq || (!transferReq.active && !transferReq.claimedBy))) {
+        if (!isResetState && !hasGM && Object.keys(members).length > 0 && (!transferReq || (!transferReq.active && !transferReq.claimedBy))) {
           this.firebaseService.triggerGMTransfer(code);
         }
 
-        if (!hasGM && transferReq && transferReq.active && !transferReq.claimedBy) {
+        if (!isResetState && !hasGM && transferReq && transferReq.active && !transferReq.claimedBy) {
           if (this.state.role !== 'game_master') {
             this.renderer.showGMTransferModal(
               async () => {
@@ -440,6 +457,7 @@ export class MarketController {
 
         // Check if player was evicted/removed from room (e.g. by GM Room Reset)
         if (this.state.role === 'player' && (!roomData.members || !roomData.members[currentUid])) {
+          this.renderer.hideGMTransferModal();
           this.unsubscribeAll();
           if (this.playerSessionService && code) {
             this.playerSessionService.clearRoomSession(code);
@@ -448,7 +466,7 @@ export class MarketController {
           this.renderer.showLobby();
           this.renderer.showErrorAlert(
             "ออกจากห้อง",
-            "ห้องเกมได้รับการรีเซ็ตโดย GM ระบบได้นำท่านกลับสู่หน้าล็อบบี้แล้ว"
+            "ไม่พบข้อมูลผู้เล่นของคุณบนเซิร์ฟเวอร์ หรือห้องเกมได้รับการรีเซ็ต ระบบได้นำท่านกลับสู่หน้าล็อบบี้แล้ว"
           );
           return;
         }

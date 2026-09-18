@@ -2,10 +2,12 @@
  * MarketBoardController - Manages Sector Filtering, Sorting, Card Controls, Inline Charts, and Danger Zone Operations.
  */
 export class MarketBoardController {
-  constructor(state, renderer, firebaseService) {
+  constructor(state, renderer, firebaseService, marketController = null, playerSessionService = null) {
     this.state = state;
     this.renderer = renderer;
     this.firebaseService = firebaseService;
+    this.marketController = marketController;
+    this.playerSessionService = playerSessionService;
   }
 
   bindSectorFilter() {
@@ -591,72 +593,31 @@ export class MarketBoardController {
           if (!code) return;
 
           const resetStocks = this.state.getResetStocks();
-          const roomSnapshot = await this.firebaseService.getRoomStateSnapshot(code);
-          const roomData = roomSnapshot ? roomSnapshot.val() : null;
 
-          const currentUser = this.firebaseService.getCurrentUser();
-          const currentUid = currentUser ? currentUser.uid : null;
+          // Reset room state on cloud and kick all participants atomically
+          await this.firebaseService.resetRoomWithKickAll(code, resetStocks);
 
-          // Keep ONLY GM in members, kick all other players out
-          const resetMembers = {};
-          if (roomData && roomData.members) {
-            if (currentUid && roomData.members[currentUid]) {
-              resetMembers[currentUid] = {
-                ...roomData.members[currentUid],
-                role: 'game_master',
-                displayName: roomData.members[currentUid].displayName || 'GM'
-              };
-            } else {
-              const gmEntry = Object.entries(roomData.members).find(([_, m]) => m && m.role === 'game_master');
-              if (gmEntry) {
-                resetMembers[gmEntry[0]] = gmEntry[1];
-              }
-            }
-          }
-
-          if (Object.keys(resetMembers).length === 0 && currentUid) {
-            resetMembers[currentUid] = {
-              displayName: 'GM',
-              role: 'game_master',
-              timestamp: Date.now()
-            };
-          }
-
-          // Overwrite members to purge all player nodes cleanly
-          await this.firebaseService.setRoomMembers(code, resetMembers);
-
-          // Reset room state: reset stocks, purge saved sessions, orders, and record reset timestamp
-          await this.firebaseService.updateRoom(code, {
-            stocks: resetStocks,
-            savedMembers: null,
-            pendingOrders: null,
-            lastProcessedOrder: null,
-            lastSalaryReceived: null,
-            lastDividendReceived: null,
-            lastDebtInterestReceived: null,
-            resetAt: Date.now()
-          });
-
-          // Reset board state
-          await this.firebaseService.setStocksBoard(code, resetStocks);
-
-          // Clear GM local action history
+          // Clear GM local action history & session
           this.state.undoStack = [];
           this.state.redoStack = [];
           this.state.pendingOrders = {};
           this.renderer.updateHistoryControlsUI(true, false, false);
-
-          // Reset filters & view
           this.state.resetFilters();
-          this.renderer.updateSortButtonsUI(this.state.sortStates);
-          this.renderer.updateSectorPillsUI(this.state.selectedSectors);
-          this.renderer.updateSizePillsUI(this.state.selectedSizes);
-          this.renderer.clearAllCardAnimations(this.state.originalCards);
 
-          this.updateViewGrid();
-          this.renderer.showTopToast("ROOM RESET", "รีเซ็ตห้องและเตะผู้เล่นทุกคนออกจากห้องเรียบร้อยแล้ว", "warning");
+          if (this.marketController) {
+            this.marketController.unsubscribeAll();
+          }
+          if (this.playerSessionService && code) {
+            this.playerSessionService.clearRoomSession(code);
+          }
+
+          this.state.reset();
+          this.renderer.hideGMTransferModal();
+          this.renderer.showLobby();
+          this.renderer.showErrorAlert("รีเซ็ตห้องสำเร็จ", "ทำการรีเซ็ตข้อมูลห้องและนำผู้เล่นทุกคนรวมทั้ง GM กลับสู่ล็อบบี้เรียบร้อยแล้ว");
         } catch (error) {
           console.error("Failed to reset room data in database:", error);
+          this.renderer.showErrorAlert("เกิดข้อผิดพลาด", "ไม่สามารถรีเซ็ตห้องได้ โปรดลองอีกครั้ง");
         }
       });
     }
