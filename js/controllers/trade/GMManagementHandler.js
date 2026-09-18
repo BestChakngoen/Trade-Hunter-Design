@@ -140,16 +140,33 @@ export class GMManagementHandler {
 
       await this.captureUndoSnapshot();
 
-      const currentCash = player.portfolio?.cash ?? 20000;
-      const newCash = currentCash + 10000;
+      // Fetch fresh snapshot to avoid race condition with live player trading
+      const freshSnap = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
+      const freshData = freshSnap ? freshSnap.val() : null;
+      const freshPlayer = freshData?.members?.[playerUid];
+      if (!freshPlayer) {
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องเกม");
+        return;
+      }
 
-      await this.firebaseService.updateRoom(this.state.roomCode, {
+      const currentCash = freshPlayer.portfolio?.cash ?? 20000;
+      const newCash = currentCash + 10000;
+      const sessionToken = freshPlayer.sessionToken || null;
+
+      const updates = {
         [`members/${playerUid}/portfolio/cash`]: newCash,
         [`lastSalaryReceived/${playerUid}`]: {
           amount: 10000,
           timestamp: Date.now()
         }
-      });
+      };
+
+      // Also update persistent snapshot in savedMembers so cash is NOT lost on page reload!
+      if (sessionToken && freshData.savedMembers && freshData.savedMembers[sessionToken]) {
+        updates[`savedMembers/${sessionToken}/portfolio/cash`] = newCash;
+      }
+
+      await this.firebaseService.updateRoom(this.state.roomCode, updates);
 
       this.renderer.showTopToast(
         "SALARY PAID", 
@@ -203,16 +220,33 @@ export class GMManagementHandler {
 
       await this.captureUndoSnapshot();
 
-      const currentCash = player.portfolio?.cash ?? 20000;
-      const newCash = currentCash + dividendData.totalDividend;
+      // Fetch fresh snapshot to avoid race condition with live player trading
+      const freshSnap = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
+      const freshData = freshSnap ? freshSnap.val() : null;
+      const freshPlayer = freshData?.members?.[playerUid];
+      if (!freshPlayer) {
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องเกม");
+        return;
+      }
 
-      await this.firebaseService.updateRoom(this.state.roomCode, {
+      const currentCash = freshPlayer.portfolio?.cash ?? 20000;
+      const newCash = currentCash + dividendData.totalDividend;
+      const sessionToken = freshPlayer.sessionToken || null;
+
+      const updates = {
         [`members/${playerUid}/portfolio/cash`]: newCash,
         [`lastDividendReceived/${playerUid}`]: {
           amount: dividendData.totalDividend,
           timestamp: Date.now()
         }
-      });
+      };
+
+      // Also update persistent snapshot in savedMembers so dividend is NOT lost on page reload!
+      if (sessionToken && freshData.savedMembers && freshData.savedMembers[sessionToken]) {
+        updates[`savedMembers/${sessionToken}/portfolio/cash`] = newCash;
+      }
+
+      await this.firebaseService.updateRoom(this.state.roomCode, updates);
 
       this.renderer.showTopToast(
         "DIVIDEND PAID", 
@@ -261,6 +295,10 @@ export class GMManagementHandler {
             amount: dividendData.totalDividend,
             timestamp: now
           };
+          // Also update savedMembers persistent snapshot
+          if (member.sessionToken && roomData.savedMembers && roomData.savedMembers[member.sessionToken]) {
+            updates[`savedMembers/${member.sessionToken}/portfolio/cash`] = newCash;
+          }
           totalTransferredCount++;
           totalAmountPaid += dividendData.totalDividend;
         }
@@ -333,16 +371,33 @@ export class GMManagementHandler {
 
       await this.captureUndoSnapshot();
 
-      const currentCash = player.portfolio?.cash ?? 20000;
-      const newCash = currentCash + debtInterestData.totalInterest;
+      // Fetch fresh snapshot to avoid race condition with live player trading
+      const freshSnap = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
+      const freshData = freshSnap ? freshSnap.val() : null;
+      const freshPlayer = freshData?.members?.[playerUid];
+      if (!freshPlayer) {
+        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องเกม");
+        return;
+      }
 
-      await this.firebaseService.updateRoom(this.state.roomCode, {
+      const currentCash = freshPlayer.portfolio?.cash ?? 20000;
+      const newCash = currentCash + debtInterestData.totalInterest;
+      const sessionToken = freshPlayer.sessionToken || null;
+
+      const updates = {
         [`members/${playerUid}/portfolio/cash`]: newCash,
         [`lastDebtInterestReceived/${playerUid}`]: {
           amount: debtInterestData.totalInterest,
           timestamp: Date.now()
         }
-      });
+      };
+
+      // Also update persistent snapshot in savedMembers so debt interest is NOT lost on page reload!
+      if (sessionToken && freshData.savedMembers && freshData.savedMembers[sessionToken]) {
+        updates[`savedMembers/${sessionToken}/portfolio/cash`] = newCash;
+      }
+
+      await this.firebaseService.updateRoom(this.state.roomCode, updates);
 
       this.renderer.showTopToast(
         "DEBT INTEREST PAID", 

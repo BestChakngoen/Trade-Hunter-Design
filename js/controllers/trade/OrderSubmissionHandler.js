@@ -92,9 +92,7 @@ export class OrderSubmissionHandler {
         createdAt: Date.now()
       };
 
-      await this.firebaseService.updateRoom(this.state.roomCode, {
-        [orderPath]: newOrder
-      });
+      await this.firebaseService.addPendingOrder(this.state.roomCode, orderId, newOrder);
 
       if (!this.state.pendingOrders) this.state.pendingOrders = {};
       this.state.pendingOrders[orderId] = newOrder;
@@ -178,9 +176,7 @@ export class OrderSubmissionHandler {
     };
 
     try {
-      await this.firebaseService.updateRoom(this.state.roomCode, {
-        [`pendingOrders/${orderId}`]: orderData
-      });
+      await this.firebaseService.addPendingOrder(this.state.roomCode, orderId, orderData);
 
       if (!this.state.pendingOrders) this.state.pendingOrders = {};
       this.state.pendingOrders[orderId] = orderData;

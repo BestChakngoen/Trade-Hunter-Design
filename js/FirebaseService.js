@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, signInAnonymously, setPersistence, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getDatabase, ref, get, set, update, onValue, onDisconnect, runTransaction } from 'firebase/database';
@@ -24,10 +24,20 @@ export class FirebaseService {
   }
 
   async init() {
-    this.app = initializeApp(this.config);
+    if (getApps().length > 0) {
+      this.app = getApp();
+    } else {
+      this.app = initializeApp(this.config);
+    }
     this.auth = getAuth(this.app);
     this.firestore = getFirestore(this.app);
     this.realtimeDb = getDatabase(this.app);
+
+    // If already signed in, reuse current user
+    if (this.auth.currentUser) {
+      this.currentUser = this.auth.currentUser;
+      return;
+    }
 
     // Set persistence to inMemoryPersistence so each tab gets a unique independent UID
     try {
@@ -217,6 +227,13 @@ export class FirebaseService {
   async setPendingOrders(roomCode, pendingOrders) {
     const ordersRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/pendingOrders`);
     await set(ordersRef, pendingOrders || {});
+  }
+
+  // Realtime Database: Add a new pending order directly to pendingOrders node without modifying parent room
+  async addPendingOrder(roomCode, orderId, orderData) {
+    if (!roomCode || !orderId || !orderData) return;
+    const orderRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/pendingOrders/${orderId}`);
+    await set(orderRef, orderData);
   }
 
   // Realtime Database: Set trigger to clean up player/GM node upon closing tab / disconnecting
