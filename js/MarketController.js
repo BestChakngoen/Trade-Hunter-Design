@@ -730,30 +730,19 @@ export class MarketController {
   }
 
   /**
-   * Handles automatic eviction when a newer tab/session is activated on the same machine/IP.
+   * Handles automatic eviction when a newer tab/session is activated for the same user account.
    */
   async handleKickedSession(reason, newUserId = null) {
     if (this.isBeingKicked) return;
     this.isBeingKicked = true;
 
     try {
-      const roomCode = this.state.roomCode;
-      const currentUser = this.firebaseService.getCurrentUser();
-      const currentUid = currentUser ? currentUser.uid : null;
-      const isGM = (this.state.role === 'game_master');
-
       this.unsubscribeAll();
-
-      // Update room member count in Firebase: remove kicked tab's member if not identical to new session
-      if (roomCode && currentUid && (!newUserId || currentUid !== newUserId)) {
-        await this.removeMemberAndTransferIfNeeded(roomCode, currentUid, isGM);
-      }
-
       this.state.reset();
       this.renderer.showLobby();
       await this.renderer.showErrorAlert(
         "SESSION DISCONNECTED",
-        reason || "มีการเข้าเล่นจากแท็บใหม่ในเครื่องนี้ เซสชันของแท็บนี้ถูกปิดลงโดยอัตโนมัติ"
+        reason || "เซสชันของคุณถูกตัดการเชื่อมต่อเนื่องจากมีการเข้าเล่นจากแท็บใหม่ด้วยบัญชีนี้"
       );
     } catch (e) {
       console.error("[MarketController] Error handling kicked session:", e);

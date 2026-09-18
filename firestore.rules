@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Master settings and allowed rooms for Trade Hunter game
+    match /games/traderHunter {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin via Console or backend can modify master settings
+
+      match /rooms/{roomCode} {
+        allow read: if request.auth != null;
+        allow write: if false; // Room codes managed by admin/backend
+      }
+    }
+  }
+}

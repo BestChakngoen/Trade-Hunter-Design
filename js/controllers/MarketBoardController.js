@@ -393,7 +393,7 @@ export class MarketBoardController {
               await this.firebaseService.setStocksBoard(this.state.roomCode, previousState.stocks);
             }
             if (previousState.members) {
-              await this.firebaseService.setRoomMembers(this.state.roomCode, previousState.members);
+              await this.firebaseService.restoreRoomMembersSnapshot(this.state.roomCode, previousState.members);
             }
             if (previousState.pendingOrders !== undefined) {
               await this.firebaseService.setPendingOrders(this.state.roomCode, previousState.pendingOrders);
@@ -434,7 +434,7 @@ export class MarketBoardController {
               await this.firebaseService.setStocksBoard(this.state.roomCode, nextState.stocks);
             }
             if (nextState.members) {
-              await this.firebaseService.setRoomMembers(this.state.roomCode, nextState.members);
+              await this.firebaseService.restoreRoomMembersSnapshot(this.state.roomCode, nextState.members);
             }
             if (nextState.pendingOrders !== undefined) {
               await this.firebaseService.setPendingOrders(this.state.roomCode, nextState.pendingOrders);

@@ -4,12 +4,15 @@
  */
 export class SessionLockService {
   constructor() {
-    this.sessionId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    this.sessionId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+      ? 'tab_' + crypto.randomUUID()
+      : 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     this.broadcastChannel = null;
     this.onKickCallback = null;
     this.clientIp = null;
-    this.ipListenerUnsubscribe = null;
+    this.userListenerUnsubscribe = null;
     this.currentRoomCode = null;
+    this.currentUserId = null;
     this.isKicked = false;
   }
 
@@ -27,8 +30,17 @@ export class SessionLockService {
         this.broadcastChannel.onmessage = (event) => {
           if (event && event.data && event.data.type === 'NEW_SESSION_ACTIVE') {
             const { sessionId, roomCode, newUserId } = event.data;
-            if (sessionId && sessionId !== this.sessionId && this.currentRoomCode && this.currentRoomCode === roomCode) {
-              this.triggerKick("มีการเข้าเล่นจากแท็บใหม่ในเครื่องนี้ เซสชันของแท็บนี้ถูกปิดลงโดยอัตโนมัติ", newUserId);
+            // Only kick if it is the SAME room AND the SAME user account
+            if (
+              sessionId &&
+              sessionId !== this.sessionId &&
+              this.currentRoomCode &&
+              this.currentRoomCode === roomCode &&
+              this.currentUserId &&
+              newUserId &&
+              this.currentUserId === newUserId
+            ) {
+              this.triggerKick("พบบัญชีนี้เปิดใช้งานในแท็บใหม่ เซสชันในแท็บนี้จึงถูกปิดลงโดยอัตโนมัติ", newUserId);
             }
           }
         };
@@ -40,11 +52,21 @@ export class SessionLockService {
     // 2. Setup localStorage storage event listener (cross-window/tab fallback)
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (event) => {
-        if (event && event.key === 'trade_hunter_active_session' && event.newValue) {
+        if (event && event.key && event.key.startsWith('trade_hunter_active_session_') && event.newValue) {
           try {
             const data = JSON.parse(event.newValue);
-            if (data && data.sessionId && data.sessionId !== this.sessionId && this.currentRoomCode && this.currentRoomCode === data.roomCode) {
-              this.triggerKick("มีการเข้าเล่นจากแท็บใหม่ในเครื่องนี้ เซสชันของแท็บนี้ถูกปิดลงโดยอัตโนมัติ", data.newUserId);
+            // Only kick if it is the SAME room AND the SAME user account
+            if (
+              data &&
+              data.sessionId &&
+              data.sessionId !== this.sessionId &&
+              this.currentRoomCode &&
+              this.currentRoomCode === data.roomCode &&
+              this.currentUserId &&
+              data.newUserId &&
+              this.currentUserId === data.newUserId
+            ) {
+              this.triggerKick("พบบัญชีนี้เปิดใช้งานในแท็บใหม่ เซสชันในแท็บนี้จึงถูกปิดลงโดยอัตโนมัติ", data.newUserId);
             }
           } catch (e) {
             // ignore parse error
@@ -55,7 +77,7 @@ export class SessionLockService {
   }
 
   /**
-   * Fetches public IP with a fast timeout (2.5s) to support cross-browser IP locking.
+   * Fetches public IP if needed.
    */
   async fetchPublicIp() {
     if (this.clientIp) return this.clientIp;
@@ -74,14 +96,16 @@ export class SessionLockService {
   }
 
   /**
-   * Registers this tab as the sole active session for the specified room.
-   * Kicks any other tab on the same machine and registers on Firebase Realtime DB by IP.
+   * Registers this tab as the sole active session for the specified user and room.
+   * Kicks older tabs on the same machine (BroadcastChannel/localStorage) and older sessions for this user on Firebase.
+   * Supports multiple players on the same Wi-Fi network (NAT) without collisions.
    */
   async registerSession(roomCode, firebaseService, userId) {
     this.currentRoomCode = roomCode;
+    this.currentUserId = userId;
     this.isKicked = false;
 
-    // 1. Broadcast to same-machine tabs to kick older sessions immediately
+    // 1. Broadcast to same-machine tabs to kick older sessions of the SAME user immediately
     const sessionPayload = {
       type: 'NEW_SESSION_ACTIVE',
       sessionId: this.sessionId,
@@ -99,33 +123,34 @@ export class SessionLockService {
     }
 
     try {
-      localStorage.setItem('trade_hunter_active_session', JSON.stringify(sessionPayload));
+      localStorage.setItem(`trade_hunter_active_session_${userId}`, JSON.stringify(sessionPayload));
     } catch (e) {
       console.warn("[SessionLockService] Failed to set localStorage session:", e);
     }
 
-    // 2. Cross-browser / IP-level locking via Firebase Realtime Database
-    if (firebaseService && roomCode) {
+    // 2. User-level session locking via Firebase Realtime Database
+    if (firebaseService && roomCode && userId) {
       try {
-        const ip = await this.fetchPublicIp();
-        if (ip) {
-          const sanitizedIp = ip.replace(/[.#$[\]]/g, '_');
-          
-          // Cleanup prior listener if any
-          this.cleanupIpListener();
+        this.cleanupUserListener();
 
-          // Register this session on Firebase under room ipSessions
-          await firebaseService.registerIpSession(roomCode, sanitizedIp, this.sessionId, userId);
+        if (typeof firebaseService.registerUserSession === 'function') {
+          await firebaseService.registerUserSession(roomCode, userId, this.sessionId);
 
-          // Listen to changes in this IP node; if a newer session overrides it, kick this tab
-          this.ipListenerUnsubscribe = firebaseService.listenToIpSession(roomCode, sanitizedIp, (data) => {
-            if (data && data.sessionId && data.sessionId !== this.sessionId && !this.isKicked) {
-              this.triggerKick("พบการเข้าเล่นจากแท็บหรือเบราว์เซอร์ใหม่บนเครื่อง/IP เดียวกัน เซสชันในแท็บนี้ถูกปิดลงโดยอัตโนมัติ", data.userId);
+          this.userListenerUnsubscribe = firebaseService.listenToUserSession(roomCode, userId, (data) => {
+            if (
+              data && 
+              data.sessionId && 
+              data.sessionId !== this.sessionId && 
+              this.currentUserId && 
+              data.userId === this.currentUserId && 
+              !this.isKicked
+            ) {
+              this.triggerKick("พบการเข้าเล่นจากแท็บหรืออุปกรณ์ใหม่ด้วยบัญชีนี้ เซสชันในแท็บนี้ถูกปิดลงโดยอัตโนมัติ", data.userId);
             }
           });
         }
       } catch (err) {
-        console.warn("[SessionLockService] Firebase IP registration error:", err);
+        console.warn("[SessionLockService] Firebase user session registration error:", err);
       }
     }
   }
@@ -142,19 +167,20 @@ export class SessionLockService {
     }
   }
 
-  cleanupIpListener() {
-    if (typeof this.ipListenerUnsubscribe === 'function') {
+  cleanupUserListener() {
+    if (typeof this.userListenerUnsubscribe === 'function') {
       try {
-        this.ipListenerUnsubscribe();
+        this.userListenerUnsubscribe();
       } catch (e) {
         // ignore
       }
-      this.ipListenerUnsubscribe = null;
+      this.userListenerUnsubscribe = null;
     }
   }
 
   cleanup() {
     this.currentRoomCode = null;
-    this.cleanupIpListener();
+    this.currentUserId = null;
+    this.cleanupUserListener();
   }
 }

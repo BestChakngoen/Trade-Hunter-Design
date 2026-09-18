@@ -369,8 +369,18 @@ export class LobbyController {
       const isExpired = Boolean(expiresAt && expiresAt <= now);
       const isEnded = Boolean(roomData.isEnd);
 
-      // Purge expired or ended rooms completely!
-      if (memberUids.length === 0 || isExpired || isEnded) {
+      // Safe Purge: Never delete a room if it has active members playing!
+      // Only purge if room has 0 active members AND (it has expired, ended, or has no creation timestamp)
+      const hasNoMembers = memberUids.length === 0;
+      if (hasNoMembers && (isExpired || isEnded || !roomData.createdAt)) {
+        await this.firebaseService.deleteRoomData(code);
+        if (this.playerSessionService) {
+          this.playerSessionService.clearRoomSession(code);
+        }
+        roomExists = false;
+        roomData = null;
+      } else if (hasNoMembers) {
+        // Abandoned room with 0 members
         await this.firebaseService.deleteRoomData(code);
         if (this.playerSessionService) {
           this.playerSessionService.clearRoomSession(code);
@@ -378,6 +388,7 @@ export class LobbyController {
         roomExists = false;
         roomData = null;
       } else {
+        // Room has active players - preserve it and prevent client clock skew from killing active games!
         roomExists = true;
       }
     }

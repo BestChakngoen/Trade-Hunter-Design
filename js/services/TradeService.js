@@ -81,6 +81,16 @@ export class TradeService {
    * Generates a unique pending order ID.
    */
   static generateOrderId() {
+    if (typeof crypto !== 'undefined') {
+      if (typeof crypto.randomUUID === 'function') {
+        return 'order_' + Date.now() + '_' + crypto.randomUUID().substring(0, 8);
+      }
+      if (typeof crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(8);
+        crypto.getRandomValues(bytes);
+        return 'order_' + Date.now() + '_' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+      }
+    }
     return 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 

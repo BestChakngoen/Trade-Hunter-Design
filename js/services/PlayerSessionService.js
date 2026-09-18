@@ -11,17 +11,60 @@ export class PlayerSessionService {
   }
 
   /**
+   * Generates a cryptographically secure token (CSPRNG).
+   * @returns {string}
+   */
+  generateSecureToken() {
+    if (typeof crypto !== 'undefined') {
+      if (typeof crypto.randomUUID === 'function') {
+        return 'st_' + crypto.randomUUID().replace(/-/g, '');
+      }
+      if (typeof crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return 'st_' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+      }
+    }
+    return 'st_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+  }
+
+  /**
    * Generates or retrieves a unique persistent session token for the given room.
    * @param {string} roomCode 
    * @returns {string} Unique session token
    */
   getOrCreateSessionToken(roomCode) {
     if (!roomCode) return null;
+    const key = `${this.storagePrefix}${roomCode.toUpperCase()}`;
+
+    // 1. Check tab-scoped sessionStorage first so independent tabs don't collide
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.sessionToken) {
+            return parsed.sessionToken;
+          }
+        }
+      } catch (e) {
+        console.warn("[PlayerSessionService] Failed to read sessionStorage:", e);
+      }
+    }
+
+    // 2. Check localStorage fallback
     const existingSession = this.getRoomSession(roomCode);
     if (existingSession && existingSession.sessionToken) {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          sessionStorage.setItem(key, JSON.stringify(existingSession));
+        } catch (e) {}
+      }
       return existingSession.sessionToken;
     }
-    const newToken = 'st_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+
+    // 3. Generate a new secure token
+    const newToken = this.generateSecureToken();
     this.saveRoomSession(roomCode, { sessionToken: newToken });
     return newToken;
   }
@@ -32,14 +75,24 @@ export class PlayerSessionService {
    * @returns {Object|null}
    */
   getRoomSession(roomCode) {
-    if (typeof window === 'undefined' || !window.localStorage || !roomCode) return null;
-    try {
-      const raw = localStorage.getItem(`${this.storagePrefix}${roomCode.toUpperCase()}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      console.warn("[PlayerSessionService] Failed to read localStorage:", e);
-      return null;
+    if (typeof window === 'undefined' || !roomCode) return null;
+    const key = `${this.storagePrefix}${roomCode.toUpperCase()}`;
+    if (window.sessionStorage) {
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
     }
+    if (window.localStorage) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        console.warn("[PlayerSessionService] Failed to read localStorage:", e);
+        return null;
+      }
+    }
+    return null;
   }
 
   /**
@@ -48,19 +101,27 @@ export class PlayerSessionService {
    * @param {Object} data 
    */
   saveRoomSession(roomCode, data) {
-    if (typeof window === 'undefined' || !window.localStorage || !roomCode) return;
+    if (typeof window === 'undefined' || !roomCode) return;
+    const rCode = roomCode.toUpperCase();
+    const key = `${this.storagePrefix}${rCode}`;
     try {
       const current = this.getRoomSession(roomCode) || {};
       const merged = {
         ...current,
         ...data,
-        roomCode: roomCode.toUpperCase(),
+        roomCode: rCode,
         updatedAt: Date.now()
       };
-      localStorage.setItem(`${this.storagePrefix}${roomCode.toUpperCase()}`, JSON.stringify(merged));
-      localStorage.setItem('th_last_active_room', roomCode.toUpperCase());
+      const serialized = JSON.stringify(merged);
+      if (window.sessionStorage) {
+        sessionStorage.setItem(key, serialized);
+      }
+      if (window.localStorage) {
+        localStorage.setItem(key, serialized);
+        localStorage.setItem('th_last_active_room', rCode);
+      }
     } catch (e) {
-      console.warn("[PlayerSessionService] Failed to save localStorage session:", e);
+      console.warn("[PlayerSessionService] Failed to save session:", e);
     }
   }
 
@@ -69,14 +130,21 @@ export class PlayerSessionService {
    * @param {string} roomCode 
    */
   clearRoomSession(roomCode) {
-    if (typeof window === 'undefined' || !window.localStorage || !roomCode) return;
+    if (typeof window === 'undefined' || !roomCode) return;
+    const rCode = roomCode.toUpperCase();
+    const key = `${this.storagePrefix}${rCode}`;
     try {
-      localStorage.removeItem(`${this.storagePrefix}${roomCode.toUpperCase()}`);
-      if (localStorage.getItem('th_last_active_room') === roomCode.toUpperCase()) {
-        localStorage.removeItem('th_last_active_room');
+      if (window.sessionStorage) {
+        sessionStorage.removeItem(key);
+      }
+      if (window.localStorage) {
+        localStorage.removeItem(key);
+        if (localStorage.getItem('th_last_active_room') === rCode) {
+          localStorage.removeItem('th_last_active_room');
+        }
       }
     } catch (e) {
-      console.warn("[PlayerSessionService] Failed to clear localStorage session:", e);
+      console.warn("[PlayerSessionService] Failed to clear session:", e);
     }
   }
 

@@ -33,92 +33,37 @@ export class GMManagementHandler {
     if (!order) return;
 
     try {
-      const roomSnapshot = await this.firebaseService.getRoomStateSnapshot(this.state.roomCode);
-      if (!roomSnapshot || !roomSnapshot.exists()) return;
-
-      const roomData = roomSnapshot.val();
-      const memberData = roomData.members ? roomData.members[order.uid] : null;
-      if (!memberData) {
-        this.renderer.showErrorAlert("Error", "ไม่พบข้อมูลผู้เล่นในห้องนี้");
-        return;
-      }
-
-      let cash = memberData.portfolio?.cash ?? 20000;
-      let currentStocks = memberData.portfolio?.stocks ?? {};
-      let currentDebt = memberData.portfolio?.debt ?? { fixAccount: 0, bond10Y: 0, bond20Y: 0 };
-      const tradePrice = order.price || order.unitPrice || 0;
-      const totalCost = (order.volume || 1) * tradePrice;
-      let newPortfolio;
-
-      if (order.category === 'DEBT') {
-        const key = order.instrumentKey;
-        const configPrice = DEBT_INSTRUMENTS[key]?.unitPrice || tradePrice;
-        if (order.type === 'INVEST') {
-          if (cash < configPrice) {
-            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} มีเงินสดไม่เพียงพอสำหรับ ${order.symbol}`);
-            return;
-          }
-          newPortfolio = {
-            cash: cash - configPrice,
-            stocks: currentStocks,
-            debt: {
-              ...currentDebt,
-              [key]: (currentDebt[key] || 0) + 1
-            }
-          };
-        } else { // REDEEM
-          const currentVol = currentDebt[key] || 0;
-          if (currentVol < 1) {
-            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} ไม่มีหน่วยลงทุนของ ${order.symbol} สำหรับขายคืน`);
-            return;
-          }
-          newPortfolio = {
-            cash: cash + configPrice,
-            stocks: currentStocks,
-            debt: {
-              ...currentDebt,
-              [key]: Math.max(0, currentVol - 1)
-            }
-          };
-        }
-      } else if (order.type === 'BUY') {
-        if (cash < totalCost) {
-          this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} มีเงินสดไม่เพียงพอสำหรับคำสั่ง BUY (ต้องการ: ${totalCost.toLocaleString()} บาท, มีอยู่: ${cash.toLocaleString()} บาท)`);
-          return;
-        }
-        const calcPort = TradeService.calculateBuyPortfolio(cash, currentStocks, order.symbol, order.volume, tradePrice);
-        newPortfolio = {
-          ...calcPort,
-          debt: currentDebt
-        };
-      } else {
-        const holding = currentStocks[order.symbol];
-        if (!holding || holding.volume < order.volume) {
-          const userVol = holding ? holding.volume : 0;
-          this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username} มีหุ้น ${order.symbol} ไม่เพียงพอสำหรับคำสั่ง SELL (ต้องการ: ${order.volume.toLocaleString()} หุ้น, มีอยู่: ${userVol.toLocaleString()} หุ้น)`);
-          return;
-        }
-        const calcPort = TradeService.calculateSellPortfolio(cash, currentStocks, order.symbol, order.volume, tradePrice);
-        newPortfolio = {
-          ...calcPort,
-          debt: currentDebt
-        };
-      }
-
       await this.captureUndoSnapshot();
 
-      await this.firebaseService.updateRoom(this.state.roomCode, {
-        [`members/${order.uid}/portfolio`]: newPortfolio,
-        [`pendingOrders/${orderId}`]: null,
-        [`lastProcessedOrder/${order.uid}`]: {
-          id: orderId,
-          type: order.type,
-          symbol: order.symbol,
-          volume: order.volume,
-          status: 'APPROVED',
-          timestamp: Date.now()
+      const result = await this.firebaseService.approveOrderWithTransaction(
+        this.state.roomCode,
+        orderId,
+        DEBT_INSTRUMENTS
+      );
+
+      if (!result.success) {
+        if (result.failureReason) {
+          if (result.failureReason.startsWith('INSUFFICIENT_FUNDS:')) {
+            const name = result.failureReason.split(':')[1];
+            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${name} มีเงินสดไม่เพียงพอสำหรับ ${order.symbol}`);
+          } else if (result.failureReason.startsWith('INSUFFICIENT_DEBT:')) {
+            const name = result.failureReason.split(':')[1];
+            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${name} ไม่มีหน่วยลงทุนของ ${order.symbol} สำหรับขายคืน`);
+          } else if (result.failureReason.startsWith('INSUFFICIENT_CASH:')) {
+            const [, cost, cash] = result.failureReason.split(':');
+            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username || 'ผู้เล่น'} มีเงินสดไม่เพียงพอสำหรับคำสั่ง BUY (ต้องการ: ${Number(cost).toLocaleString()} บาท, มีอยู่: ${Number(cash).toLocaleString()} บาท)`);
+          } else if (result.failureReason.startsWith('INSUFFICIENT_SHARES:')) {
+            this.renderer.showErrorAlert("Approval Failed", `ผู้เล่น ${order.username || 'ผู้เล่น'} มีหุ้น ${order.symbol} ไม่เพียงพอสำหรับคำสั่ง SELL`);
+          } else if (result.failureReason === 'ORDER_NOT_FOUND') {
+            this.renderer.showErrorAlert("Notice", "คำสั่งนี้ได้รับการประมวลผลหรือถูกยกเลิกไปแล้ว");
+          } else {
+            this.renderer.showErrorAlert("Approval Failed", "ไม่สามารถอนุมัติคำสั่งซื้อขายได้");
+          }
+        } else {
+          this.renderer.showErrorAlert("Notice", "คำสั่งนี้ได้รับการประมวลผลหรือถูกยกเลิกไปแล้ว");
         }
-      });
+        return;
+      }
 
       const updatedStocks = order.type === 'BUY'
         ? this.state.getUpdatedStocksForUp(order.symbol)
@@ -148,23 +93,15 @@ export class GMManagementHandler {
     const order = this.state.pendingOrders ? this.state.pendingOrders[orderId] : null;
     try {
       await this.captureUndoSnapshot();
-      
-      const updateData = {
-        [`pendingOrders/${orderId}`]: null
-      };
 
-      if (order && order.uid) {
-        updateData[`lastProcessedOrder/${order.uid}`] = {
-          id: orderId,
-          type: order.type,
-          symbol: order.symbol,
-          volume: order.volume,
-          status: 'REJECTED',
-          timestamp: Date.now()
-        };
+      const result = await this.firebaseService.rejectOrderWithTransaction(
+        this.state.roomCode,
+        orderId
+      );
+
+      if (!result.success) {
+        console.warn("Reject order transaction did not commit or order was already handled");
       }
-
-      await this.firebaseService.updateRoom(this.state.roomCode, updateData);
 
       this.renderer.showTopToast(
         "ORDER REJECTED",
