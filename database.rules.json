@@ -10,7 +10,7 @@
       "gameRooms": {
         "$roomCode": {
           ".read": "auth != null",
-          ".write": "auth != null && (!data.exists() || !newData.exists() || root.child('traderHunter/gameRooms/' + $roomCode + '/members/' + auth.uid + '/role').val() === 'game_master' || newData.child('members/' + auth.uid).exists() || newData.child('gmTransferRequest/claimedBy').val() === auth.uid || (data.child('members/' + auth.uid).exists() && (newData.child('pendingOrders').exists() || newData.child('lastActiveAt').exists())))",
+          ".write": "auth != null && (!data.exists() || !newData.exists() || root.child('traderHunter/gameRooms/' + $roomCode + '/members/' + auth.uid + '/role').val() === 'game_master' || newData.child('members/' + auth.uid).exists() || newData.child('gmTransferRequest/claimedBy').val() === auth.uid)",
           
           "members": {
             "$uid": {

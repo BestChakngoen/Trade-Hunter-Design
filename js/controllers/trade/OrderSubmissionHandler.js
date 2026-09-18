@@ -92,7 +92,14 @@ export class OrderSubmissionHandler {
         createdAt: Date.now()
       };
 
-      await this.firebaseService.addPendingOrder(this.state.roomCode, orderId, newOrder);
+      try {
+        await this.firebaseService.updateRoom(this.state.roomCode, {
+          [orderPath]: newOrder
+        });
+      } catch (updateErr) {
+        console.warn("[OrderSubmissionHandler] updateRoom failed, falling back to addPendingOrder:", updateErr);
+        await this.firebaseService.addPendingOrder(this.state.roomCode, orderId, newOrder);
+      }
 
       if (!this.state.pendingOrders) this.state.pendingOrders = {};
       this.state.pendingOrders[orderId] = newOrder;
@@ -176,7 +183,14 @@ export class OrderSubmissionHandler {
     };
 
     try {
-      await this.firebaseService.addPendingOrder(this.state.roomCode, orderId, orderData);
+      try {
+        await this.firebaseService.updateRoom(this.state.roomCode, {
+          [`pendingOrders/${orderId}`]: orderData
+        });
+      } catch (updateErr) {
+        console.warn("[OrderSubmissionHandler] updateRoom failed, falling back to addPendingOrder:", updateErr);
+        await this.firebaseService.addPendingOrder(this.state.roomCode, orderId, orderData);
+      }
 
       if (!this.state.pendingOrders) this.state.pendingOrders = {};
       this.state.pendingOrders[orderId] = orderData;

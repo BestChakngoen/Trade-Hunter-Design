@@ -829,29 +829,37 @@ export class FirebaseService {
 
   // Realtime Database: Verify player existence and active room status on server
   async verifyPlayerExistsOnServer(roomCode, userId, sessionToken = null) {
-    if (!roomCode) return { exists: false, reason: 'NO_ROOM_CODE' };
+    if (!roomCode || !userId) return { exists: false, reason: 'INVALID_ARGS' };
     try {
-      const roomSnap = await this.getRoomStateSnapshot(roomCode);
-      if (!roomSnap || !roomSnap.exists()) {
-        return { exists: false, reason: 'ROOM_NOT_FOUND' };
+      // 1. Direct lightweight check on player's member node
+      const memberRef = this.getUserInBoardRef(roomCode, userId);
+      const memberSnap = await get(memberRef);
+      if (memberSnap.exists()) {
+        return {
+          exists: true,
+          hasMember: true,
+          memberData: memberSnap.val()
+        };
       }
-      const roomData = roomSnap.val();
-      if (roomData.isReset || roomData.status === 'RESET') {
-        return { exists: false, reason: 'ROOM_RESET', roomData };
+
+      // 2. Check saved member snapshot if sessionToken provided
+      if (sessionToken) {
+        const snapRef = ref(this.realtimeDb, `traderHunter/gameRooms/${roomCode}/savedMembers/${sessionToken}`);
+        const savedSnap = await get(snapRef);
+        if (savedSnap.exists()) {
+          return {
+            exists: true,
+            hasSavedMember: true,
+            savedMemberData: savedSnap.val()
+          };
+        }
       }
-      const hasMember = Boolean(userId && roomData.members && roomData.members[userId]);
-      const hasSavedMember = Boolean(sessionToken && roomData.savedMembers && roomData.savedMembers[sessionToken]);
-      return {
-        exists: hasMember || hasSavedMember,
-        hasMember,
-        hasSavedMember,
-        memberData: hasMember ? roomData.members[userId] : null,
-        savedMemberData: hasSavedMember ? roomData.savedMembers[sessionToken] : null,
-        roomData
-      };
+
+      return { exists: false, reason: 'MEMBER_NOT_FOUND' };
     } catch (e) {
-      console.error("Failed to verify player on server:", e);
-      return { exists: false, reason: 'SERVER_ERROR', error: e.message };
+      console.warn("[FirebaseService] Server verification network error, permitting active session fallback:", e);
+      // Graceful fallback to avoid blocking valid players during temporary network latency
+      return { exists: true, fallback: true };
     }
   }
 

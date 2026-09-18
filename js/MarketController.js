@@ -494,11 +494,6 @@ export class MarketController {
             this.renderer.updateControlsVisibility(this.state.role, this.state.playerName, this.state.gameMode);
           }
 
-          // Keep savedMembers snapshot continuously synchronized with latest portfolio
-          if (memberData.role === 'player' && memberData.portfolio && memberData.sessionToken && this.playerSessionService) {
-            this.playerSessionService.syncPlayerToFirebase(code, this.firebaseService, memberData.sessionToken, memberData);
-          }
-
           const stats = this.state.getPortfolioStats();
           this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, orders, currentUid);
           const debtData = TradeService.calculateDebtInstrumentsValue(this.state.portfolio?.debt);
