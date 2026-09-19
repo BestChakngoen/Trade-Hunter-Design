@@ -1,8 +1,9 @@
 /**
- * CardGridRenderer - Manages Stock Card Grid Rendering, Value Flashing Animations, Beta Colors, Filter UIs, and Dialog Modals.
+ * CardGridRenderer - Manages Stock Card Grid Rendering, Value Flashing Animations, Beta Colors, and Filter/Sort Button UIs.
+ * Adheres to Single Responsibility Principle (SRP).
  */
 export class CardGridRenderer {
-  constructor(priceGrid, sectorPills, sortPriceBtn, sortBetaBtn, sortSizeBtn, sortSectorBtn, confirmModal) {
+  constructor(priceGrid, sectorPills, sortPriceBtn, sortBetaBtn = null, sortSizeBtn = null, sortSectorBtn = null, confirmModal = null) {
     this.priceGrid = priceGrid;
     this.sectorPills = sectorPills;
     this.sortPriceBtn = sortPriceBtn;
@@ -24,7 +25,11 @@ export class CardGridRenderer {
     let isUp = false;
     let isDown = false;
 
-    if (direction === 'up') {
+    if (direction === 'neutral') {
+      // Explicit neutral/white on reset or baseline
+      isUp = false;
+      isDown = false;
+    } else if (direction === 'up') {
       isUp = true;
     } else if (direction === 'down') {
       isDown = true;
@@ -73,7 +78,7 @@ export class CardGridRenderer {
     }
   }
 
-  updateCardValue(card, price, direction, prevPrice) {
+  updateCardValue(card, price, direction, prevPrice, shouldAnimate = true) {
     const valueEl = card.querySelector('.card-value');
     const priceBox = card.querySelector('.price-box');
     if (!valueEl) return;
@@ -81,17 +86,19 @@ export class CardGridRenderer {
     valueEl.textContent = price.toLocaleString('en-US');
     this.setPriceBoxStyle(priceBox, valueEl, price, prevPrice, direction);
 
-    valueEl.classList.remove('flash-up', 'flash-down');
-    void valueEl.offsetWidth; // Reflow to restart keyframe animation
-    if (direction === 'up') {
-      valueEl.classList.add('flash-up');
-    } else if (direction === 'down') {
-      valueEl.classList.add('flash-down');
-    }
-
-    setTimeout(() => {
+    if (shouldAnimate && direction) {
       valueEl.classList.remove('flash-up', 'flash-down');
-    }, 300);
+      void valueEl.offsetWidth; // Reflow to restart keyframe animation
+      if (direction === 'up') {
+        valueEl.classList.add('flash-up');
+      } else if (direction === 'down') {
+        valueEl.classList.add('flash-down');
+      }
+
+      setTimeout(() => {
+        valueEl.classList.remove('flash-up', 'flash-down');
+      }, 300);
+    }
   }
 
   clearAllCardAnimations(cards) {
@@ -130,7 +137,7 @@ export class CardGridRenderer {
           direction = 'down';
         } else {
           // Reset or initial baseline: white
-          direction = null;
+          direction = 'neutral';
         }
       }
 
@@ -234,234 +241,5 @@ export class CardGridRenderer {
         symbolGroup.parentElement.appendChild(viewGraphBtn);
       }
     });
-  }
-
-  openConfirmModal() {
-    if (!this.confirmModal) return;
-    this.confirmModal.style.display = 'flex';
-    this.confirmModal.classList.add('show');
-  }
-
-  closeConfirmModal() {
-    if (!this.confirmModal) return;
-    this.confirmModal.classList.remove('show');
-    this.confirmModal.style.display = 'none';
-  }
-
-  _captureScrollState() {
-    const pageShell = document.querySelector('.page-shell');
-    const isShellVisible = Boolean(
-      pageShell && 
-      pageShell.style.display !== 'none' && 
-      (!window.getComputedStyle || window.getComputedStyle(pageShell).display !== 'none')
-    );
-    const shellScroll = (pageShell && isShellVisible) ? pageShell.scrollTop : 0;
-    const winScroll = isShellVisible ? (window.scrollY || document.documentElement.scrollTop || 0) : 0;
-    return { pageShell, shellScroll, winScroll, isShellVisible };
-  }
-
-  _restoreScrollState(state) {
-    if (!state || !state.isShellVisible) return;
-    if (state.pageShell && typeof state.pageShell.scrollTop === 'number') {
-      state.pageShell.scrollTop = state.shellScroll;
-    }
-    window.scrollTo(0, state.winScroll);
-  }
-
-  showErrorAlert(title, text) {
-    const scrollState = this._captureScrollState();
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    if (window.Swal) {
-      window.Swal.fire({
-        icon: 'error',
-        title: title,
-        text: text,
-        background: '#0b0f19',
-        color: '#f8fafc',
-        iconColor: '#ef4444',
-        confirmButtonText: 'OK',
-        heightAuto: false,
-        scrollbarPadding: false,
-        returnFocus: false,
-        showClass: {
-          popup: 'swal2-noanimation',
-          backdrop: 'swal2-noanimation',
-          icon: 'swal2-noanimation'
-        },
-        hideClass: {
-          popup: '',
-          backdrop: ''
-        },
-        didOpen: () => {
-          this._restoreScrollState(scrollState);
-        },
-        willClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        didClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        customClass: {
-          popup: 'trade-alert-popup',
-          title: 'trade-alert-title',
-          htmlContainer: 'trade-alert-text',
-          confirmButton: 'trade-alert-error-btn'
-        },
-        buttonsStyling: false
-      });
-    } else {
-      alert(`${title}\n${text}`);
-    }
-  }
-
-  showSuccessAlert(title, text) {
-    const scrollState = this._captureScrollState();
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    if (window.Swal) {
-      window.Swal.fire({
-        icon: 'success',
-        title: title,
-        text: text,
-        background: '#0b0f19',
-        color: '#f8fafc',
-        iconColor: '#2563eb',
-        confirmButtonText: 'OK',
-        heightAuto: false,
-        scrollbarPadding: false,
-        returnFocus: false,
-        showClass: {
-          popup: 'swal2-noanimation',
-          backdrop: 'swal2-noanimation',
-          icon: 'swal2-noanimation'
-        },
-        hideClass: {
-          popup: '',
-          backdrop: ''
-        },
-        didOpen: () => {
-          this._restoreScrollState(scrollState);
-        },
-        willClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        didClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        customClass: {
-          popup: 'trade-alert-popup',
-          title: 'trade-alert-title',
-          htmlContainer: 'trade-alert-text',
-          confirmButton: 'trade-alert-ok-btn'
-        },
-        buttonsStyling: false
-      });
-    } else {
-      alert(`${title}\n${text}`);
-    }
-  }
-
-  showConfirmAlert(title, text, confirmText = 'YES', cancelText = 'NO') {
-    const scrollState = this._captureScrollState();
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    if (window.Swal) {
-      return window.Swal.fire({
-        icon: 'question',
-        title: title,
-        text: text,
-        background: '#0b0f19',
-        color: '#f8fafc',
-        iconColor: '#10b981',
-        showCancelButton: true,
-        confirmButtonText: confirmText,
-        cancelButtonText: cancelText,
-        heightAuto: false,
-        scrollbarPadding: false,
-        returnFocus: false,
-        showClass: {
-          popup: 'swal2-noanimation',
-          backdrop: 'swal2-noanimation',
-          icon: 'swal2-noanimation'
-        },
-        hideClass: {
-          popup: '',
-          backdrop: ''
-        },
-        didOpen: () => {
-          this._restoreScrollState(scrollState);
-        },
-        willClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        didClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        customClass: {
-          popup: 'trade-alert-popup',
-          title: 'trade-alert-title',
-          htmlContainer: 'trade-alert-text',
-          confirmButton: 'trade-alert-ok-btn',
-          cancelButton: 'trade-alert-cancel-btn',
-          actions: 'trade-alert-actions'
-        },
-        buttonsStyling: false
-      });
-    } else {
-      const confirmed = confirm(`${title}\n${text}`);
-      return Promise.resolve({ isConfirmed: confirmed });
-    }
-  }
-
-  showAutoDismissModal(title, text, duration = 3500) {
-    const scrollState = this._captureScrollState();
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    if (window.Swal) {
-      return window.Swal.fire({
-        icon: 'warning',
-        title: title,
-        text: text,
-        background: '#0b0f19',
-        color: '#f8fafc',
-        iconColor: '#f59e0b',
-        showConfirmButton: false,
-        timer: duration,
-        timerProgressBar: true,
-        heightAuto: false,
-        scrollbarPadding: false,
-        returnFocus: false,
-        showClass: {
-          popup: 'swal2-noanimation',
-          backdrop: 'swal2-noanimation',
-          icon: 'swal2-noanimation'
-        },
-        hideClass: {
-          popup: '',
-          backdrop: ''
-        },
-        didOpen: () => {
-          this._restoreScrollState(scrollState);
-        },
-        willClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        didClose: () => {
-          this._restoreScrollState(scrollState);
-        },
-        customClass: {
-          popup: 'trade-alert-popup',
-          title: 'trade-alert-title',
-          htmlContainer: 'trade-alert-text'
-        }
-      });
-    } else {
-      alert(`${title}\n${text}`);
-    }
   }
 }

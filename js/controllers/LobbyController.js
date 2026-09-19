@@ -1,7 +1,13 @@
 import { PlayerSessionService } from '../services/PlayerSessionService.js';
+import { LobbyInputHandler } from './lobby/LobbyInputHandler.js';
+import { LobbySessionCoordinator } from './lobby/LobbySessionCoordinator.js';
+import { RoomSetupService } from './lobby/RoomSetupService.js';
+import { LobbyDialogCoordinator } from './lobby/LobbyDialogCoordinator.js';
 
 /**
  * LobbyController - Manages Game Room Joining, Creation, and Player Role Initialization.
+ * Refactored into a high-level facade coordinating input UX, session recovery, room setup, and dialogs.
+ * Adheres to Single Responsibility Principle (SRP).
  */
 export class LobbyController {
   constructor(state, renderer, firebaseService, sessionLockService = null, playerSessionService = null) {
@@ -11,102 +17,22 @@ export class LobbyController {
     this.sessionLockService = sessionLockService;
     this.playerSessionService = playerSessionService || new PlayerSessionService();
     this.isSubmitting = false;
+
+    // Specialized Sub-modules (Extracted in Phases 4 & C)
+    this.inputHandler = new LobbyInputHandler(this.renderer, this.playerSessionService);
+    this.sessionCoordinator = new LobbySessionCoordinator(this.firebaseService, this.sessionLockService, this.playerSessionService);
+    this.roomSetupService = new RoomSetupService(this.state, this.renderer, this.firebaseService, this.sessionLockService, this.playerSessionService);
+    this.dialogCoordinator = new LobbyDialogCoordinator(this.renderer, this.firebaseService, this.state, this.playerSessionService);
   }
 
+  /**
+   * Binds the Lobby Form submission and input events.
+   * @param {Function} onJoinSuccess - Callback invoked when room join/creation succeeds.
+   */
   bindLobbyEntrance(onJoinSuccess) {
+    this.inputHandler.bindInputEvents();
+
     if (!this.renderer.lobbyForm) return;
-
-    if (this.renderer.roomCodeInput) {
-      this.renderer.roomCodeInput.addEventListener('input', (e) => {
-        const start = e.target.selectionStart;
-        const end = e.target.selectionEnd;
-        const originalVal = e.target.value;
-        const cleanedVal = originalVal.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (originalVal !== cleanedVal) {
-          e.target.value = cleanedVal;
-          if (start !== null && end !== null) {
-            const diff = originalVal.length - cleanedVal.length;
-            const newPos = Math.max(0, start - diff);
-            e.target.setSelectionRange(newPos, newPos);
-          }
-        }
-        this.updateRoomCodeSlots(e.target.value);
-      });
-      this.renderer.roomCodeInput.addEventListener('focus', () => {
-        const codeBox = this.renderer.roomCodeInput.closest('.lobby-code-box');
-        if (codeBox) codeBox.classList.add('code-box-focused');
-        this.updateRoomCodeSlots(this.renderer.roomCodeInput.value, true);
-        const lobbyScreen = document.getElementById('lobbyScreen');
-        if (lobbyScreen) lobbyScreen.classList.add('lobby-keyboard-active');
-      });
-      this.renderer.roomCodeInput.addEventListener('blur', () => {
-        const codeBox = this.renderer.roomCodeInput.closest('.lobby-code-box');
-        if (codeBox) codeBox.classList.remove('code-box-focused');
-        const slotsContainer = document.getElementById('roomCodeSlots');
-        if (slotsContainer) {
-          slotsContainer.querySelectorAll('.code-slot').forEach(slot => slot.classList.remove('active-focus'));
-        }
-        this.updateRoomCodeSlots(this.renderer.roomCodeInput.value, false);
-        const lobbyScreen = document.getElementById('lobbyScreen');
-        if (lobbyScreen) lobbyScreen.classList.remove('lobby-keyboard-active');
-      });
-
-      const codeBox = this.renderer.roomCodeInput.closest('.lobby-code-box');
-      if (codeBox) {
-        codeBox.addEventListener('click', () => {
-          if (this.renderer.roomCodeInput && document.activeElement !== this.renderer.roomCodeInput) {
-            this.renderer.roomCodeInput.focus();
-          }
-        });
-      }
-
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-          const lobbyScreen = document.getElementById('lobbyScreen');
-          if (!lobbyScreen) return;
-          const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.78;
-          if (isKeyboardOpen && document.activeElement === this.renderer.roomCodeInput) {
-            lobbyScreen.classList.add('lobby-keyboard-active');
-          } else if (!isKeyboardOpen) {
-            lobbyScreen.classList.remove('lobby-keyboard-active');
-          }
-        });
-      }
-
-      // Automatically pre-fill last active room code if available
-      if (this.playerSessionService) {
-        const lastCode = this.playerSessionService.getLastActiveRoomCode();
-        if (lastCode && !this.renderer.roomCodeInput.value) {
-          this.renderer.roomCodeInput.value = lastCode;
-          this.updateRoomCodeSlots(lastCode);
-        }
-      }
-    }
-
-    const triggerShakeIfEmpty = (e) => {
-      const code = this.renderer.roomCodeInput ? this.renderer.roomCodeInput.value.trim().toUpperCase() : '';
-      if (!code) {
-        if (e) e.preventDefault();
-        if (typeof this.renderer.triggerShakeCodeBox === 'function') {
-          this.renderer.triggerShakeCodeBox();
-        }
-        return true;
-      }
-      return false;
-    };
-
-    if (this.renderer.joinRoomBtn) {
-      this.renderer.joinRoomBtn.addEventListener('click', (e) => {
-        if (triggerShakeIfEmpty(e)) return;
-      });
-    }
-
-    const keySubmitBtn = document.querySelector('.lobby-key-submit-btn');
-    if (keySubmitBtn) {
-      keySubmitBtn.addEventListener('click', (e) => {
-        if (triggerShakeIfEmpty(e)) return;
-      });
-    }
 
     this.renderer.lobbyForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -138,8 +64,8 @@ export class LobbyController {
           onJoinSuccess(code);
         }
       } catch (err) {
-        if (err && err.message === 'USER_CANCELLED_WAITING') {
-          console.log("[Lobby] User cancelled waiting for GM.");
+        if (err && (err.message === 'USER_CANCELLED_WAITING' || err.message === 'USER_RESET_ROOM')) {
+          console.log("[Lobby] User cancelled or reset room from waiting screen.");
           return;
         }
         console.error("Lobby join error:", err);
@@ -151,380 +77,49 @@ export class LobbyController {
           btn.disabled = false;
           btn.style.opacity = '1';
           btn.style.cursor = 'pointer';
-          if (originalBtnHtml) {
-            btn.innerHTML = originalBtnHtml;
-          }
+          btn.innerHTML = originalBtnHtml;
         }
       }
     });
   }
 
-  async promptRoleSelection(code) {
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-
-    const modal = this.renderer.roleSelectionModal;
-    const btnGM = this.renderer.roleOptGMBtn;
-    const btnPlayer = this.renderer.roleOptPlayerBtn;
-    const btnClose = this.renderer.roleOptCloseBtn;
-
-    if (!modal || !btnGM || !btnPlayer || !btnClose) {
-      const choice = confirm("กด OK เพื่อเลือกเป็น GM หรือ Cancel เพื่อเลือกเป็น Player");
-      return choice ? 'game_master' : 'player';
-    }
-
-    return new Promise((resolve) => {
-      modal.style.display = 'flex';
-      let roomUnsub = null;
-
-      const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-          handleClose();
-        }
-      };
-
-      const cleanup = () => {
-        if (typeof roomUnsub === 'function') {
-          roomUnsub();
-          roomUnsub = null;
-        }
-        document.removeEventListener('keydown', handleKeyDown);
-        btnGM.removeEventListener('click', handleGM);
-        btnPlayer.removeEventListener('click', handlePlayer);
-        btnClose.removeEventListener('click', handleClose);
-      };
-
-      const handleGM = () => {
-        cleanup();
-        modal.style.display = 'none';
-        resolve('game_master');
-      };
-
-      const handlePlayer = () => {
-        cleanup();
-        modal.style.display = 'none';
-        resolve('player');
-      };
-
-      const handleClose = () => {
-        cleanup();
-        modal.style.display = 'none';
-        resolve(null);
-      };
-
-      document.addEventListener('keydown', handleKeyDown);
-      btnGM.addEventListener('click', handleGM);
-      btnPlayer.addEventListener('click', handlePlayer);
-      btnClose.addEventListener('click', handleClose);
-
-      // Realtime Listener: Auto-dismiss modal if someone claims GM in this room code while modal is open
-      if (code) {
-        roomUnsub = this.firebaseService.listenToRoom(code, (roomData) => {
-          if (roomData && roomData.members) {
-            const hasGM = Object.values(roomData.members).some(m => m && m.role === 'game_master');
-            if (hasGM) {
-              cleanup();
-              modal.style.display = 'none';
-              resolve('player');
-            }
-          }
-        });
-      }
-    });
+  // --- Backward Compatibility Proxies ---
+  updateRoomCodeSlots(val = '', isFocused = null) {
+    this.inputHandler.updateRoomCodeSlots(val, isFocused);
   }
 
-  promptPlayerNameSelection(code, defaultName, existingNames = new Set()) {
-    const modal = this.renderer.playerNameModal;
-    const input = this.renderer.playerNameInput;
-    const btnConfirm = this.renderer.playerNameConfirmBtn;
-    const btnClose = this.renderer.playerNameCloseBtn;
-
-    if (!modal || !input || !btnConfirm) {
-      return Promise.resolve(defaultName);
-    }
-
-    return new Promise((resolve) => {
-      let savedName = '';
-      try {
-        savedName = localStorage.getItem('traderHunter_playerName') || '';
-      } catch (e) {}
-
-      let initialVal = defaultName;
-      if (savedName && savedName.trim() && !existingNames.has(savedName.trim())) {
-        initialVal = savedName.trim();
-      }
-
-      this.renderer.showPlayerNameModal({
-        title: "ตั้งชื่อผู้เล่นของคุณ",
-        subtitle: "โปรดระบุชื่อที่ต้องการใช้แสดงในห้องเกม (1 - 20 ตัวอักษร)",
-        confirmText: "เข้าสู่เกม",
-        initialValue: initialVal
-      });
-
-      const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleConfirm();
-        } else if (e.key === 'Escape') {
-          handleClose();
-        }
-      };
-
-      const handleOverlayClick = (e) => {
-        if (e.target === modal) {
-          handleClose();
-        }
-      };
-
-      const cleanup = () => {
-        document.removeEventListener('keydown', handleKeyDown);
-        btnConfirm.removeEventListener('click', handleConfirm);
-        if (btnClose) btnClose.removeEventListener('click', handleClose);
-        modal.removeEventListener('click', handleOverlayClick);
-      };
-
-      const handleConfirm = () => {
-        const raw = (input.value || '').trim();
-        if (!raw) {
-          this.renderer.showPlayerNameError("กรุณากรอกชื่อผู้เล่น");
-          return;
-        }
-        if (raw.length < 1 || raw.length > 20) {
-          this.renderer.showPlayerNameError("ความยาวชื่อต้องอยู่ระหว่าง 1 - 20 ตัวอักษร");
-          return;
-        }
-        const upper = raw.toUpperCase();
-        if (upper === 'GM' || upper === 'GAME MASTER' || upper === 'GAME_MASTER') {
-          this.renderer.showPlayerNameError("สงวนสิทธิ์ห้ามใช้ชื่อ GM หรือ Game Master");
-          return;
-        }
-        if (existingNames.has(raw)) {
-          this.renderer.showPlayerNameError(`ชื่อ "${raw}" มีผู้เล่นอื่นในห้องใช้อยู่แล้ว โปรดตั้งชื่ออื่น`);
-          return;
-        }
-
-        cleanup();
-        this.renderer.hidePlayerNameModal();
-        try {
-          localStorage.setItem('traderHunter_playerName', raw);
-        } catch (e) {}
-        resolve(raw);
-      };
-
-      const handleClose = () => {
-        cleanup();
-        this.renderer.hidePlayerNameModal();
-        resolve(null);
-      };
-
-      document.addEventListener('keydown', handleKeyDown);
-      btnConfirm.addEventListener('click', handleConfirm);
-      if (btnClose) btnClose.addEventListener('click', handleClose);
-      modal.addEventListener('click', handleOverlayClick);
-    });
-  }
-
-  async promptGameModeSelection(roomCode, currentUid) {
-    const modal = this.renderer.gameModeSelectionModal;
-    const btnBasic = this.renderer.gameModeBasicBtn;
-    const btnAdvance = this.renderer.gameModeAdvanceBtn;
-    const btnClose = this.renderer.gameModeCloseBtn;
-
-    if (!modal || !btnBasic || !btnAdvance) {
-      return 'advance';
-    }
-
-    return new Promise((resolve, reject) => {
-      modal.style.display = 'flex';
-
-      const handleBasic = () => {
-        cleanup();
-        modal.style.display = 'none';
-        resolve('basic');
-      };
-
-      const handleAdvance = () => {
-        cleanup();
-        modal.style.display = 'none';
-        resolve('advance');
-      };
-
-      const handleClose = async () => {
-        cleanup();
-        modal.style.display = 'none';
-        if (roomCode) {
-          try {
-            await this.firebaseService.deleteRoomData(roomCode);
-          } catch (e) {
-            console.warn("Could not delete room on GM cancel game mode:", e);
-          }
-        }
-        reject(new Error('GM_CANCELLED_GAME_MODE'));
-      };
-
-      const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-          handleClose();
-        }
-      };
-
-      const cleanup = () => {
-        document.removeEventListener('keydown', handleKeyDown);
-        btnBasic.removeEventListener('click', handleBasic);
-        btnAdvance.removeEventListener('click', handleAdvance);
-        if (btnClose) btnClose.removeEventListener('click', handleClose);
-      };
-
-      document.addEventListener('keydown', handleKeyDown);
-      btnBasic.addEventListener('click', handleBasic);
-      btnAdvance.addEventListener('click', handleAdvance);
-      if (btnClose) btnClose.addEventListener('click', handleClose);
-    });
-  }
-
-  async waitForGameModeSelection(code) {
-    const modal = this.renderer.waitingForGMModal;
-    const closeBtn = this.renderer.waitingCloseBtn;
-    const resetBtn = this.renderer.waitingResetRoomBtn;
-    if (modal) modal.style.display = 'flex';
-    this.renderer.updateRoomCodeDisplay(code);
-
-    return new Promise((resolve, reject) => {
-      let unsub = null;
-
-      const cleanup = () => {
-        if (typeof unsub === 'function') {
-          unsub();
-          unsub = null;
-        }
-        if (closeBtn) {
-          closeBtn.removeEventListener('click', handleClose);
-        }
-        if (resetBtn) {
-          resetBtn.removeEventListener('click', handleResetRoom);
-        }
-        if (modal) modal.style.display = 'none';
-      };
-
-      const checkMode = (roomVal) => {
-        if (!roomVal) {
-          cleanup();
-          reject(new Error('USER_CANCELLED_WAITING'));
-          return;
-        }
-        const mode = roomVal?.roomSettings?.gameMode;
-        if (mode) {
-          cleanup();
-          resolve(mode);
-        }
-      };
-
-      const handleClose = async () => {
-        cleanup();
-        const currentUser = this.firebaseService.getCurrentUser();
-        if (code && currentUser?.uid) {
-          try {
-            await this.firebaseService.removeMemberFromRoom(code, currentUser.uid);
-            const roomSnap = await this.firebaseService.getRoomStateSnapshot(code);
-            const roomData = roomSnap ? roomSnap.val() : null;
-            const remainingMembers = roomData ? (roomData.members || {}) : {};
-            if (Object.keys(remainingMembers).length === 0) {
-              await this.firebaseService.deleteRoomData(code);
-            }
-          } catch (e) {
-            console.warn("Could not remove member on cancel waiting:", e);
-          }
-        }
-        if (this.playerSessionService && code) {
-          const token = this.playerSessionService.getOrCreateSessionToken(code);
-          if (token) {
-            try {
-              await this.firebaseService.updateRoom(code, {
-                [`savedMembers/${token}`]: null
-              });
-            } catch (e) {}
-          }
-          this.playerSessionService.clearRoomSession(code);
-        }
-        reject(new Error('USER_CANCELLED_WAITING'));
-      };
-
-      const handleResetRoom = async () => {
-        const confirmed = await this.renderer.showConfirmAlert(
-          "รีเซ็ตห้องเกมทั้งหมด?",
-          "คุณต้องการล้างข้อมูลห้องเกมนี้ทั้งหมดใช่หรือไม่? ข้อมูลผู้เล่น คำสั่งซื้อขาย และสถานะ GM เดิมที่ค้างอยู่จะถูกล้างทิ้งทั้งหมด เพื่อเริ่มต้นเซสชันใหม่",
-          "รีเซ็ตห้อง",
-          "ยกเลิก"
-        );
-        if (!confirmed) return;
-
-        cleanup();
-
-        try {
-          const resetStocks = this.state.getResetStocks ? this.state.getResetStocks() : null;
-          await this.firebaseService.resetRoomWithKickAll(code, resetStocks);
-          await this.firebaseService.deleteRoomData(code);
-        } catch (e) {
-          console.error("Failed to reset room data from waiting modal:", e);
-        }
-
-        const currentUser = this.firebaseService.getCurrentUser();
-        if (code && currentUser?.uid) {
-          try {
-            await this.firebaseService.removeMemberFromRoom(code, currentUser.uid);
-          } catch (e) {}
-        }
-        if (this.playerSessionService && code) {
-          this.playerSessionService.clearRoomSession(code);
-        }
-        this.state.reset();
-
-        this.renderer.showLobby();
-        this.renderer.showTopToast(
-          "ROOM RESET SUCCESS",
-          "รีเซ็ตห้องเกมสำเร็จ คุณสามารถกด JOIN ด้วยรหัสห้องเดิมเพื่อเลือกบทบาท GM และเริ่มเกมใหม่ได้ทันที",
-          "approved",
-          5000
-        );
-
-        reject(new Error('USER_RESET_ROOM'));
-      };
-
-      if (closeBtn) {
-        closeBtn.addEventListener('click', handleClose);
-      }
-      if (resetBtn) {
-        resetBtn.addEventListener('click', handleResetRoom);
-      }
-
-      unsub = this.firebaseService.listenToRoom(code, (data) => {
-        checkMode(data);
-      });
-    });
+  clearLobbyRoomCodeInput() {
+    this.inputHandler.clearLobbyRoomCodeInput();
   }
 
   withTimeout(promise, timeoutMs, errorMessage) {
-    let timer;
-    const timeoutPromise = new Promise((_, reject) => {
-      timer = setTimeout(() => {
-        reject(new Error(errorMessage));
-      }, timeoutMs);
-    });
-    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+    return this.sessionCoordinator.withTimeout(promise, timeoutMs, errorMessage);
+  }
+
+  // --- Dialog Coordinator Proxies (Backward Compatibility) ---
+  async promptRoleSelection(code) {
+    return this.dialogCoordinator.promptRoleSelection(code);
+  }
+
+  promptPlayerNameSelection(code, defaultName, existingNames = new Set()) {
+    return this.dialogCoordinator.promptPlayerNameSelection(code, defaultName, existingNames);
+  }
+
+  async promptGameModeSelection(roomCode, currentUid) {
+    return this.dialogCoordinator.promptGameModeSelection(roomCode, currentUid);
+  }
+
+  async waitForGameModeSelection(code) {
+    return this.dialogCoordinator.waitForGameModeSelection(code);
   }
 
   async joinOrCreateRoom(code) {
     // 0. Reset local state before any new room entrance
     this.state.reset();
 
-    // 1. Verify if the code is permitted in Firestore
-    const isAllowed = await this.withTimeout(
-      this.firebaseService.checkRoomExists(code),
-      8000,
-      "หมดเวลาการเชื่อมต่อกับเซิร์ฟเวอร์ (Firestore Timeout)"
-    );
-    if (!isAllowed) {
+    // 1. Inspect room and session in Firebase
+    const sessionInfo = await this.sessionCoordinator.inspectRoomAndSession(code);
+    if (!sessionInfo.isAllowed) {
       this.clearLobbyRoomCodeInput();
       if (typeof this.renderer.triggerShakeCodeBox === 'function') {
         this.renderer.triggerShakeCodeBox();
@@ -533,103 +128,34 @@ export class LobbyController {
         await this.renderer.showInvalidRoomModal(code);
       }
       this.clearLobbyRoomCodeInput();
-      return;
+      return false;
     }
 
-    const now = Date.now();
+    const {
+      clientIp,
+      roomExists,
+      roomData,
+      user,
+      members,
+      hasActiveGM,
+      sessionToken,
+      savedMember,
+      maxPlayers
+    } = sessionInfo;
 
-    // 2. Detect Client Public IP for access tracking
-    let clientIp = 'unknown';
-    if (this.sessionLockService) {
-      try {
-        clientIp = (await this.sessionLockService.fetchPublicIp()) || 'unknown';
-      } catch (e) {
-        console.warn("[Lobby] Failed to fetch public IP:", e);
-      }
-    }
-
-    // 3. Fetch room status & inspect stale/expired state from Firebase Realtime Database
-    let roomExists = false;
-    let roomData = null;
-
-    const roomSnapshot = await this.withTimeout(
-      this.firebaseService.getRoomStateSnapshot(code),
-      8000,
-      "หมดเวลาการเชื่อมต่อกับ Realtime Database"
-    );
-
-    if (roomSnapshot && roomSnapshot.exists()) {
-      roomData = roomSnapshot.val();
-      const members = roomData.members || {};
-      const memberUids = Object.keys(members);
-      const expiresAt = roomData.expiresAt;
-      const isExpired = Boolean(expiresAt && expiresAt <= now);
-      const isEnded = Boolean(roomData.isEnd);
-      const isReset = Boolean(roomData.isReset || roomData.status === 'RESET');
-
-      // Safe Purge: If room is marked as RESET, or has 0 members and (isExpired, isEnded, or has no members):
-      const hasNoMembers = memberUids.length === 0;
-      if (isReset || hasNoMembers || (isExpired && hasNoMembers) || (isEnded && hasNoMembers)) {
-        await this.firebaseService.deleteRoomData(code);
-        if (this.playerSessionService) {
-          this.playerSessionService.clearRoomSession(code);
-        }
-        roomExists = false;
-        roomData = null;
-      } else {
-        // Room has active players - preserve it!
-        roomExists = true;
-      }
-    }
-
-    let user = this.firebaseService.getCurrentUser();
-    if (!user) {
-      await this.firebaseService.init();
-      user = this.firebaseService.getCurrentUser();
-    }
-
-    const members = roomData ? (roomData.members || {}) : {};
-    const memberUids = Object.keys(members);
-
-    // Determine user role, display name, and capacity
     let role = null;
     let displayName = null;
-    let maxPlayers = (roomData && roomData.roomSettings && roomData.roomSettings.maxPlayers) ? roomData.roomSettings.maxPlayers : 5;
-
-    // Check persistent session token for returning player recovery
-    const sessionToken = this.playerSessionService ? this.playerSessionService.getOrCreateSessionToken(code) : null;
-    let savedMember = (roomExists && roomData && roomData.savedMembers && sessionToken) ? roomData.savedMembers[sessionToken] : null;
-
-    // Server-Side Verification: If room exists but session token is not recognized on server and player UID is not in members:
-    if (roomExists && sessionToken && !savedMember && (!members || !members[user.uid])) {
-      console.log(`[Lobby] Player session ${sessionToken} not found on server for room ${code}. Clearing local session.`);
-      if (this.playerSessionService) {
-        this.playerSessionService.clearRoomSession(code);
-      }
-    }
-
-    // Clear any leftover kickedMembers flag on server so kicked player can join fresh
-    if (roomExists && roomData && roomData.kickedMembers && roomData.kickedMembers[user.uid]) {
-      this.firebaseService.clearKickedMember(code, user.uid).catch(() => {});
-    }
-
     let restoredPortfolio = null;
     let restoredBackupProfile = null;
     let isRestoredPlayer = false;
 
-    // Check if room currently has an active GM (someone other than this user)
-    const hasActiveGM = memberUids.some(uid => uid !== user.uid && members[uid] && members[uid].role === 'game_master');
-
+    // 2. Resolve Role & Player Name
     if (!hasActiveGM) {
-      // Room does NOT have an active GM -> Always allow user to select role (GM or Player)
       role = await this.promptRoleSelection(code);
-      if (!role) {
-        return false;
-      }
+      if (!role) return false;
 
       if (role === 'game_master') {
         displayName = 'GM';
-        // Preserve prior player profile as backup if they were previously a player
         const prevPlayerProfile = (savedMember && savedMember.portfolio)
           ? savedMember
           : (members[user.uid] && members[user.uid].portfolio ? members[user.uid] : null);
@@ -640,7 +166,6 @@ export class LobbyController {
           };
         }
       } else {
-        // User chose Player in a room without GM
         if (roomExists && savedMember && savedMember.role === 'player') {
           displayName = savedMember.displayName || 'Player';
           restoredPortfolio = savedMember.portfolio || { cash: 20000 };
@@ -652,7 +177,6 @@ export class LobbyController {
           restoredBackupProfile = members[user.uid].backupPlayerProfile || null;
           isRestoredPlayer = true;
         } else {
-          // New player -> prompt name
           const existingNames = new Set(
             Object.values(members || {})
               .filter(m => m && m.role === 'player' && m.displayName)
@@ -664,13 +188,10 @@ export class LobbyController {
           }
           const defaultName = `Player_${nextIndex}`;
           displayName = await this.promptPlayerNameSelection(code, defaultName, existingNames);
-          if (!displayName) {
-            return false;
-          }
+          if (!displayName) return false;
         }
       }
     } else {
-      // Room ALREADY has an active GM (GM is taken by someone else)
       role = 'player';
       if (roomExists && savedMember && savedMember.role === 'player') {
         displayName = savedMember.displayName || 'Player';
@@ -683,7 +204,6 @@ export class LobbyController {
         restoredBackupProfile = members[user.uid].backupPlayerProfile || null;
         isRestoredPlayer = true;
       } else {
-        // New player -> prompt name
         const existingNames = new Set(
           Object.values(members || {})
             .filter(m => m && m.role === 'player' && m.displayName)
@@ -695,182 +215,40 @@ export class LobbyController {
         }
         const defaultName = `Player_${nextIndex}`;
         displayName = await this.promptPlayerNameSelection(code, defaultName, existingNames);
-        if (!displayName) {
-          return false;
-        }
+        if (!displayName) return false;
       }
     }
 
-    // Fetch Master Settings from Firestore
-    const gameSetting = await this.withTimeout(
-      this.firebaseService.getGameSetting(),
-      8000,
-      "หมดเวลาการดึงข้อมูลการตั้งค่าเกม (getGameSetting Timeout)"
-    );
-    this.state.setMasterStocks(gameSetting.stocks);
+    // 3. Setup or Join Room via RoomSetupService
+    const setupResult = await this.roomSetupService.setupOrJoinRoom({
+      code,
+      role,
+      displayName,
+      restoredPortfolio,
+      restoredBackupProfile,
+      sessionToken,
+      clientIp,
+      roomExists,
+      roomData,
+      members,
+      maxPlayers,
+      user
+    });
 
-    // 3. ATOMICALLY REGISTER ROLE IN FIREBASE IMMEDIATELY
-    // Register role in Firebase so other clients see GM in real-time right away!
-    if (!roomExists) {
-      // Build initial board configuration from master steps
-      const initialBoardStocks = gameSetting.stocks.map(s => {
-        const startValue = s.steps[s.startStep - 1];
-        return {
-          name: s.name,
-          value: startValue,
-          step: s.startStep - 1,
-          maxStep: s.steps.length,
-          startStep: s.startStep - 1,
-          oldValue: null,
-          history: [startValue],
-          updatedAt: null
-        };
-      });
-
-      // Create fresh board state
-      await this.firebaseService.createBoard(code, initialBoardStocks);
-
-      // Create fresh room state with 3-hour expiration timestamp
-      const expiresAt = now + (3 * 60 * 60 * 1000);
-      const initialMemberObj = {
-        role: role,
-        displayName: displayName,
-        joinedAt: now,
-        ip: clientIp,
-        sessionToken: sessionToken || null,
-        online: true
-      };
-      if (role === 'player') {
-        initialMemberObj.portfolio = restoredPortfolio || { cash: 20000 };
-      }
-      if (restoredBackupProfile) {
-        initialMemberObj.backupPlayerProfile = restoredBackupProfile;
-      }
-
-      // Double check if room was created by another client while promptRoleSelection modal was open
-      const freshSnap = await this.firebaseService.getRoomStateSnapshot(code);
-      if (freshSnap && freshSnap.exists()) {
-        await this.firebaseService.joinRoomWithTransaction(code, {
-          uid: user.uid,
-          role: role,
-          displayName: displayName,
-          portfolio: restoredPortfolio,
-          sessionToken: sessionToken,
-          backupPlayerProfile: restoredBackupProfile,
-          ip: clientIp
-        }, clientIp);
-      } else {
-        await this.firebaseService.createRoom(code, {
-          maxPlayers,
-          gameMode: null
-        }, {
-          [user.uid]: initialMemberObj
-        }, clientIp);
-        await this.firebaseService.updateRoom(code, { expiresAt });
-      }
-
-      roomExists = true;
-    } else {
-      if (members[user.uid]) {
-        // Re-joining member
-        const updates = {
-          [`members/${user.uid}/online`]: true,
-          [`members/${user.uid}/role`]: role,
-          [`members/${user.uid}/displayName`]: displayName
-        };
-        if (roomData.kickedMembers && roomData.kickedMembers[user.uid]) {
-          updates[`kickedMembers/${user.uid}`] = null;
-        }
-        if (clientIp && clientIp !== 'unknown') {
-          updates[`members/${user.uid}/ip`] = clientIp;
-          if (sessionToken && roomData.savedMembers && roomData.savedMembers[sessionToken]) {
-            updates[`savedMembers/${sessionToken}/ip`] = clientIp;
-          }
-        }
-        if (sessionToken && !members[user.uid].sessionToken) {
-          updates[`members/${user.uid}/sessionToken`] = sessionToken;
-        }
-        if (role === 'game_master') {
-          if (restoredBackupProfile) {
-            updates[`members/${user.uid}/backupPlayerProfile`] = restoredBackupProfile;
-          }
-        } else if (role === 'player') {
-          if (!members[user.uid].portfolio || restoredPortfolio) {
-            updates[`members/${user.uid}/portfolio`] = restoredPortfolio || members[user.uid].portfolio || { cash: 20000 };
-          }
-        }
-        if (Object.keys(updates).length > 0) {
-          await this.firebaseService.updateRoom(code, updates);
-        }
-      } else {
-        // Atomic transaction to handle high concurrency joining & GM demotion
-        const txnRes = await this.firebaseService.joinRoomWithTransaction(code, {
-          uid: user.uid,
-          role: role,
-          displayName: displayName,
-          portfolio: restoredPortfolio,
-          sessionToken: sessionToken,
-          backupPlayerProfile: restoredBackupProfile,
-          ip: clientIp
-        }, clientIp);
-
-        if (!txnRes || (txnRes.result && !txnRes.result.committed)) {
-          await this.renderer.showErrorAlert("เข้าห้องไม่สำเร็จ", "ไม่สามารถเข้าร่วมห้องได้ในขณะนี้ โปรดลองใหม่อีกครั้ง");
-          return;
-        }
-
-        if (txnRes.assignedRole) {
-          role = txnRes.assignedRole;
-          if (role === 'player' && displayName === 'GM') {
-            const existingNames = new Set(
-              Object.values(members || {})
-                .filter(m => m && m.role === 'player' && m.displayName)
-                .map(m => m.displayName)
-            );
-            let nextIndex = 1;
-            while (existingNames.has(`Player_${nextIndex}`)) {
-              nextIndex++;
-            }
-            displayName = `Player_${nextIndex}`;
-          }
-        }
-      }
-    }
-
-    this.state.setRole(role);
-    this.state.setPlayerName(displayName);
-
-    if (restoredPortfolio && role === 'player') {
-      this.state.portfolio = JSON.parse(JSON.stringify(restoredPortfolio));
-    }
-    if (this.playerSessionService && sessionToken) {
-      this.playerSessionService.saveRoomSession(code, {
-        sessionToken,
-        role,
-        displayName,
-        uid: user.uid,
-        ip: clientIp
-      });
-      await this.playerSessionService.syncPlayerToFirebase(code, this.firebaseService, sessionToken, {
-        displayName,
-        role,
-        portfolio: restoredPortfolio || (role === 'player' ? { cash: 20000 } : null),
-        backupPlayerProfile: restoredBackupProfile,
-        ip: clientIp
-      });
-    }
+    if (!setupResult) return false;
+    const { finalRole, finalDisplayName } = setupResult;
 
     if (isRestoredPlayer) {
-      this.renderer.showTopToast("DATA RESTORED", `โหลดข้อมูลเดิมของ ${displayName} เรียบร้อยแล้ว`, "success");
+      this.renderer.showTopToast("DATA RESTORED", `โหลดข้อมูลเดิมของ ${finalDisplayName} เรียบร้อยแล้ว`, "success");
     }
 
-    // 4. GAME MODE SELECTION (Now GM is officially registered in Firebase, other clients see GM instantly!)
+    // 4. Game Mode Selection (Now GM is registered in Firebase)
     const freshSnap = await this.firebaseService.getRoomStateSnapshot(code);
     const freshRoomData = freshSnap && freshSnap.exists() ? freshSnap.val() : null;
     let gameMode = (freshRoomData && freshRoomData.roomSettings && freshRoomData.roomSettings.gameMode) ? freshRoomData.roomSettings.gameMode : null;
 
     if (!gameMode) {
-      if (role === 'game_master') {
+      if (finalRole === 'game_master') {
         try {
           gameMode = await this.promptGameModeSelection(code, user.uid);
           if (!gameMode) gameMode = 'advance';
@@ -878,7 +256,7 @@ export class LobbyController {
         } catch (err) {
           if (err && err.message === 'GM_CANCELLED_GAME_MODE') {
             this.renderer.showLobby();
-            return;
+            return false;
           }
           throw err;
         }
@@ -888,7 +266,7 @@ export class LobbyController {
         } catch (err) {
           if (err && (err.message === 'USER_CANCELLED_WAITING' || err.message === 'USER_RESET_ROOM')) {
             this.renderer.showLobby();
-            return;
+            return false;
           }
           throw err;
         }
@@ -897,31 +275,18 @@ export class LobbyController {
 
     this.state.setGameMode(gameMode);
     this.state.setRoomCode(code);
-    window.history.pushState({ page: 'in_game' }, '');
-
-    // Register tab session & IP lock to kick older tabs on this machine
-    if (this.sessionLockService) {
-      await this.sessionLockService.registerSession(code, this.firebaseService, user.uid);
+    if (typeof window !== 'undefined' && window.history) {
+      window.history.pushState({ page: 'in_game' }, '');
     }
 
-    // Configure player/GM cleanup on disconnect
-    this.firebaseService.configureDisconnectCleanup(code, user.uid, role === 'game_master');
+    // 5. Register session lock and cleanup listeners
+    await this.roomSetupService.registerSessionLock(code, user.uid);
+    this.roomSetupService.configureDisconnectCleanup(code, user.uid, finalRole === 'game_master');
+    await this.roomSetupService.syncLateJoinerBoard(code);
 
-    // Sync latest board snapshot immediately for late-joining players
-    try {
-      const boardSnap = await this.firebaseService.getBoardSnapshot(code);
-      if (boardSnap && boardSnap.exists()) {
-        this.state.updateFromFirebaseBoard(boardSnap.val());
-      }
-    } catch (e) {
-      console.warn("Could not sync initial board snapshot for late joiner:", e);
-    }
-
-    console.log("[Lobby] ✅ Room entrance process finished successfully!");
-    // 5. Transition screens and activate UI state
+    // 6. Transition screens and activate UI state
     this.renderer.showDashboard();
     
-    // Show role controller and configure spectator options
     if (this.renderer.roleController) {
       this.renderer.roleController.style.display = 'flex';
     }
@@ -931,59 +296,11 @@ export class LobbyController {
     this.state.isSpectating = false;
     this.renderer.updateSpectatorButtonUI(false);
     
-    this.renderer.updateControlsVisibility(this.state.role, displayName, this.state.gameMode);
+    this.renderer.updateControlsVisibility(this.state.role, finalDisplayName, this.state.gameMode);
     this.renderer.updateRoomCodeDisplay(code);
 
-    // Perform initial portfolio rendering with user UID
     const stats = this.state.getPortfolioStats();
     this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, this.state.pendingOrders, user.uid);
     return true;
-  }
-
-  updateRoomCodeSlots(val = '', isFocused = null) {
-    const slotsContainer = document.getElementById('roomCodeSlots');
-    if (!slotsContainer) return;
-    const input = this.renderer.roomCodeInput;
-    const currentlyFocused = (isFocused !== null) ? isFocused : (input && document.activeElement === input);
-    const slots = slotsContainer.querySelectorAll('.code-slot');
-    const cleanVal = (val || '').trim().toUpperCase();
-
-    // Show slots if user typed something OR if input is currently focused
-    const shouldShowSlots = cleanVal.length > 0 || currentlyFocused;
-
-    if (shouldShowSlots) {
-      slotsContainer.classList.add('visible-slots');
-      slotsContainer.style.cssText = 'display: flex !important; opacity: 1 !important;';
-    } else {
-      slotsContainer.classList.remove('visible-slots');
-      slotsContainer.style.cssText = 'display: none !important; opacity: 0 !important;';
-    }
-
-    slots.forEach((slot, index) => {
-      const char = cleanVal[index] || '';
-      slot.textContent = char;
-      if (char && cleanVal.length > 0) {
-        slot.classList.add('filled');
-      } else {
-        slot.classList.remove('filled');
-      }
-
-      // Highlight active slot: if empty, slot 0; if partially filled, the next slot
-      if (currentlyFocused && index === cleanVal.length && cleanVal.length < 6) {
-        slot.classList.add('active-focus');
-      } else {
-        slot.classList.remove('active-focus');
-      }
-    });
-  }
-
-  clearLobbyRoomCodeInput() {
-    if (this.renderer.roomCodeInput) {
-      this.renderer.roomCodeInput.value = '';
-    }
-    this.updateRoomCodeSlots('');
-    if (typeof this.renderer.clearRoomCodeSlots === 'function') {
-      this.renderer.clearRoomCodeSlots();
-    }
   }
 }

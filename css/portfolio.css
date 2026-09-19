@@ -44,10 +44,32 @@
 
 /* ตัวเลขสรุปยอดเงินคงเหลือ / กำไรขาดทุน */
 .summary-value {
+  display: inline-block;
   font-size: 20px;                  /* 👈 ขนาดตัวอักษรยอดเงินสรุป */
   font-weight: bold;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.25s ease, color 0.25s ease;
+  will-change: transform;
+}
+
+/* แอนิเมชันขณะตัวเลขปรับขึ้น (เขียว + ขยาย + เรืองแสง) */
+.port-counting-up {
+  color: #34d399 !important;
+  transform: scale(1.08);
+  text-shadow: 0 0 14px rgba(52, 211, 153, 0.55) !important;
+}
+
+/* แอนิเมชันขณะตัวเลขปรับลง (แดง + ขยาย + เรืองแสง) */
+.port-counting-down {
+  color: #f87171 !important;
+  transform: scale(1.08);
+  text-shadow: 0 0 14px rgba(248, 113, 113, 0.55) !important;
+}
+
+/* คืนค่าเป็นสีขาวเมื่อแอนิเมชันจบสำหรับ Total Assets และ Available Cash */
+.summary-value.text-white {
+  color: #ffffff !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -167,6 +189,8 @@
 .table-col-center,
 .holdings-table th.table-col-center,
 .holdings-table td.table-col-center,
+.holdings-table th:nth-child(6),
+.holdings-table td:nth-child(6),
 .gm-pending-orders-table th.table-col-center,
 .gm-pending-orders-table td.table-col-center {
   text-align: center !important;

@@ -1,0 +1,18 @@
+export const initializeApp = () => ({});
+export const getApps = () => [];
+export const getApp = () => ({});
+export const getAuth = () => ({ currentUser: null });
+export const signInAnonymously = async () => ({ user: { uid: 'mock_uid' } });
+export const setPersistence = async () => {};
+export const inMemoryPersistence = {};
+export const getFirestore = () => ({});
+export const doc = () => ({});
+export const getDoc = async () => ({ exists: () => true, data: () => ({ stocks: [] }) });
+export const getDatabase = () => ({});
+export const ref = (db, path) => ({ path, db });
+export const get = async (r) => ({ exists: () => true, val: () => ({}) });
+export const set = async (r, val) => {};
+export const update = async (r, val) => {};
+export const onValue = (r, cb) => () => {};
+export const onDisconnect = () => ({ cancel: () => {}, remove: async () => {}, set: async () => {} });
+export const runTransaction = async (r, cb) => ({ committed: true, result: { committed: true } });

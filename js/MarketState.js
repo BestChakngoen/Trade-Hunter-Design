@@ -1,38 +1,21 @@
 import { TradeService } from './services/TradeService.js';
+import { 
+  normalizePriceToHundreds, 
+  calculateExponentialBetaPrice,
+  calculateStockStepUp,
+  calculateStockStepDown,
+  calculateResetStocks
+} from './services/MarketMathService.js';
+import { HistoryStateManager } from './services/HistoryStateManager.js';
 
-/**
- * Normalizes stock price to full hundreds (e.g. 5238 -> 5200, 5265 -> 5300)
- */
-export function normalizePriceToHundreds(price) {
-  if (price === null || price === undefined) return 100;
-  const cleanPrice = typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : Number(price);
-  if (isNaN(cleanPrice) || cleanPrice < 100) return 100;
-  return Math.max(100, Math.round(cleanPrice / 100) * 100);
-}
-
-/**
- * Calculates next price using exponential movement scaled by Beta volatility.
- * @param {number|string} currentPrice - Current price S_t
- * @param {number} beta - Stock Beta factor
- * @param {number} direction - Direction: +1 for Up, -1 for Down
- * @param {number} baseReturn - Base step return rate (default 0.05 = 5%)
- */
-export function calculateExponentialBetaPrice(currentPrice, beta = 1.0, direction = 1, baseReturn = 0.05) {
-  const cleanPrice = normalizePriceToHundreds(currentPrice);
-  const effectiveBeta = Number(beta) || 1.0;
-  const logReturn = direction * effectiveBeta * baseReturn;
-  const rawNextPrice = cleanPrice * Math.exp(logReturn);
-  let nextPrice = normalizePriceToHundreds(rawNextPrice);
-
-  // Ensure price moves by at least 100 in the target direction when rounded
-  if (direction > 0 && nextPrice <= cleanPrice) {
-    nextPrice = cleanPrice + 100;
-  } else if (direction < 0 && nextPrice >= cleanPrice) {
-    nextPrice = Math.max(100, cleanPrice - 100);
-  }
-
-  return nextPrice;
-}
+// Re-export for full backward compatibility across the codebase
+export { 
+  normalizePriceToHundreds, 
+  calculateExponentialBetaPrice,
+  calculateStockStepUp,
+  calculateStockStepDown,
+  calculateResetStocks
+};
 
 export class MarketState {
   constructor(cardElements) {
@@ -72,9 +55,22 @@ export class MarketState {
     // Player info
     this.playerName = 'Player_1';
     
-    // Continuous Undo & Redo Action Stacks (Full Room State Snapshot)
-    this.undoStack = [];
-    this.redoStack = [];
+    // History Snapshot Manager (Extracted in Phase B)
+    this.historyManager = new HistoryStateManager(50);
+  }
+
+  get undoStack() {
+    return this.historyManager.undoStack;
+  }
+  set undoStack(val) {
+    this.historyManager.undoStack = val;
+  }
+
+  get redoStack() {
+    return this.historyManager.redoStack;
+  }
+  set redoStack(val) {
+    this.historyManager.redoStack = val;
   }
 
   setRoomCode(code) {
@@ -93,93 +89,37 @@ export class MarketState {
     this.gameMode = mode;
   }
 
-  // Push room state snapshot (stocks, members portfolio/cash, pendingOrders) to Undo stack
+  // Push room state snapshot to Undo stack (delegated to HistoryStateManager)
   pushUndoSnapshot(roomData) {
-    if (!roomData) return;
-    const snapshot = {
-      stocks: JSON.parse(JSON.stringify(roomData.stocks || {})),
-      members: JSON.parse(JSON.stringify(roomData.members || {})),
-      pendingOrders: JSON.parse(JSON.stringify(roomData.pendingOrders || {}))
-    };
-    this.undoStack.push(snapshot);
-    // Limit stack size to 50 items
-    if (this.undoStack.length > 50) {
-      this.undoStack.shift();
-    }
-    // Clear Redo stack when a new action is performed
-    this.redoStack = [];
+    this.historyManager.pushUndo(roomData);
   }
 
   popUndoSnapshot() {
-    if (this.undoStack.length === 0) return null;
-    return this.undoStack.pop();
+    return this.historyManager.popUndo();
   }
 
   pushRedoSnapshot(roomData) {
-    if (!roomData) return;
-    const snapshot = {
-      stocks: JSON.parse(JSON.stringify(roomData.stocks || {})),
-      members: JSON.parse(JSON.stringify(roomData.members || {})),
-      pendingOrders: JSON.parse(JSON.stringify(roomData.pendingOrders || {}))
-    };
-    this.redoStack.push(snapshot);
+    this.historyManager.pushRedo(roomData);
   }
 
   popRedoSnapshot() {
-    if (this.redoStack.length === 0) return null;
-    return this.redoStack.pop();
+    return this.historyManager.popRedo();
   }
 
   canUndo() {
-    return this.undoStack.length > 0;
+    return this.historyManager.canUndo();
   }
 
   canRedo() {
-    return this.redoStack.length > 0;
+    return this.historyManager.canRedo();
   }
 
-  // Remove player UID from all undo and redo history snapshots
   removeMemberFromHistory(playerUid) {
-    if (!playerUid) return;
-    const uidStr = String(playerUid).trim().toLowerCase();
-
-    const cleanSnapshot = (snapshot) => {
-      if (!snapshot) return;
-      if (snapshot.members) {
-        Object.keys(snapshot.members).forEach(uid => {
-          if (String(uid).trim().toLowerCase() === uidStr) {
-            delete snapshot.members[uid];
-          }
-        });
-      }
-      if (snapshot.pendingOrders) {
-        Object.keys(snapshot.pendingOrders).forEach(orderId => {
-          const order = snapshot.pendingOrders[orderId];
-          if (order && String(order.uid || '').trim().toLowerCase() === uidStr) {
-            delete snapshot.pendingOrders[orderId];
-          }
-        });
-      }
-    };
-
-    this.undoStack.forEach(cleanSnapshot);
-    this.redoStack.forEach(cleanSnapshot);
+    this.historyManager.removeMemberFromHistory(playerUid);
   }
 
   purgeUserData(playerUid) {
     this.removeMemberFromHistory(playerUid);
-  }
-
-  setRoomCode(code) {
-    this.roomCode = code;
-  }
-
-  setRole(role) {
-    this.role = role;
-  }
-
-  setPlayerName(name) {
-    this.playerName = name;
   }
 
   // Get or calculate starting price for stock comparison
@@ -277,66 +217,6 @@ export class MarketState {
 
       const startPrice = this.getStartPrice(symbol, stock.value);
 
-      const card = this.originalCards.find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol);
-      const activeGridCard = document.getElementById('priceGrid')
-        ? Array.from(document.getElementById('priceGrid').querySelectorAll('.price-card')).find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol)
-        : null;
-
-      [card, activeGridCard].forEach(targetCard => {
-        if (!targetCard) return;
-        targetCard.setAttribute('data-price', stock.value);
-        const valueText = targetCard.querySelector('.card-value');
-        const priceBox = targetCard.querySelector('.price-box');
-        if (valueText) {
-          valueText.textContent = stock.value.toLocaleString('en-US');
-        }
-        if (priceBox) {
-          priceBox.classList.remove('price-up', 'price-down', 'price-neutral');
-
-          let isUp = false;
-          let isDown = false;
-          if (stock.direction === 'up') {
-            isUp = true;
-          } else if (stock.direction === 'down') {
-            isDown = true;
-          } else if (Number(stock.value) === 100) {
-            isDown = true;
-          } else if (stock.oldValue !== null && stock.oldValue !== undefined) {
-            if (stock.value > stock.oldValue) isUp = true;
-            else if (stock.value < stock.oldValue) isDown = true;
-          }
-
-          if (isUp) {
-            priceBox.classList.add('price-up');
-            priceBox.style.setProperty('background-color', 'rgba(16, 185, 129, 0.18)', 'important');
-            priceBox.style.setProperty('border', '1.5px solid rgba(16, 185, 129, 0.5)', 'important');
-            priceBox.style.setProperty('box-shadow', '0 0 14px rgba(16, 185, 129, 0.25)', 'important');
-            if (valueText) {
-              valueText.style.setProperty('color', '#34d399', 'important');
-              valueText.style.setProperty('text-shadow', '0 0 10px rgba(52, 211, 153, 0.5)', 'important');
-            }
-          } else if (isDown) {
-            priceBox.classList.add('price-down');
-            priceBox.style.setProperty('background-color', 'rgba(239, 68, 68, 0.18)', 'important');
-            priceBox.style.setProperty('border', '1.5px solid rgba(239, 68, 68, 0.5)', 'important');
-            priceBox.style.setProperty('box-shadow', '0 0 14px rgba(239, 68, 68, 0.25)', 'important');
-            if (valueText) {
-              valueText.style.setProperty('color', '#f87171', 'important');
-              valueText.style.setProperty('text-shadow', '0 0 10px rgba(248, 113, 113, 0.5)', 'important');
-            }
-          } else {
-            priceBox.classList.add('price-neutral');
-            priceBox.style.setProperty('background-color', '#e5e7eb', 'important');
-            priceBox.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.1)', 'important');
-            priceBox.style.setProperty('box-shadow', 'none', 'important');
-            if (valueText) {
-              valueText.style.setProperty('color', '#111827', 'important');
-              valueText.style.setProperty('text-shadow', 'none', 'important');
-            }
-          }
-        }
-      });
-
       if (Array.isArray(stock.history) && stock.history.length > 0) {
         this.priceHistory[symbol] = stock.history.map(val => normalizePriceToHundreds(val));
       } else {
@@ -353,89 +233,45 @@ export class MarketState {
   // Generate updated stocks list for saving to Firebase when upgrading price step (Exponential Beta Model)
   getUpdatedStocksForUp(symbol) {
     const boardStocksArray = Object.values(this.boardStocks);
-    const stockIndex = boardStocksArray.findIndex(s => s.name === symbol);
-    if (stockIndex === -1) return null;
+    const currentStock = boardStocksArray.find(s => s.name === symbol);
+    if (!currentStock) return null;
 
-    const currentStock = boardStocksArray[stockIndex];
     const master = this.masterStocks[symbol];
     if (!master) return null;
 
-    const currentStep = (typeof currentStock.step === 'number' && !isNaN(currentStock.step)) ? currentStock.step : 0;
-    const nextStep = currentStep + 1;
-    const beta = this.getStockBeta(symbol);
-    const curVal = normalizePriceToHundreds(currentStock.value);
-    
-    // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
-    const nextValue = calculateExponentialBetaPrice(curVal, beta, 1, 0.16);
-    if (isNaN(nextValue) || nextValue < 100) return null;
+    const updated = calculateStockStepUp(
+      currentStock,
+      master,
+      this.getStockBeta(symbol),
+      this.priceHistory[symbol]
+    );
+    if (!updated) return null;
 
-    const updatedStocks = boardStocksArray.map(s => {
-      if (s.name === symbol) {
-        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
-        const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
-        const newHistory = [...currentHistory, nextValue];
-        this.priceHistory[symbol] = newHistory;
+    this.priceHistory[symbol] = updated.history;
 
-        return {
-          ...s,
-          step: nextStep,
-          value: nextValue,
-          oldValue: curVal,
-          direction: 'up',
-          history: newHistory,
-          updatedAt: Date.now()
-        };
-      }
-      return s;
-    });
-
-    return updatedStocks;
+    return boardStocksArray.map(s => (s.name === symbol ? updated : { ...s, direction: null }));
   }
 
   // Generate updated stocks list for saving to Firebase when downgrading price step (Exponential Beta Model)
   getUpdatedStocksForDown(symbol) {
     const boardStocksArray = Object.values(this.boardStocks);
-    const stockIndex = boardStocksArray.findIndex(s => s.name === symbol);
-    if (stockIndex === -1) return null;
+    const currentStock = boardStocksArray.find(s => s.name === symbol);
+    if (!currentStock) return null;
 
-    const currentStock = boardStocksArray[stockIndex];
     const master = this.masterStocks[symbol];
     if (!master) return null;
 
-    const currentStep = (typeof currentStock.step === 'number' && !isNaN(currentStock.step)) ? currentStock.step : 0;
-    let prevStep = currentStep - 1;
-    if (prevStep < 0) {
-      prevStep = 0; // Clamp to lowest step 0 instead of wrapping
-    }
+    const updated = calculateStockStepDown(
+      currentStock,
+      master,
+      this.getStockBeta(symbol),
+      this.priceHistory[symbol]
+    );
+    if (!updated) return null;
 
-    const beta = this.getStockBeta(symbol);
-    const curVal = normalizePriceToHundreds(currentStock.value);
+    this.priceHistory[symbol] = updated.history;
 
-    // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
-    const nextValue = Math.max(100, calculateExponentialBetaPrice(curVal, beta, -1, 0.16));
-    if (isNaN(nextValue) || nextValue < 100) return null;
-
-    const updatedStocks = boardStocksArray.map(s => {
-      if (s.name === symbol) {
-        const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
-        const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
-        const newHistory = (nextValue !== curVal) ? [...currentHistory, nextValue] : currentHistory;
-        this.priceHistory[symbol] = newHistory;
-
-        return {
-          ...s,
-          step: prevStep,
-          value: nextValue,
-          oldValue: curVal,
-          direction: 'down',
-          history: newHistory,
-          updatedAt: Date.now()
-        };
-      }
-      return s;
-    });
-
-    return updatedStocks;
+    return boardStocksArray.map(s => (s.name === symbol ? updated : { ...s, direction: null }));
   }
 
   // Generate updated stocks list for saving to Firebase when upgrading price step for visible/target stocks by +1
@@ -447,33 +283,22 @@ export class MarketState {
     const updatedStocks = boardStocksArray.map(s => {
       const symbol = s.name;
       if (targetSymbols && targetSymbols.size > 0 && !targetSymbols.has(symbol)) {
-        return s;
+        return { ...s, direction: null };
       }
       const master = this.masterStocks[symbol];
       if (!master) return s;
 
-      const currentStep = (typeof s.step === 'number' && !isNaN(s.step)) ? s.step : 0;
-      const nextStep = currentStep + 1;
-      const beta = this.getStockBeta(symbol);
-      const curVal = normalizePriceToHundreds(s.value);
-      const nextValue = calculateExponentialBetaPrice(curVal, beta, 1, 0.16);
-      if (isNaN(nextValue) || nextValue < 100) return s;
+      const updated = calculateStockStepUp(
+        s,
+        master,
+        this.getStockBeta(symbol),
+        this.priceHistory[symbol]
+      );
+      if (!updated) return s;
 
       hasChanges = true;
-      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
-      const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
-      const newHistory = [...currentHistory, nextValue];
-      this.priceHistory[symbol] = newHistory;
-
-      return {
-        ...s,
-        step: nextStep,
-        value: nextValue,
-        oldValue: curVal,
-        direction: 'up',
-        history: newHistory,
-        updatedAt: Date.now()
-      };
+      this.priceHistory[symbol] = updated.history;
+      return updated;
     });
 
     return hasChanges ? updatedStocks : null;
@@ -488,39 +313,25 @@ export class MarketState {
     const updatedStocks = boardStocksArray.map(s => {
       const symbol = s.name;
       if (targetSymbols && targetSymbols.size > 0 && !targetSymbols.has(symbol)) {
-        return s;
+        return { ...s, direction: null };
       }
       const master = this.masterStocks[symbol];
       if (!master) return s;
 
-      const currentStep = (typeof s.step === 'number' && !isNaN(s.step)) ? s.step : 0;
-      let prevStep = currentStep - 1;
-      if (prevStep < 0) {
-        prevStep = 0;
-      }
-
-      const beta = this.getStockBeta(symbol);
       const curVal = normalizePriceToHundreds(s.value);
       if (curVal <= 100) return s;
 
-      const nextValue = Math.max(100, calculateExponentialBetaPrice(curVal, beta, -1, 0.16));
-      if (isNaN(nextValue) || nextValue < 100 || nextValue >= curVal) return s;
+      const updated = calculateStockStepDown(
+        s,
+        master,
+        this.getStockBeta(symbol),
+        this.priceHistory[symbol]
+      );
+      if (!updated || updated.value >= curVal) return s;
 
       hasChanges = true;
-      const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
-      const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
-      const newHistory = [...currentHistory, nextValue];
-      this.priceHistory[symbol] = newHistory;
-
-      return {
-        ...s,
-        step: prevStep,
-        value: nextValue,
-        oldValue: curVal,
-        direction: 'down',
-        history: newHistory,
-        updatedAt: Date.now()
-      };
+      this.priceHistory[symbol] = updated.history;
+      return updated;
     });
 
     return hasChanges ? updatedStocks : null;
@@ -528,22 +339,13 @@ export class MarketState {
 
   // Reset entire market state back to initial steps
   getResetStocks() {
-    return Object.values(this.boardStocks).map(s => {
-      const master = this.masterStocks[s.name];
-      if (!master) return s;
-      const startIdx = master.startStep - 1;
-      const startPrice = normalizePriceToHundreds(master.steps[startIdx]);
-      this.priceHistory[s.name] = [startPrice];
-      return {
-        ...s,
-        step: startIdx,
-        value: startPrice,
-        oldValue: null,
-        direction: null,
-        history: [startPrice],
-        updatedAt: Date.now()
-      };
+    const resetStocks = calculateResetStocks(Object.values(this.boardStocks), this.masterStocks);
+    resetStocks.forEach(s => {
+      if (s.history) {
+        this.priceHistory[s.name] = [...s.history];
+      }
     });
+    return resetStocks;
   }
 
   resetFilters() {
@@ -702,7 +504,8 @@ export class MarketState {
     };
     this.pendingOrders = {};
     this.priceHistory = {};
-    this.undoStack = [];
-    this.redoStack = [];
+    if (this.historyManager) {
+      this.historyManager.clear();
+    }
   }
 }

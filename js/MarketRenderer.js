@@ -1,9 +1,10 @@
 import { ChartRenderer } from './renderers/ChartRenderer.js';
 import { PortfolioRenderer } from './renderers/PortfolioRenderer.js';
 import { CardGridRenderer } from './renderers/CardGridRenderer.js';
+import { ModalsRenderer } from './renderers/ModalsRenderer.js';
 
 /**
- * MarketRenderer - Main Facade Renderer coordinating Canvas Charts, Portfolio UI, and Stock Card Grid modules.
+ * MarketRenderer - Main Facade Renderer coordinating Canvas Charts, Portfolio UI, Stock Card Grid, and Modals modules.
  */
 export class MarketRenderer {
   constructor() {
@@ -17,7 +18,6 @@ export class MarketRenderer {
     this.resetBtn = document.getElementById('resetBtn');
     this.resetMarketBtn = document.getElementById('resetMarketBtn');
     this.resetRoomDataBtn = document.getElementById('resetRoomDataBtn');
-    this.confirmResetRoomModal = document.getElementById('confirmResetRoomModal');
     this.stockChartCanvas = document.getElementById('stockChart');
     
     // Lobby Screen Elements
@@ -25,65 +25,6 @@ export class MarketRenderer {
     this.lobbyForm = document.getElementById('lobbyForm');
     this.roomCodeInput = document.getElementById('roomCodeInput');
     this.joinRoomBtn = document.getElementById('joinRoomBtn');
-    
-    // Role Selection Modal
-    this.roleSelectionModal = document.getElementById('roleSelectionModal');
-    this.roleOptGMBtn = document.getElementById('roleOptGMBtn');
-    this.roleOptPlayerBtn = document.getElementById('roleOptPlayerBtn');
-    this.roleOptCloseBtn = document.getElementById('roleOptCloseBtn');
-
-    // Player Name Modal
-    this.playerNameModal = document.getElementById('playerNameModal');
-    this.playerNameInput = document.getElementById('playerNameInput');
-    this.playerNameErrorText = document.getElementById('playerNameErrorText');
-    this.playerNameConfirmBtn = document.getElementById('playerNameConfirmBtn');
-    this.playerNameCloseBtn = document.getElementById('playerNameCloseBtn');
-    this.playerNameModalTitle = document.getElementById('playerNameModalTitle');
-    this.playerNameModalSubtitle = document.getElementById('playerNameModalSubtitle');
-    this.editPlayerNameBtn = document.getElementById('editPlayerNameBtn');
-
-    // Game Mode Selection Modal (GM) & Waiting Modal (Player)
-    this.gameModeSelectionModal = document.getElementById('gameModeSelectionModal');
-    this.gameModeBasicBtn = document.getElementById('gameModeBasicBtn');
-    this.gameModeAdvanceBtn = document.getElementById('gameModeAdvanceBtn');
-    this.gameModeCloseBtn = document.getElementById('gameModeCloseBtn');
-    this.waitingForGMModal = document.getElementById('waitingForGMModal');
-    this.waitingCloseBtn = document.getElementById('waitingCloseBtn');
-    this.waitingResetRoomBtn = document.getElementById('waitingResetRoomBtn');
-    this.waitingRoomCodeBadge = document.getElementById('waitingRoomCodeBadge');
-    
-    // Room Full Alert Modal
-    this.roomFullModal = document.getElementById('roomFullModal');
-    this.roomFullOkBtn = document.getElementById('roomFullOkBtn');
-    
-    // Invalid Room Code Modal
-    this.invalidRoomModal = document.getElementById('invalidRoomModal');
-    this.invalidRoomCodeText = document.getElementById('invalidRoomCodeText');
-    this.invalidRoomOkBtn = document.getElementById('invalidRoomOkBtn');
-    
-    // Confirm Dialog Modal components
-    this.confirmModal = document.getElementById('confirmModal');
-
-    // GM Transfer Modal
-    this.gmTransferModal = document.getElementById('gmTransferModal');
-    this.gmTransferClaimBtn = document.getElementById('gmTransferClaimBtn');
-    this.gmTransferDeclineBtn = document.getElementById('gmTransferDeclineBtn');
-
-    // Direct GM Handover Modal (Danger Zone)
-    this.openTransferGmModalBtn = document.getElementById('openTransferGmModalBtn');
-    this.gmDirectTransferModal = document.getElementById('gmDirectTransferModal');
-    this.gmTransferPlayerList = document.getElementById('gmTransferPlayerList');
-    this.confirmDirectTransferBtn = document.getElementById('confirmDirectTransferBtn');
-    this.cancelDirectTransferBtn = document.getElementById('cancelDirectTransferBtn');
-    this.closeDirectTransferModalBtn = document.getElementById('closeDirectTransferModalBtn');
-
-    // Kick Player Modal (Danger Zone)
-    this.openKickPlayerModalBtn = document.getElementById('openKickPlayerModalBtn');
-    this.kickPlayerModal = document.getElementById('kickPlayerModal');
-    this.kickPlayerList = document.getElementById('kickPlayerList');
-    this.confirmKickPlayerBtn = document.getElementById('confirmKickPlayerBtn');
-    this.cancelKickPlayerBtn = document.getElementById('cancelKickPlayerBtn');
-    this.closeKickPlayerModalBtn = document.getElementById('closeKickPlayerModalBtn');
 
     // Role & Room Controller Elements
     this.roleController = document.getElementById('roleController');
@@ -106,6 +47,7 @@ export class MarketRenderer {
     this.playerPendingOrdersBody = document.getElementById('playerPendingOrdersBody');
 
     // Sub-renderers following Single Responsibility Principle
+    this.modalsRenderer = new ModalsRenderer();
     this.chartRenderer = new ChartRenderer(this);
     this.portfolioRenderer = new PortfolioRenderer();
     this.cardGridRenderer = new CardGridRenderer(
@@ -115,12 +57,65 @@ export class MarketRenderer {
       null,
       null,
       this.sortSectorBtn,
-      this.confirmModal
+      this.modalsRenderer.confirmModal
     );
   }
 
+  // --- Getters for Modals & Dialog Elements (100% Backward Compatibility) ---
+  get confirmResetRoomModal() { return this.modalsRenderer.confirmResetRoomModal; }
+  get roleSelectionModal() { return this.modalsRenderer.roleSelectionModal; }
+  get roleOptGMBtn() { return this.modalsRenderer.roleOptGMBtn; }
+  get roleOptPlayerBtn() { return this.modalsRenderer.roleOptPlayerBtn; }
+  get roleOptCloseBtn() { return this.modalsRenderer.roleOptCloseBtn; }
+  get playerNameModal() { return this.modalsRenderer.playerNameModal; }
+  get playerNameInput() { return this.modalsRenderer.playerNameInput; }
+  get playerNameErrorText() { return this.modalsRenderer.playerNameErrorText; }
+  get playerNameConfirmBtn() { return this.modalsRenderer.playerNameConfirmBtn; }
+  get playerNameCloseBtn() { return this.modalsRenderer.playerNameCloseBtn; }
+  get playerNameModalTitle() { return this.modalsRenderer.playerNameModalTitle; }
+  get playerNameModalSubtitle() { return this.modalsRenderer.playerNameModalSubtitle; }
+  get editPlayerNameBtn() { return this.modalsRenderer.editPlayerNameBtn; }
+  get gameModeSelectionModal() { return this.modalsRenderer.gameModeSelectionModal; }
+  get gameModeBasicBtn() { return this.modalsRenderer.gameModeBasicBtn; }
+  get gameModeAdvanceBtn() { return this.modalsRenderer.gameModeAdvanceBtn; }
+  get gameModeCloseBtn() { return this.modalsRenderer.gameModeCloseBtn; }
+  get waitingForGMModal() { return this.modalsRenderer.waitingForGMModal; }
+  get waitingCloseBtn() { return this.modalsRenderer.waitingCloseBtn; }
+  get waitingResetRoomBtn() { return this.modalsRenderer.waitingResetRoomBtn; }
+  get waitingRoomCodeBadge() { return this.modalsRenderer.waitingRoomCodeBadge; }
+  get roomFullModal() { return this.modalsRenderer.roomFullModal; }
+  get roomFullOkBtn() { return this.modalsRenderer.roomFullOkBtn; }
+  get invalidRoomModal() { return this.modalsRenderer.invalidRoomModal; }
+  get invalidRoomCodeText() { return this.modalsRenderer.invalidRoomCodeText; }
+  get invalidRoomOkBtn() { return this.modalsRenderer.invalidRoomOkBtn; }
+  get confirmModal() { return this.modalsRenderer.confirmModal; }
+  get gmTransferModal() { return this.modalsRenderer.gmTransferModal; }
+  get gmTransferClaimBtn() { return this.modalsRenderer.gmTransferClaimBtn; }
+  get gmTransferDeclineBtn() { return this.modalsRenderer.gmTransferDeclineBtn; }
+  get openTransferGmModalBtn() { return this.modalsRenderer.openTransferGmModalBtn; }
+  get gmDirectTransferModal() { return this.modalsRenderer.gmDirectTransferModal; }
+  get gmTransferPlayerList() { return this.modalsRenderer.gmTransferPlayerList; }
+  get confirmDirectTransferBtn() { return this.modalsRenderer.confirmDirectTransferBtn; }
+  get cancelDirectTransferBtn() { return this.modalsRenderer.cancelDirectTransferBtn; }
+  get closeDirectTransferModalBtn() { return this.modalsRenderer.closeDirectTransferModalBtn; }
+  get openKickPlayerModalBtn() { return this.modalsRenderer.openKickPlayerModalBtn; }
+  get kickPlayerModal() { return this.modalsRenderer.kickPlayerModal; }
+  get kickPlayerList() { return this.modalsRenderer.kickPlayerList; }
+  get confirmKickPlayerBtn() { return this.modalsRenderer.confirmKickPlayerBtn; }
+  get cancelKickPlayerBtn() { return this.modalsRenderer.cancelKickPlayerBtn; }
+  get closeKickPlayerModalBtn() { return this.modalsRenderer.closeKickPlayerModalBtn; }
+  get selectedKickPlayerUid() { return this.modalsRenderer.selectedKickPlayerUid; }
+  set selectedKickPlayerUid(val) { this.modalsRenderer.selectedKickPlayerUid = val; }
+  get currentKickEligiblePlayers() { return this.modalsRenderer.currentKickEligiblePlayers; }
+  set currentKickEligiblePlayers(val) { this.modalsRenderer.currentKickEligiblePlayers = val; }
+  get onKickPlayerConfirmCallback() { return this.modalsRenderer.onKickPlayerConfirmCallback; }
+  set onKickPlayerConfirmCallback(val) { this.modalsRenderer.onKickPlayerConfirmCallback = val; }
+
   showLobby() {
     this.hidePlayerNameModal();
+    if (this.portfolioRenderer) {
+      this.portfolioRenderer.resetAnimationState();
+    }
     if (this.lobbyScreen) {
       this.lobbyScreen.style.display = 'flex';
       this.lobbyScreen.removeAttribute('aria-hidden');
@@ -353,134 +348,7 @@ export class MarketRenderer {
     }
   }
 
-  showTopToast(title, message, type = 'success', duration = 3800) {
-    let container = document.getElementById('toastContainer');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'toastContainer';
-      container.style.cssText = 'position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 999999; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; width: 100%; max-width: 380px; padding: 0 16px;';
-      document.body.appendChild(container);
-    }
-
-    const toast = document.createElement('div');
-    
-    // Apple Dynamic Island Minimal SVG Badges & Colors
-    let glowColor = '#30d158'; // Apple Green
-    let iconSvg = `<svg style="width: 14px; height: 14px; color: ${glowColor};" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
-    let titleColor = '#30d158';
-    
-    if (type === 'rejected' || type === 'error') {
-      glowColor = '#ff453a'; // Apple Red
-      iconSvg = `<svg style="width: 14px; height: 14px; color: ${glowColor};" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
-      titleColor = '#ff453a';
-    } else if (type === 'warning' || type === 'gm') {
-      glowColor = '#ffd60a'; // Apple Gold
-      iconSvg = `<svg style="width: 14px; height: 14px; color: ${glowColor};" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>`;
-      titleColor = '#ffd60a';
-    } else if (type === 'success' || type === 'info') {
-      glowColor = '#0a84ff'; // Apple Blue
-      iconSvg = `<svg style="width: 14px; height: 14px; color: ${glowColor};" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>`;
-      titleColor = '#64d2ff';
-    }
-
-    const appleContainerStyle = `
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 16px;
-      border-radius: 9999px;
-      background: rgba(18, 18, 20, 0.88);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.7), 0 0 12px -2px ${glowColor}40;
-      width: 100%;
-      transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s ease;
-      transform: translateY(-24px) scale(0.92);
-      opacity: 0;
-    `;
-
-    toast.style.cssText = appleContainerStyle;
-    toast.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: ${glowColor}18; border: 1px solid ${glowColor}40; flex-shrink: 0;">
-        ${iconSvg}
-      </div>
-      <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: ${titleColor}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;">${title}</span>
-        </div>
-        <span style="font-size: 11px; font-weight: 500; color: rgba(235, 235, 245, 0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;">${message}</span>
-      </div>
-      <button class="toast-close-btn" style="background: rgba(255, 255, 255, 0.08); border: none; color: rgba(235, 235, 245, 0.6); font-size: 14px; font-weight: bold; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: background 0.2s;">&times;</button>
-    `;
-
-    // Enforce max 3 active toasts (dismiss oldest if > 3)
-    const activeToasts = Array.from(container.children).filter(el => !el.classList.contains('dismissing'));
-    if (activeToasts.length >= 3) {
-      const oldestToast = activeToasts[0];
-      if (oldestToast && typeof oldestToast._dismiss === 'function') {
-        oldestToast._dismiss();
-      } else if (oldestToast && oldestToast.parentNode) {
-        oldestToast.parentNode.removeChild(oldestToast);
-      }
-    }
-
-    container.appendChild(toast);
-
-    requestAnimationFrame(() => {
-      toast.style.transform = 'translateY(0) scale(1)';
-      toast.style.opacity = '1';
-    });
-
-    const closeBtn = toast.querySelector('.toast-close-btn');
-    const dismiss = () => {
-      toast.classList.add('dismissing');
-      toast.style.transform = 'translateY(-24px) scale(0.92)';
-      toast.style.opacity = '0';
-      setTimeout(() => {
-        if (toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 350);
-    };
-    toast._dismiss = dismiss;
-
-    if (closeBtn) closeBtn.addEventListener('click', dismiss);
-    setTimeout(dismiss, duration);
-  }
-
-  // Card Grid Delegations
-  renderGrid(cards) { this.cardGridRenderer.renderGrid(cards); }
-  updateCardValue(card, price, direction, prevPrice) { this.cardGridRenderer.updateCardValue(card, price, direction, prevPrice); }
-  clearAllCardAnimations(cards) { this.cardGridRenderer.clearAllCardAnimations(cards); }
-  applyBetaColors(cards) { this.cardGridRenderer.applyBetaColors(cards); }
-  applyPriceColors(cards, boardStocks, masterStocks, initialPrices) { this.cardGridRenderer.applyPriceColors(cards, boardStocks, masterStocks, initialPrices); }
-  calculateBetaColor(beta) { return this.cardGridRenderer.calculateBetaColor(beta); }
-  updateSortButtonsUI(sortStates) { this.cardGridRenderer.updateSortButtonsUI(sortStates); }
-  updateSectorPillsUI(selectedSectors) { this.cardGridRenderer.updateSectorPillsUI(selectedSectors); }
-  updateSizePillsUI(selectedSizes) { this.cardGridRenderer.updateSizePillsUI(selectedSizes); }
-  ensureViewGraphButtons() { this.cardGridRenderer.ensureViewGraphButtons(); }
-  openConfirmModal() { this.cardGridRenderer.openConfirmModal(); }
-  closeConfirmModal() { this.cardGridRenderer.closeConfirmModal(); }
-  openConfirmResetRoomModal() {
-    if (!this.confirmResetRoomModal) return;
-    this.confirmResetRoomModal.style.display = 'flex';
-    this.confirmResetRoomModal.classList.add('show');
-  }
-  closeConfirmResetRoomModal() {
-    if (!this.confirmResetRoomModal) return;
-    this.confirmResetRoomModal.classList.remove('show');
-    this.confirmResetRoomModal.style.display = 'none';
-  }
-  showErrorAlert(title, text) { this.cardGridRenderer.showErrorAlert(title, text); }
-  showSuccessAlert(title, text) { this.cardGridRenderer.showSuccessAlert(title, text); }
-  showConfirmAlert(title, text, confirmText, cancelText) { return this.cardGridRenderer.showConfirmAlert(title, text, confirmText, cancelText); }
-  showAutoDismissModal(title, text, duration) { return this.cardGridRenderer.showAutoDismissModal(title, text, duration); }
-
-  // Chart Rendering Delegations
-  drawCardChart(canvas, history, activeIndex = -1) { this.chartRenderer.drawCardChart(canvas, history, activeIndex); }
-  bindTimelineEvents(canvas, chartContainer, startPrice, beta) { this.chartRenderer.bindTimelineEvents(canvas, chartContainer, startPrice, beta); }
-  toggleCardChart(card, history, startPrice, beta) { this.chartRenderer.toggleCardChart(card, history, startPrice, beta); }
-
+  // --- Lobby Helpers ---
   clearRoomCodeSlots() {
     if (this.roomCodeInput) {
       this.roomCodeInput.value = '';
@@ -497,13 +365,11 @@ export class MarketRenderer {
   }
 
   triggerShakeCodeBox() {
-    // 1. เคลียร์ข้อความในช่องกรอกให้อัตโนมัติ ล้าง 6 ช่องสล็อต และโฟกัสช่องพิมพ์
     this.clearRoomCodeSlots();
     if (this.roomCodeInput) {
       this.roomCodeInput.focus();
     }
 
-    // 2. แอนิเมชันสั่นสะเทือนเรืองแสงแดง JS Web Animations API 100% การันตีผล
     const codeBox = document.querySelector('.lobby-code-box');
     if (codeBox) {
       const currentY = getComputedStyle(codeBox).getPropertyValue('--lobby-code-box-y').trim() || '-150px';
@@ -523,359 +389,58 @@ export class MarketRenderer {
     }
   }
 
+  // --- Card Grid Delegations ---
+  renderGrid(cards) { this.cardGridRenderer.renderGrid(cards); }
+  updateCardValue(card, price, direction, prevPrice, shouldAnimate = true) { this.cardGridRenderer.updateCardValue(card, price, direction, prevPrice, shouldAnimate); }
+  clearAllCardAnimations(cards) { this.cardGridRenderer.clearAllCardAnimations(cards); }
+  applyBetaColors(cards) { this.cardGridRenderer.applyBetaColors(cards); }
+  applyPriceColors(cards, boardStocks, masterStocks, initialPrices) { this.cardGridRenderer.applyPriceColors(cards, boardStocks, masterStocks, initialPrices); }
+  calculateBetaColor(beta) { return this.cardGridRenderer.calculateBetaColor(beta); }
+  updateSortButtonsUI(sortStates) { this.cardGridRenderer.updateSortButtonsUI(sortStates); }
+  updateSectorPillsUI(selectedSectors) { this.cardGridRenderer.updateSectorPillsUI(selectedSectors); }
+  updateSizePillsUI(selectedSizes) { this.cardGridRenderer.updateSizePillsUI(selectedSizes); }
+  ensureViewGraphButtons() { this.cardGridRenderer.ensureViewGraphButtons(); }
+
+  // --- Modals & Popups Delegations ---
+  openConfirmModal() { this.modalsRenderer.openConfirmModal(); }
+  closeConfirmModal() { this.modalsRenderer.closeConfirmModal(); }
+  openConfirmResetRoomModal() { this.modalsRenderer.openConfirmResetRoomModal(); }
+  closeConfirmResetRoomModal() { this.modalsRenderer.closeConfirmResetRoomModal(); }
+  showErrorAlert(title, text) { this.modalsRenderer.showErrorAlert(title, text); }
+  showSuccessAlert(title, text) { this.modalsRenderer.showSuccessAlert(title, text); }
+  showConfirmAlert(title, text, confirmText = 'Confirm', cancelText = 'Cancel') { return this.modalsRenderer.showConfirmAlert(title, text, confirmText, cancelText); }
+  showAutoDismissModal(title, text, duration = 3500) { return this.modalsRenderer.showAutoDismissModal(title, text, duration); }
+  showTopToast(title, message, type = 'success', duration = 3800) { this.modalsRenderer.showTopToast(title, message, type, duration); }
+
   showInvalidRoomModal(code) {
     this.clearRoomCodeSlots();
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    if (this.invalidRoomCodeText) {
-      this.invalidRoomCodeText.textContent = code ? code.toUpperCase() : '-';
-    }
-    const modal = this.invalidRoomModal;
-    const okBtn = this.invalidRoomOkBtn;
-    if (!modal || !okBtn) {
-      this.showErrorAlert("Invalid Room Code", `Room code "${code}" was not found in the system. Please check your room code or contact system administrator.`);
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve) => {
-      modal.style.display = 'flex';
-      const handleOk = () => {
-        okBtn.removeEventListener('click', handleOk);
-        modal.style.display = 'none';
-        this.clearRoomCodeSlots();
-        if (this.roomCodeInput) {
-          this.roomCodeInput.focus();
-        }
-        resolve();
-      };
-      okBtn.addEventListener('click', handleOk);
+    return this.modalsRenderer.showInvalidRoomModal(code, () => {
+      this.clearRoomCodeSlots();
+      if (this.roomCodeInput) {
+        this.roomCodeInput.focus();
+      }
     });
   }
 
-  showRoomFullModal(customMessage = null) {
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    const modal = this.roomFullModal;
-    const okBtn = this.roomFullOkBtn;
-    const resetBtn = document.getElementById('roomFullResetBtn');
+  showRoomFullModal(customMessage = null) { return this.modalsRenderer.showRoomFullModal(customMessage); }
+  showGMTransferModal(onClaim, onDecline) { this.modalsRenderer.showGMTransferModal(onClaim, onDecline); }
+  hideGMTransferModal() { this.modalsRenderer.hideGMTransferModal(); }
+  showDirectTransferModal(players = [], onConfirm = null) { this.modalsRenderer.showDirectTransferModal(players, onConfirm); }
+  hideDirectTransferModal() { this.modalsRenderer.hideDirectTransferModal(); }
+  isKickPlayerModalOpen() { return this.modalsRenderer.isKickPlayerModalOpen(); }
+  updateKickPlayerList(players = []) { this.modalsRenderer.updateKickPlayerList(players); }
+  showKickPlayerModal(players = [], onConfirm = null) { this.modalsRenderer.showKickPlayerModal(players, onConfirm); }
+  hideKickPlayerModal() { this.modalsRenderer.hideKickPlayerModal(); }
+  showPlayerNameModal(options = {}) { this.modalsRenderer.showPlayerNameModal(options); }
+  hidePlayerNameModal() { this.modalsRenderer.hidePlayerNameModal(); }
+  showPlayerNameError(message) { this.modalsRenderer.showPlayerNameError(message); }
 
-    if (!modal) {
-      alert(customMessage || "Room Full\nThis game room has reached its maximum player limit (8 players max).");
-      return Promise.resolve('close');
-    }
+  // --- Chart Rendering Delegations ---
+  drawCardChart(canvas, history, activeIndex = -1) { this.chartRenderer.drawCardChart(canvas, history, activeIndex); }
+  bindTimelineEvents(canvas, chartContainer, startPrice, beta) { this.chartRenderer.bindTimelineEvents(canvas, chartContainer, startPrice, beta); }
+  toggleCardChart(card, history, startPrice, beta) { this.chartRenderer.toggleCardChart(card, history, startPrice, beta); }
 
-    const sub = modal.querySelector('.apple-modal-subtitle');
-    const defaultText = "ห้องเกมนี้มีจำนวนผู้เล่นครบตามจำนวนสูงสุดแล้ว (จำกัดสูงสุด 8 คน) คุณสามารถรีเซ็ตห้องเพื่อล้างเซสชันเก่าได้";
-    if (sub) {
-      sub.textContent = customMessage || defaultText;
-    }
-
-    return new Promise((resolve) => {
-      modal.style.display = 'flex';
-      const cleanup = (action) => {
-        if (okBtn) okBtn.removeEventListener('click', handleOk);
-        if (resetBtn) resetBtn.removeEventListener('click', handleReset);
-        modal.style.display = 'none';
-        if (sub) sub.textContent = defaultText;
-        resolve(action);
-      };
-      const handleOk = () => cleanup('close');
-      const handleReset = () => cleanup('reset');
-
-      if (okBtn) okBtn.addEventListener('click', handleOk);
-      if (resetBtn) resetBtn.addEventListener('click', handleReset);
-    });
-  }
-
-  showGMTransferModal(onClaim, onDecline) {
-    const modal = this.gmTransferModal;
-    const claimBtn = this.gmTransferClaimBtn;
-    const declineBtn = this.gmTransferDeclineBtn;
-    if (!modal) return;
-
-    modal.style.display = 'flex';
-
-    const handleClaim = (e) => {
-      e.preventDefault();
-      if (onClaim) onClaim();
-    };
-
-    const handleDecline = (e) => {
-      e.preventDefault();
-      modal.style.display = 'none';
-      if (onDecline) onDecline();
-    };
-
-    if (claimBtn) {
-      claimBtn.onclick = handleClaim;
-    }
-    if (declineBtn) {
-      declineBtn.onclick = handleDecline;
-    }
-  }
-
-  hideGMTransferModal() {
-    const modal = this.gmTransferModal;
-    if (modal) {
-      modal.style.display = 'none';
-    }
-  }
-
-  showDirectTransferModal(players = [], onConfirm = null) {
-    const modal = this.gmDirectTransferModal;
-    const listContainer = this.gmTransferPlayerList;
-    const confirmBtn = this.confirmDirectTransferBtn;
-    const cancelBtn = this.cancelDirectTransferBtn;
-    const closeBtn = this.closeDirectTransferModalBtn;
-    if (!modal || !listContainer) return;
-
-    let selectedUid = null;
-    listContainer.innerHTML = '';
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.style.opacity = '0.5';
-      confirmBtn.style.cursor = 'not-allowed';
-    }
-
-    if (players.length === 0) {
-      listContainer.innerHTML = `<div class="gm-transfer-empty">ไม่มีผู้เล่นอื่นในห้องขณะนี้ (ต้องการผู้เล่นอย่างน้อย 1 คนเพื่อส่งมอบตำแหน่ง)</div>`;
-    } else {
-      players.forEach(player => {
-        const item = document.createElement('div');
-        item.className = 'gm-transfer-player-item';
-        item.dataset.uid = player.uid;
-
-        const cashFormatted = (player.cash || 0).toLocaleString('en-US');
-        const initial = (player.displayName || 'P').charAt(0).toUpperCase();
-
-        item.innerHTML = `
-          <div class="gm-transfer-player-info">
-            <div class="gm-transfer-avatar">${initial}</div>
-            <div>
-              <div class="gm-transfer-player-name">${player.displayName || 'Player'}</div>
-              <div class="gm-transfer-player-stats">Cash: ${cashFormatted} ฿</div>
-            </div>
-          </div>
-          <div class="gm-transfer-radio-indicator"></div>
-        `;
-
-        item.addEventListener('click', () => {
-          listContainer.querySelectorAll('.gm-transfer-player-item').forEach(el => el.classList.remove('selected'));
-          item.classList.add('selected');
-          selectedUid = player.uid;
-          if (confirmBtn) {
-            confirmBtn.disabled = false;
-            confirmBtn.style.opacity = '1';
-            confirmBtn.style.cursor = 'pointer';
-          }
-        });
-
-        listContainer.appendChild(item);
-      });
-    }
-
-    modal.style.display = 'flex';
-
-    const handleConfirm = () => {
-      if (!selectedUid) return;
-      cleanup();
-      modal.style.display = 'none';
-      if (typeof onConfirm === 'function') {
-        const selectedPlayer = players.find(p => p.uid === selectedUid);
-        onConfirm(selectedUid, selectedPlayer);
-      }
-    };
-
-    const handleClose = () => {
-      cleanup();
-      modal.style.display = 'none';
-    };
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        handleClose();
-      }
-    };
-
-    const handleOverlayClick = (e) => {
-      if (e.target === modal) {
-        handleClose();
-      }
-    };
-
-    const cleanup = () => {
-      if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
-      if (cancelBtn) cancelBtn.removeEventListener('click', handleClose);
-      if (closeBtn) closeBtn.removeEventListener('click', handleClose);
-      document.removeEventListener('keydown', handleKeyDown);
-      modal.removeEventListener('click', handleOverlayClick);
-    };
-
-    if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
-    if (cancelBtn) cancelBtn.addEventListener('click', handleClose);
-    if (closeBtn) closeBtn.addEventListener('click', handleClose);
-    document.addEventListener('keydown', handleKeyDown);
-    modal.addEventListener('click', handleOverlayClick);
-  }
-
-  hideDirectTransferModal() {
-    if (this.gmDirectTransferModal) {
-      this.gmDirectTransferModal.style.display = 'none';
-    }
-  }
-
-  showKickPlayerModal(players = [], onConfirm = null) {
-    const modal = this.kickPlayerModal;
-    const listContainer = this.kickPlayerList;
-    const confirmBtn = this.confirmKickPlayerBtn;
-    const cancelBtn = this.cancelKickPlayerBtn;
-    const closeBtn = this.closeKickPlayerModalBtn;
-    if (!modal || !listContainer) return;
-
-    let selectedUid = null;
-    listContainer.innerHTML = '';
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.style.opacity = '0.5';
-      confirmBtn.style.cursor = 'not-allowed';
-    }
-
-    if (players.length === 0) {
-      listContainer.innerHTML = `<div class="kick-player-empty">ไม่มีผู้เล่นอื่นในห้องขณะนี้ (ไม่พบผู้เล่นที่สามารถบังคับออกได้)</div>`;
-    } else {
-      players.forEach(player => {
-        const item = document.createElement('div');
-        item.className = 'kick-player-item';
-        item.dataset.uid = player.uid;
-
-        const cashFormatted = (player.cash || 0).toLocaleString('en-US');
-        const initial = (player.displayName || 'P').charAt(0).toUpperCase();
-
-        item.innerHTML = `
-          <div class="kick-player-info">
-            <div class="kick-player-avatar">${initial}</div>
-            <div>
-              <div class="kick-player-name">${player.displayName || 'Player'}</div>
-              <div class="kick-player-stats">Cash: ${cashFormatted} ฿</div>
-            </div>
-          </div>
-          <div class="kick-player-radio-indicator"></div>
-        `;
-
-        item.addEventListener('click', () => {
-          listContainer.querySelectorAll('.kick-player-item').forEach(el => el.classList.remove('selected'));
-          item.classList.add('selected');
-          selectedUid = player.uid;
-          if (confirmBtn) {
-            confirmBtn.disabled = false;
-            confirmBtn.style.opacity = '1';
-            confirmBtn.style.cursor = 'pointer';
-          }
-        });
-
-        listContainer.appendChild(item);
-      });
-    }
-
-    modal.style.display = 'flex';
-
-    const handleConfirm = () => {
-      if (!selectedUid) return;
-      cleanup();
-      modal.style.display = 'none';
-      if (typeof onConfirm === 'function') {
-        const selectedPlayer = players.find(p => p.uid === selectedUid);
-        onConfirm(selectedUid, selectedPlayer);
-      }
-    };
-
-    const handleClose = () => {
-      cleanup();
-      modal.style.display = 'none';
-    };
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        handleClose();
-      }
-    };
-
-    const handleOverlayClick = (e) => {
-      if (e.target === modal) {
-        handleClose();
-      }
-    };
-
-    const cleanup = () => {
-      if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
-      if (cancelBtn) cancelBtn.removeEventListener('click', handleClose);
-      if (closeBtn) closeBtn.removeEventListener('click', handleClose);
-      document.removeEventListener('keydown', handleKeyDown);
-      modal.removeEventListener('click', handleOverlayClick);
-    };
-
-    if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
-    if (cancelBtn) cancelBtn.addEventListener('click', handleClose);
-    if (closeBtn) closeBtn.addEventListener('click', handleClose);
-    document.addEventListener('keydown', handleKeyDown);
-    modal.addEventListener('click', handleOverlayClick);
-  }
-
-  hideKickPlayerModal() {
-    if (this.kickPlayerModal) {
-      this.kickPlayerModal.style.display = 'none';
-    }
-  }
-
-  showPlayerNameModal({ title = "ตั้งชื่อผู้เล่นของคุณ", subtitle = "โปรดระบุชื่อที่ต้องการใช้แสดงในห้องเกม (1 - 20 ตัวอักษร)", confirmText = "เข้าสู่เกม", initialValue = "" } = {}) {
-    if (!this.playerNameModal) return;
-    if (this.playerNameModalTitle) this.playerNameModalTitle.textContent = title;
-    if (this.playerNameModalSubtitle) this.playerNameModalSubtitle.textContent = subtitle;
-    if (this.playerNameConfirmBtn) {
-      this.playerNameConfirmBtn.textContent = confirmText;
-      this.playerNameConfirmBtn.disabled = false;
-      this.playerNameConfirmBtn.style.opacity = '1';
-      this.playerNameConfirmBtn.style.cursor = 'pointer';
-    }
-    if (this.playerNameInput) {
-      this.playerNameInput.value = initialValue;
-    }
-    if (this.playerNameErrorText) {
-      this.playerNameErrorText.textContent = '';
-      this.playerNameErrorText.style.display = 'none';
-    }
-    this.playerNameModal.style.display = 'flex';
-    setTimeout(() => {
-      if (this.playerNameInput) {
-        this.playerNameInput.focus();
-        this.playerNameInput.select();
-      }
-    }, 100);
-  }
-
-  hidePlayerNameModal() {
-    if (this.playerNameModal) {
-      this.playerNameModal.style.display = 'none';
-    }
-    if (this.playerNameErrorText) {
-      this.playerNameErrorText.textContent = '';
-      this.playerNameErrorText.style.display = 'none';
-    }
-  }
-
-  showPlayerNameError(message) {
-    if (this.playerNameErrorText) {
-      this.playerNameErrorText.textContent = message;
-      this.playerNameErrorText.style.display = 'block';
-    }
-    if (this.playerNameInput) {
-      this.playerNameInput.focus();
-    }
-  }
-
-  // Portfolio & Orders Delegations
+  // --- Portfolio & Orders Delegations ---
   updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders = {}, userUid = null) { 
     this.portfolioRenderer.updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders, userUid); 
   }
