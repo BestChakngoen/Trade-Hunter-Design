@@ -278,6 +278,7 @@ export class GMManagementHandler {
         const role = (member.role || '').toLowerCase();
         const name = (member.displayName || '').toUpperCase();
         if (role === 'game_master' || name === 'GM') return;
+        if (member.online === false) return;
 
         const playerStocks = member.portfolio?.stocks || {};
         const dividendData = TradeService.calculatePlayerDividend(

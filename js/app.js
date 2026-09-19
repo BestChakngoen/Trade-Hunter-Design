@@ -2,8 +2,13 @@ import { FirebaseService } from './FirebaseService.js';
 import { MarketState } from './MarketState.js';
 import { MarketRenderer } from './MarketRenderer.js';
 import { MarketController } from './MarketController.js';
+import { InAppBrowserService } from './services/InAppBrowserService.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize In-App Browser detection & guidance for LINE, Facebook, Instagram
+  const inAppBrowserService = new InAppBrowserService();
+  inAppBrowserService.init();
+
   const priceGrid = document.getElementById('priceGrid');
   const originalCards = Array.from(priceGrid.querySelectorAll('.price-card'));
   

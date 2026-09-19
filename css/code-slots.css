@@ -67,16 +67,43 @@
 
 .code-slot.active-focus {
   border-color: #10b981 !important;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.65), inset 0 0 6px rgba(16, 185, 129, 0.2) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  position: relative !important;
   animation: slotPulse 1.2s infinite ease-in-out !important;
+}
+
+.code-slot.active-focus:empty::after {
+  content: "";
+  display: block;
+  width: 2.5px;
+  height: 55%;
+  background-color: #10b981;
+  border-radius: 2px;
+  animation: slotCaretBlink 0.9s infinite ease-in-out !important;
 }
 
 @keyframes slotPulse {
   0%, 100% {
     border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
   }
   50% {
     border-color: rgba(16, 185, 129, 1);
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.75), inset 0 0 8px rgba(16, 185, 129, 0.3);
   }
+}
+
+@keyframes slotCaretBlink {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.lobby-code-input:focus::placeholder {
+  opacity: 0 !important;
+  color: transparent !important;
 }

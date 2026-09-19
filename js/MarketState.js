@@ -166,6 +166,10 @@ export class MarketState {
     this.redoStack.forEach(cleanSnapshot);
   }
 
+  purgeUserData(playerUid) {
+    this.removeMemberFromHistory(playerUid);
+  }
+
   setRoomCode(code) {
     this.roomCode = code;
   }
@@ -288,7 +292,21 @@ export class MarketState {
         }
         if (priceBox) {
           priceBox.classList.remove('price-up', 'price-down', 'price-neutral');
-          if (stock.value > startPrice) {
+
+          let isUp = false;
+          let isDown = false;
+          if (stock.direction === 'up') {
+            isUp = true;
+          } else if (stock.direction === 'down') {
+            isDown = true;
+          } else if (Number(stock.value) === 100) {
+            isDown = true;
+          } else if (stock.oldValue !== null && stock.oldValue !== undefined) {
+            if (stock.value > stock.oldValue) isUp = true;
+            else if (stock.value < stock.oldValue) isDown = true;
+          }
+
+          if (isUp) {
             priceBox.classList.add('price-up');
             priceBox.style.setProperty('background-color', 'rgba(16, 185, 129, 0.18)', 'important');
             priceBox.style.setProperty('border', '1.5px solid rgba(16, 185, 129, 0.5)', 'important');
@@ -297,7 +315,7 @@ export class MarketState {
               valueText.style.setProperty('color', '#34d399', 'important');
               valueText.style.setProperty('text-shadow', '0 0 10px rgba(52, 211, 153, 0.5)', 'important');
             }
-          } else if (stock.value < startPrice) {
+          } else if (isDown) {
             priceBox.classList.add('price-down');
             priceBox.style.setProperty('background-color', 'rgba(239, 68, 68, 0.18)', 'important');
             priceBox.style.setProperty('border', '1.5px solid rgba(239, 68, 68, 0.5)', 'important');
@@ -363,6 +381,7 @@ export class MarketState {
           step: nextStep,
           value: nextValue,
           oldValue: curVal,
+          direction: 'up',
           history: newHistory,
           updatedAt: Date.now()
         };
@@ -391,7 +410,7 @@ export class MarketState {
 
     const beta = this.getStockBeta(symbol);
     const curVal = normalizePriceToHundreds(currentStock.value);
-    
+
     // Exponential Beta calculation: slope varies dynamically by Beta (16% base step scaling - doubled)
     const nextValue = Math.max(100, calculateExponentialBetaPrice(curVal, beta, -1, 0.16));
     if (isNaN(nextValue) || nextValue < 100) return null;
@@ -400,7 +419,7 @@ export class MarketState {
       if (s.name === symbol) {
         const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
         const currentHistory = Array.isArray(s.history) ? s.history : (this.priceHistory[symbol] || [startPrice]);
-        const newHistory = [...currentHistory, nextValue];
+        const newHistory = (nextValue !== curVal) ? [...currentHistory, nextValue] : currentHistory;
         this.priceHistory[symbol] = newHistory;
 
         return {
@@ -408,6 +427,7 @@ export class MarketState {
           step: prevStep,
           value: nextValue,
           oldValue: curVal,
+          direction: 'down',
           history: newHistory,
           updatedAt: Date.now()
         };
@@ -450,6 +470,7 @@ export class MarketState {
         step: nextStep,
         value: nextValue,
         oldValue: curVal,
+        direction: 'up',
         history: newHistory,
         updatedAt: Date.now()
       };
@@ -480,8 +501,10 @@ export class MarketState {
 
       const beta = this.getStockBeta(symbol);
       const curVal = normalizePriceToHundreds(s.value);
+      if (curVal <= 100) return s;
+
       const nextValue = Math.max(100, calculateExponentialBetaPrice(curVal, beta, -1, 0.16));
-      if (isNaN(nextValue) || nextValue < 100) return s;
+      if (isNaN(nextValue) || nextValue < 100 || nextValue >= curVal) return s;
 
       hasChanges = true;
       const startPrice = master ? normalizePriceToHundreds(master.steps[master.startStep - 1]) : curVal;
@@ -494,6 +517,7 @@ export class MarketState {
         step: prevStep,
         value: nextValue,
         oldValue: curVal,
+        direction: 'down',
         history: newHistory,
         updatedAt: Date.now()
       };
@@ -515,6 +539,7 @@ export class MarketState {
         step: startIdx,
         value: startPrice,
         oldValue: null,
+        direction: null,
         history: [startPrice],
         updatedAt: Date.now()
       };
@@ -670,7 +695,11 @@ export class MarketState {
     this.role = 'player';
     this.isSpectating = false;
     this.boardStocks = {};
-    this.portfolio = { cash: 20000, stocks: {} };
+    this.portfolio = {
+      cash: 20000,
+      stocks: {},
+      debt: { fixAccount: 0, bond10Y: 0, bond20Y: 0 }
+    };
     this.pendingOrders = {};
     this.priceHistory = {};
     this.undoStack = [];

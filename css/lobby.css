@@ -3,34 +3,34 @@
    ========================================================================== */
 :root, #lobbyScreen {
   /* 📏 1. ปรับขนาดองค์ประกอบหลัก (Main Size) */
-  --lobby-logo-size: 350px;       /* ความกว้างโลโก้ */
-  --lobby-character-size: 700px;  /* ความกว้างภาพตัวละคร */
-  --lobby-code-box-size: 700px;   /* ความกว้างหลอดกรอกรหัส */
-  --lobby-joy-btn-size: 200px;    /* ความกว้างปุ่มจอยสติ๊ก */
+  --lobby-logo-size: 380px;       /* ความกว้างโลโก้ */
+  --lobby-character-size: 720px;  /* ความกว้างภาพตัวละคร (เนื่องจากตัวละครอยู่ตรงกลาง 41.6% ของภาพ) */
+  --lobby-code-box-size: 420px;   /* ความกว้างหลอดกรอกรหัส */
+  --lobby-joy-btn-size: 240px;    /* ความกว้างปุ่มจอยสติ๊ก */
 
   /* 📍 2. ปรับตำแหน่งแนวตั้งองค์ประกอบหลัก เลื่อนขึ้น/ลง (Main Position Y) */
   --lobby-logo-y: 0px;            /* 👈 เลื่อนโลโก้: ติดลบ(-) เลื่อนขึ้น / ค่าบวก(+) เลื่อนลง */
-  --lobby-character-y: -40px;     /* 👈 เลื่อนภาพตัวละคร: ติดลบ(-) เลื่อนขึ้น / ค่าบวก(+) เลื่อนลง */
-  --lobby-code-box-y: -150px;     /* 👈 เลื่อนหลอดกรอกรหัส: ติดลบ(-) เลื่อนขึ้น / ค่าบวก(+) เลื่อนลง */
-  --lobby-joy-btn-y: -175px;      /* 👈 เลื่อนปุ่มจอยสติ๊ก: ติดลบ(-) เลื่อนขึ้น / ค่าบวก(+) เลื่อนลง */
+  --lobby-character-y: -20px;     /* 👈 เลื่อนภาพตัวละคร: ชิดโลโก้ */
+  --lobby-code-box-y: -55px;      /* 👈 เลื่อนหลอดกรอกรหัส: ให้ขอบบนทับรองเท้าตัวละครตามแบบ IMG_1417 */
+  --lobby-joy-btn-y: -35px;       /* 👈 เลื่อนปุ่มจอยสติ๊ก: ชิดใต้หลอดกรอกรหัส */
 
   /* ⌨️ 3. ปรับขนาดและตำแหน่งของกล่องกรอกรหัสภายในหลอดขาว (Inner Input Controls) */
-  --lobby-input-width: 60%;         /* 👈 ความกว้างพื้นที่พิมพ์รหัส (เช่น 60% - 75%) */
-  --lobby-input-height: 40%;        /* 👈 ความสูงพื้นที่พิมพ์รหัส/คอนเทนเนอร์ช่องสล็อต */
-  --lobby-input-font-size: 1.15rem; /* 👈 ขนาดฟอนต์ตัวพิมพ์/ข้อความในกล่อง (เช่น 0.8rem - 1.5rem) */
-  --lobby-input-offset-x: 15%;      /* 👈 ขยับตำแหน่งแนวนอนของช่องกรอก (ซ้าย/ขวา) */
-  --lobby-input-offset-y: 29%;       /* 👈 ขยับตำแหน่งแนวตั้งของช่องกรอก (ขึ้น/ลง) */
-  --lobby-slot-height: 75%;         /* 👈 ความสูงของกรอบสล็อตสี่เหลี่ยมแต่ละช่อง */
-  --lobby-slot-max-width: 33px;     /* 👈 ความกว้างสูงสุดของกรอบสล็อตสี่เหลี่ยมแต่ละช่อง */
-  --lobby-slot-gap: 4px;            /* 👈 ระยะห่างระหว่างช่องสล็อตทั้ง 6 ช่อง */
-  --lobby-placeholder-offset-x: 0px;/* 👈 ขยับตำแหน่งแนวนอนของข้อความใส่รหัส (ซ้าย/ขวา) */
-  --lobby-placeholder-offset-y: -4px;/* 👈 ขยับตำแหน่งแนวตั้งของข้อความใส่รหัส (ขึ้น/ลง) */
-  --lobby-placeholder-font-size: 0.9rem; /* 👈 ขนาดตัวอักษรของข้อความใส่รหัส */
+  --lobby-input-width: 68%;         /* 👈 ความกว้างพื้นที่พิมพ์รหัส */
+  --lobby-input-height: 55%;        /* 👈 ความสูงพื้นที่พิมพ์รหัส/คอนเทนเนอร์ช่องสล็อต */
+  --lobby-input-font-size: 1.2rem;  /* 👈 ขนาดฟอนต์ตัวพิมพ์/ข้อความในกล่อง */
+  --lobby-input-offset-x: 5%;       /* 👈 ขยับตำแหน่งแนวนอนของช่องกรอก (ชิดฝั่งซ้ายของหลอดขาว) */
+  --lobby-input-offset-y: 20%;      /* 👈 ขยับตำแหน่งแนวตั้งของช่องกรอก */
+  --lobby-slot-height: 50%;         /* 👈 ความสูงของกรอบสล็อตสี่เหลี่ยมแต่ละช่อง */
+  --lobby-slot-max-width: 38px;     /* 👈 ความกว้างสูงสุดของกรอบสล็อตสี่เหลี่ยมแต่ละช่อง */
+  --lobby-slot-gap: 8px;            /* 👈 ระยะห่างระหว่างช่องสล็อตทั้ง 6 ช่อง */
+  --lobby-placeholder-offset-x: 0px;/* 👈 ขยับตำแหน่งแนวนอนของข้อความใส่รหัส */
+  --lobby-placeholder-offset-y: 0px;/* 👈 ขยับตำแหน่งแนวตั้งของข้อความใส่รหัส */
+  --lobby-placeholder-font-size: 0.95rem; /* 👈 ขนาดตัวอักษรของข้อความใส่รหัส */
 
   /* 🎮 4. ปรับขนาดและตำแหน่งตัวหนังสือบนปุ่ม JOY (Joy Button Text Controls) */
-  --lobby-joy-text-size: 1.8rem;    /* 👈 ขนาดตัวอักษร JOY บนปุ่มกด (เช่น 1.2rem - 2.5rem) */
-  --lobby-joy-text-offset-x: 62%;   /* 👈 ขยับตำแหน่งแนวนอนของ JOY (ซ้าย/ขวา เช่น 45% - 65%) */
-  --lobby-joy-text-offset-y: 48%;   /* 👈 ขยับตำแหน่งแนวตั้งของ JOY (ขึ้น/ลง เช่น 40% - 60%) */
+  --lobby-joy-text-size: 1.75rem;   /* 👈 ขนาดตัวอักษร JOY บนปุ่มกด */
+  --lobby-joy-text-offset-x: 62%;   /* 👈 ขยับตำแหน่งแนวนอนของ JOY */
+  --lobby-joy-text-offset-y: 48%;   /* 👈 ขยับตำแหน่งแนวตั้งของ JOY */
 }
 
 /* --------------------------------------------------------------------------
@@ -38,7 +38,6 @@
    -------------------------------------------------------------------------- */
 html, body {
   background-color: #0b0f19 !important;
-  background: #0b0f19 !important;
 }
 
 #lobbyScreen {
@@ -54,8 +53,8 @@ html, body {
   height: 100svh !important;
   height: 100dvh !important;
   background-image: url('../Assets/UI_Lobby/BG.png') !important;
-  background-size: auto !important;
-  background-position: center center !important;
+  background-size: cover !important;
+  background-position: center bottom !important;
   background-repeat: no-repeat !important;
   z-index: 50 !important;
   overflow: hidden !important;
@@ -122,8 +121,9 @@ html, body {
 
 .lobby-code-box {
   width: var(--lobby-code-box-size) !important;
-  max-width: none !important;
-  height: calc(var(--lobby-code-box-size) * (84 / 380)) !important;
+  max-width: 100% !important;
+  aspect-ratio: 1805 / 871 !important;
+  height: auto !important;
   max-height: none !important;
   position: relative !important;
   z-index: 20 !important;
@@ -140,10 +140,16 @@ html, body {
   left: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain !important;
+  object-fit: fill !important;
   pointer-events: none !important;
   z-index: 1 !important;
   filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5)) !important;
+  transition: filter 0.25s ease-out !important;
+}
+
+/* เอฟเฟกต์เรืองแสงเมื่อช่องใส่รหัสได้รับการ Focus */
+.lobby-code-box.code-box-focused .lobby-code-btn-bg {
+  filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.75)) drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5)) !important;
 }
 
 /* ช่องพิมพ์รหัสภายในกล่องสีขาว (ฝั่งซ้ายของวงกลมกุญแจสีเขียว) */
@@ -152,7 +158,7 @@ html, body {
   left: var(--lobby-input-offset-x) !important;
   top: var(--lobby-input-offset-y) !important;
   width: var(--lobby-input-width) !important;
-  height: 84% !important;
+  height: var(--lobby-input-height) !important;
   z-index: 10 !important;
   pointer-events: auto !important;
   background: transparent !important;
@@ -176,14 +182,19 @@ html, body {
 }
 
 .lobby-code-input::placeholder {
-  color: #334155 !important;
-  font-size: var(--lobby-placeholder-font-size, calc(var(--lobby-input-font-size) * 0.78)) !important;
+  color: #0f172a !important;
+  opacity: 1 !important;
+  font-size: var(--lobby-placeholder-font-size, 0.95rem) !important;
   font-weight: 800 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   display: inline-block !important;
   transform: translate(var(--lobby-placeholder-offset-x, 0px), var(--lobby-placeholder-offset-y, 0px)) !important;
-  animation: lobbyPulsePlaceholder 1.8s infinite ease-in-out !important;
+}
+
+/* แอนิเมชันกระพริบข้อความบอกใบ้ (Placeholder Pulse) เมื่อยังไม่ได้พิมพ์และไม่ได้โฟกัส */
+.lobby-code-input:placeholder-shown:not(:focus) {
+  animation: lobbyPulsePlaceholder 1.5s infinite ease-in-out !important;
 }
 
 /* แอนิเมชันสั่นสะเทือนเด่นชัด 100% เมื่อกรอกรหัสผิดหรือยังไม่ได้กรอก */
@@ -194,7 +205,7 @@ html, body {
 
 @keyframes lobbyPulsePlaceholder {
   0%, 100% {
-    opacity: 0.35;
+    opacity: 0.25;
   }
   50% {
     opacity: 1;
@@ -229,9 +240,9 @@ html, body {
 .lobby-key-submit-btn {
   position: absolute !important;
   right: 0 !important;
-  top: 0 !important;
-  width: 24% !important;
-  height: 100% !important;
+  top: var(--lobby-input-offset-y) !important;
+  width: 26% !important;
+  height: var(--lobby-input-height) !important;
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -251,7 +262,7 @@ html, body {
    -------------------------------------------------------------------------- */
 .lobby-joy-box {
   width: var(--lobby-joy-btn-size) !important;
-  max-width: none !important;
+  max-width: 100% !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
@@ -267,9 +278,13 @@ html, body {
   outline: none !important;
   padding: 0 !important;
   cursor: pointer !important;
-  transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.15s ease !important;
+  transition: transform 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.15s ease !important;
   width: var(--lobby-joy-btn-size) !important;
-  max-width: none !important;
+  max-width: 100% !important;
+  aspect-ratio: 1805 / 871 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   overflow: visible !important;
   transform: translateY(var(--lobby-joy-btn-y)) !important;
   -webkit-tap-highlight-color: transparent !important;
@@ -280,12 +295,12 @@ html, body {
 }
 
 .lobby-joy-btn-img {
-  width: var(--lobby-joy-btn-size) !important;
-  max-width: none !important;
-  height: auto !important;
-  max-height: none !important;
-  object-fit: contain !important;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.6)) !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: fill !important;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6)) !important;
   pointer-events: none !important;
   -webkit-tap-highlight-color: transparent !important;
   -webkit-user-drag: none !important;
@@ -293,7 +308,7 @@ html, body {
   -webkit-backface-visibility: hidden !important;
 }
 
-/* ตัวหนังสือคำว่า JOY ซ้อนบนปุ่มกดสีแดง */
+/* ตัวหนังสือคำว่า JOIN ซ้อนบนปุ่มกดสีแดง */
 .lobby-joy-btn-text {
   position: absolute !important;
   left: var(--lobby-joy-text-offset-x, 62%) !important;
@@ -301,10 +316,11 @@ html, body {
   transform: translate(-50%, -50%) !important;
   color: #ffffff !important;
   font-weight: 900 !important;
-  font-size: var(--lobby-joy-text-size, 1.8rem) !important;
+  font-size: var(--lobby-joy-text-size, clamp(1.05rem, calc(var(--lobby-joy-btn-size) * 0.16), 1.8rem)) !important;
   letter-spacing: 0.05em !important;
+  line-height: 1 !important;
   text-transform: uppercase !important;
-  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.85), 0 0 12px rgba(0, 0, 0, 0.6) !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 0, 0, 0.6) !important;
   z-index: 30 !important;
   pointer-events: none !important;
   user-select: none !important;
@@ -329,26 +345,58 @@ html, body {
 }
 
 /* --------------------------------------------------------------------------
-   5. 📱 Short Viewports & Mobile Landscape (ย่ออัตโนมัติหากความสูงหน้าจอน้อยกว่า 650px)
+   5. 📱 Mobile Viewport Responsive (จอมือถือความกว้างปกติ <= 640px)
    -------------------------------------------------------------------------- */
-@media (max-height: 650px) {
+@media (max-width: 640px) {
+  :root, #lobbyScreen {
+    --lobby-logo-size: min(105vw, 440px);
+    --lobby-character-size: min(178vw, 700px);
+    --lobby-code-box-size: min(92vw, 355px);
+    --lobby-joy-btn-size: min(60vw, 230px);
+
+    --lobby-logo-y: 2px;
+    --lobby-character-y: -44px;
+    --lobby-code-box-y: -115px;
+    --lobby-joy-btn-y: -150px;
+
+    --lobby-input-width: 68%;
+    --lobby-input-height: 55%;
+    --lobby-input-offset-x: 5%;
+    --lobby-input-offset-y: 20%;
+    --lobby-input-font-size: 1.15rem;
+    --lobby-slot-height: 50%;
+    --lobby-slot-max-width: 34px;
+    --lobby-slot-gap: 5px;
+    --lobby-placeholder-font-size: 0.98rem;
+
+    --lobby-joy-text-size: clamp(1.3rem, 5.5vw, 1.7rem);
+    --lobby-joy-text-offset-x: 62%;
+    --lobby-joy-text-offset-y: 48%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. 📱 Short Viewports & Mobile Landscape (ความสูงหน้าจอน้อยกว่า 650px บนมือถือ)
+   -------------------------------------------------------------------------- */
+@media (max-height: 650px) and (max-width: 640px) {
+  :root, #lobbyScreen {
+    --lobby-joy-btn-size: 145px;
+    --lobby-joy-text-size: 1.2rem;
+  }
+
   .lobby-logo-wrapper {
-    max-height: 75px !important;
+    max-height: 65px !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
 
   .lobby-logo-img {
-    max-width: 210px !important;
-    max-height: 70px !important;
+    max-width: 190px !important;
+    max-height: 60px !important;
   }
 
   .lobby-character-img {
-    max-height: 30vh !important;
-  }
-
-  .lobby-joy-btn-img {
-    max-height: 58px !important;
+    max-height: 25vh !important;
   }
 
   #lobbyForm {
@@ -356,9 +404,25 @@ html, body {
   }
 }
 
+/* --------------------------------------------------------------------------
+   7. ⌨️ Mobile Virtual Keyboard Active Mode (เมื่อเปิดคีย์บอร์ดพิมพ์รหัสผ่านบนมือถือ)
+   เลื่อนทั้งหน้าจอขึ้นเบาๆ ตามการดันของแป้นพิมพ์ โดยคงตัวละครและปุ่ม JOIN ไว้นิ่งๆ ตามเดิม
+   -------------------------------------------------------------------------- */
+#lobbyScreen main {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@media (max-width: 768px), (max-height: 560px) {
+  #lobbyScreen.lobby-keyboard-active main,
+  #lobbyScreen:has(#lobbyForm:focus-within) main {
+    transform: translateY(-55px) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lobby-code-box.shake-code-box .lobby-code-btn-bg,
   .lobby-code-box.shake-code-box .lobby-code-input,
+  .lobby-code-input:placeholder-shown,
   .lobby-code-input::placeholder,
   .lobby-joy-btn {
     animation-duration: 0.01ms !important;
@@ -366,3 +430,62 @@ html, body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   8. 🖥️ Desktop Responsive Viewports (รองรับจอคอมหลากหลายขนาด 720p, 1080p, 2K/4K)
+   สเกลย่อ-ขยายอัจฉริยะตามความสูงหน้าจอ (vh) แบบสมส่วน เพื่อไม่ให้ล้นขอบจอเตี้ย และไม่จมบนจอใหญ่
+   -------------------------------------------------------------------------- */
+@media (min-width: 641px) {
+  :root, #lobbyScreen {
+    /* 📏 1. ปรับขนาดองค์ประกอบหลักตามความสูงหน้าจอ (vh) พร้อมคุมสัดส่วนที่สมดุล */
+    --lobby-logo-size: clamp(370px, 38vh, 500px);
+    --lobby-character-size: clamp(520px, 58vh, 760px);
+    --lobby-code-box-size: clamp(320px, 34vh, 440px);
+    --lobby-joy-btn-size: clamp(180px, 19vh, 250px);
+
+    /* 📍 2. ปรับตำแหน่งแนวตั้ง: เว้นช่องไฟโลโก้ไม่ให้ชนหมวก และดึงกล่องรหัสทับรองเท้า */
+    --lobby-logo-y: clamp(24px, 3.2vh, 44px);
+    --lobby-character-y: clamp(-5px, 0vh, 10px);
+    --lobby-code-box-y: clamp(-65px, -7vh, -50px);
+    --lobby-joy-btn-y: clamp(-104px, -11.5vh, -80px);
+
+    /* ⌨️ 3. กล่องพิมพ์รหัสและสล็อต */
+    --lobby-input-width: 68%;
+    --lobby-input-height: 55%;
+    --lobby-input-offset-x: 5%;
+    --lobby-input-offset-y: 20%;
+    --lobby-input-font-size: clamp(1rem, 1.8vh, 1.25rem);
+    --lobby-slot-height: 50%;
+    --lobby-slot-max-width: clamp(28px, 3.6vh, 40px);
+    --lobby-slot-gap: clamp(5px, 0.8vh, 8px);
+    --lobby-placeholder-offset-x: 0px;
+    --lobby-placeholder-offset-y: 0px;
+    --lobby-placeholder-font-size: clamp(0.85rem, 1.4vh, 1.02rem);
+
+    /* 🎮 4. ตัวหนังสือบนปุ่ม JOY */
+    --lobby-joy-text-size: clamp(1.2rem, calc(var(--lobby-joy-btn-size) * 0.16), 1.85rem);
+    --lobby-joy-text-offset-x: 62%;
+    --lobby-joy-text-offset-y: 48%;
+  }
+
+  #lobbyScreen main {
+    justify-content: center !important;
+    padding-top: 10px !important;
+    padding-bottom: 20px !important;
+  }
+
+  .lobby-logo-wrapper {
+    max-height: none !important;
+  }
+
+  .lobby-logo-img {
+    max-width: none !important;
+    max-height: none !important;
+  }
+
+  .lobby-character-img {
+    max-height: none !important;
+  }
+}
+
+

@@ -40,21 +40,28 @@ html, body {
   min-height: 100dvh !important;
   background-color: #0b0f19 !important;
   background-image: url('../Assets/UI_Lobby/BG.png') !important;
-  background-size: auto !important;
-  background-position: center center !important;
+  background-size: cover !important;
+  background-position: center bottom !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
   color: var(--text-secondary-bright) !important;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .page-shell {
-  background-image: url('../Assets/UI_Lobby/BG.png') !important;
-  background-size: auto !important;
-  background-position: center top !important;
-  background-repeat: no-repeat !important;
-  background-attachment: scroll !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
   height: 100% !important;
   height: 100svh !important;
   height: 100dvh !important;
@@ -62,12 +69,29 @@ html, body {
   overflow-x: hidden !important;
   -webkit-overflow-scrolling: touch !important;
   box-sizing: border-box !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.page-shell::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 @media (min-width: 768px) {
   .page-shell {
-    background-position: center center !important;
-    background-attachment: fixed !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .page-shell::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 

@@ -6,6 +6,7 @@ import { SessionLockService } from './services/SessionLockService.js';
 import { SoundService } from './services/SoundService.js';
 import { PlayerSessionService } from './services/PlayerSessionService.js';
 import { GMHandoverService } from './services/GMHandoverService.js';
+import { PlayerKickService } from './services/PlayerKickService.js';
 
 /**
  * MarketController - Main Facade Controller coordinating Lobby, Trading, and Market Board modules.
@@ -33,6 +34,7 @@ export class MarketController {
 
     this.boardListenerUnsubscribe = null;
     this.roomListenerUnsubscribe = null;
+    this.hasReceivedInitialBoard = false;
     this.prevSalaryTimestamp = null;
     this.prevInterestTimestamp = null;
     this.prevDividendTimestamp = null;
@@ -100,6 +102,8 @@ export class MarketController {
     this.tradeController.bindTradeFormEvents();
     this.bindLeaveRoomButton();
     this.bindGMHandoverButton();
+    this.bindKickPlayerButton();
+    this.bindPlayerNameEdit();
     this.bindGlobalProtectionEvents();
   }
 
@@ -112,7 +116,7 @@ export class MarketController {
       const title = "Leave Room";
       const message = isGM 
         ? "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? ในฐานะ GM การออกจากห้องอาจส่งมอบสิทธิ์ให้ผู้เล่นคนอื่น หรือปิดเซสชันห้องเกมสำหรับทุกคน"
-        : "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? (หากห้องยังไม่หมดอายุหรือยังมีผู้เล่นในห้อง คุณสามารถกลับเข้ามาเล่นต่อด้วยข้อมูลเดิมได้)";
+        : "คุณแน่ใจหรือไม่ว่าต้องการออกจากห้อง? คุณจะออกจากห้องนี้ และสามารถเลือกบทบาทใหม่ได้เมื่อเข้าห้องอีกครั้ง";
 
       const result = await this.renderer.showConfirmAlert(title, message, "YES", "NO");
       if (!result || !result.isConfirmed) return;
@@ -150,7 +154,7 @@ export class MarketController {
         const confirmResult = await this.renderer.showConfirmAlert(
           "ยืนยันการส่งมอบตำแหน่ง GM",
           `คุณต้องการส่งมอบสิทธิ์ GM ให้กับ "${targetPlayer.displayName}" หรือไม่? ${hasBackup ? '(ข้อมูลพอร์ตเดิมของคุณจะถูกโหลดกลับมา)' : ''}`,
-          "ยืนยันส่งมอบ",
+          "ยืนยัน",
           "ยกเลิก"
         );
 
@@ -171,6 +175,16 @@ export class MarketController {
                 "approved"
               );
             }
+
+            // Automatically prompt the former GM to set their player name
+            setTimeout(() => {
+              this.openPlayerNameModal({
+                title: "ตั้งชื่อผู้เล่นของคุณ",
+                subtitle: "คุณได้เปลี่ยนบทบาทเป็นผู้เล่นแล้ว โปรดระบุชื่อที่ต้องการใช้แสดงในห้องเกม (1 - 20 ตัวอักษร)",
+                confirmText: "บันทึกชื่อ",
+                initialValue: res.formerGmRestoredProfile?.displayName || this.state.playerName || ''
+              });
+            }, 300);
           } else {
             this.renderer.showErrorAlert("Transfer Failed", "ไม่สามารถส่งมอบตำแหน่งได้ กรุณาลองใหม่อีกครั้ง");
           }
@@ -180,6 +194,217 @@ export class MarketController {
         }
       });
     });
+  }
+
+  bindKickPlayerButton() {
+    if (!this.renderer.openKickPlayerModalBtn) return;
+
+    this.renderer.openKickPlayerModalBtn.addEventListener('click', async () => {
+      const code = this.state.roomCode;
+      if (!code) return;
+
+      const roomSnap = await this.firebaseService.getRoomStateSnapshot(code);
+      if (!roomSnap || !roomSnap.exists()) return;
+      const roomData = roomSnap.val();
+      const members = roomData.members || {};
+      const currentUser = this.firebaseService.getCurrentUser();
+      const currentUid = currentUser ? currentUser.uid : null;
+
+      const eligiblePlayers = PlayerKickService.getEligiblePlayers(members, currentUid);
+
+      this.renderer.showKickPlayerModal(eligiblePlayers, async (targetUid, targetPlayer) => {
+        const confirmResult = await this.renderer.showConfirmAlert(
+          "ยืนยันการบังคับออกจากห้อง",
+          `คุณแน่ใจหรือไม่ว่าต้องการเตะ "${targetPlayer.displayName}" ออกจากห้องเกม? ข้อมูลพอร์ตและคำสั่งซื้อขายทั้งหมดจะถูกล้างถาวร`,
+          "เตะผู้เล่น",
+          "ยกเลิก"
+        );
+
+        if (!confirmResult || !confirmResult.isConfirmed) return;
+
+        try {
+          const res = await this.firebaseService.kickPlayerAndPurgeData(code, targetUid);
+          if (res && res.success) {
+            this.renderer.showTopToast(
+              "PLAYER KICKED",
+              `นำ "${targetPlayer.displayName}" ออกจากห้องและล้างข้อมูลเรียบร้อยแล้ว`,
+              "approved"
+            );
+          } else {
+            this.renderer.showErrorAlert("Kick Failed", "ไม่สามารถเตะผู้เล่นได้ กรุณาลองใหม่อีกครั้ง");
+          }
+        } catch (err) {
+          console.error("[MarketController] Error kicking player:", err);
+          this.renderer.showErrorAlert("Error", "เกิดข้อผิดพลาดในการเตะผู้เล่นออกจากห้อง");
+        }
+      });
+    });
+  }
+
+  openPlayerNameModal({
+    title = "แก้ไขชื่อผู้เล่น",
+    subtitle = "โปรดระบุชื่อใหม่ที่ต้องการใช้แสดงในห้องเกม (1 - 20 ตัวอักษร)",
+    confirmText = "บันทึกชื่อ",
+    initialValue = null
+  } = {}) {
+    if (this.state.role !== 'player') return;
+
+    const code = this.state.roomCode;
+    if (!code) return;
+
+    const modal = this.renderer.playerNameModal;
+    const input = this.renderer.playerNameInput;
+    const btnConfirm = this.renderer.playerNameConfirmBtn;
+    const btnClose = this.renderer.playerNameCloseBtn;
+
+    if (!modal || !input || !btnConfirm) return;
+
+    if (this._playerNameModalCleanup) {
+      this._playerNameModalCleanup();
+      this._playerNameModalCleanup = null;
+    }
+
+    const defaultVal = (initialValue !== null) ? initialValue : (this.state.playerName || '');
+
+    // 1. Open modal immediately for instant Apple-style responsiveness (0ms latency)
+    this.renderer.showPlayerNameModal({
+      title,
+      subtitle,
+      confirmText,
+      initialValue: defaultVal
+    });
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleConfirm();
+      } else if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    const handleOverlayClick = (e) => {
+      if (e.target === modal) {
+        handleClose();
+      }
+    };
+
+    const cleanup = () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      btnConfirm.removeEventListener('click', handleConfirm);
+      if (btnClose) btnClose.removeEventListener('click', handleClose);
+      modal.removeEventListener('click', handleOverlayClick);
+      this._playerNameModalCleanup = null;
+    };
+
+    this._playerNameModalCleanup = cleanup;
+
+    const handleClose = () => {
+      cleanup();
+      this.renderer.hidePlayerNameModal();
+    };
+
+    const handleConfirm = async () => {
+      const raw = (input.value || '').trim();
+      if (!raw) {
+        this.renderer.showPlayerNameError("กรุณากรอกชื่อผู้เล่น");
+        return;
+      }
+      if (raw.length < 1 || raw.length > 20) {
+        this.renderer.showPlayerNameError("ความยาวชื่อต้องอยู่ระหว่าง 1 - 20 ตัวอักษร");
+        return;
+      }
+      const upper = raw.toUpperCase();
+      if (upper === 'GM' || upper === 'GAME MASTER' || upper === 'GAME_MASTER') {
+        this.renderer.showPlayerNameError("สงวนสิทธิ์ห้ามใช้ชื่อ GM หรือ Game Master");
+        return;
+      }
+
+      if (raw === this.state.playerName) {
+        handleClose();
+        return;
+      }
+
+      btnConfirm.disabled = true;
+      btnConfirm.style.opacity = '0.6';
+
+      try {
+        // Check for duplicate names against current room members in Realtime DB
+        const roomSnap = await this.firebaseService.getRoomStateSnapshot(code);
+        if (roomSnap && roomSnap.exists()) {
+          const roomData = roomSnap.val();
+          const members = roomData.members || {};
+          const currentUid = this.firebaseService.getCurrentUser()?.uid;
+          const existingNames = new Set(
+            Object.entries(members)
+              .filter(([uid, m]) => uid !== currentUid && m && m.role === 'player' && m.displayName)
+              .map(([uid, m]) => m.displayName)
+          );
+          if (existingNames.has(raw)) {
+            btnConfirm.disabled = false;
+            btnConfirm.style.opacity = '1';
+            this.renderer.showPlayerNameError(`ชื่อ "${raw}" มีผู้เล่นอื่นในห้องใช้อยู่แล้ว โปรดตั้งชื่ออื่น`);
+            return;
+          }
+        }
+
+        const user = this.firebaseService.getCurrentUser();
+        const currentUid = user ? user.uid : null;
+        if (currentUid && code) {
+          const updates = {
+            [`members/${currentUid}/displayName`]: raw
+          };
+          const sessionToken = this.playerSessionService ? this.playerSessionService.getOrCreateSessionToken(code) : null;
+          if (sessionToken) {
+            updates[`savedMembers/${sessionToken}/displayName`] = raw;
+          }
+
+          // Also update username in any existing pending orders from this user
+          if (roomSnap && roomSnap.exists()) {
+            const pendingOrders = roomSnap.val().pendingOrders || {};
+            Object.entries(pendingOrders).forEach(([orderId, ord]) => {
+              if (ord && ord.uid === currentUid) {
+                updates[`pendingOrders/${orderId}/username`] = raw;
+              }
+            });
+          }
+
+          await this.firebaseService.updateRoom(code, updates);
+        }
+
+        this.state.setPlayerName(raw);
+        try {
+          localStorage.setItem('traderHunter_playerName', raw);
+        } catch (e) {}
+
+        this.renderer.updateControlsVisibility(this.state.role, raw, this.state.gameMode);
+        handleClose();
+        this.renderer.showTopToast("NAME UPDATED", `เปลี่ยนชื่อผู้เล่นเป็น "${raw}" เรียบร้อยแล้ว`, "success");
+      } catch (err) {
+        console.error("Failed to update player name:", err);
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        this.renderer.showErrorAlert("Error", "ไม่สามารถอัปเดตชื่อผู้เล่นได้ โปรดลองใหม่อีกครั้ง");
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    btnConfirm.addEventListener('click', handleConfirm);
+    if (btnClose) btnClose.addEventListener('click', handleClose);
+    modal.addEventListener('click', handleOverlayClick);
+  }
+
+  bindPlayerNameEdit() {
+    if (this.renderer.editPlayerNameBtn) {
+      this.renderer.editPlayerNameBtn.addEventListener('click', () => {
+        this.openPlayerNameModal();
+      });
+    }
+    if (this.renderer.userRoleBadge) {
+      this.renderer.userRoleBadge.addEventListener('click', () => {
+        this.openPlayerNameModal();
+      });
+    }
   }
 
   // Real-time synchronization Orchestrator
@@ -193,8 +418,13 @@ export class MarketController {
       this.boardListenerUnsubscribe();
     }
 
+    this.hasReceivedInitialBoard = false;
+
     this.boardListenerUnsubscribe = this.firebaseService.listenToBoard(code, (firebaseBoard) => {
       if (!firebaseBoard) return;
+
+      const isFirstLoad = !this.hasReceivedInitialBoard;
+      this.hasReceivedInitialBoard = true;
 
       const oldPrices = {};
       Object.keys(this.state.boardStocks).forEach(name => {
@@ -224,8 +454,13 @@ export class MarketController {
         }
       });
 
-      // Play Raise_price or Down_price sound for everyone when prices update
-      if (changedStocks.length > 0 && this.soundService) {
+      // Check if this board update is a Reset action (e.g. GM clicked Reset Price or Room Reset)
+      const isBoardReset = Array.isArray(firebaseBoard.stocks) &&
+        firebaseBoard.stocks.length > 0 &&
+        firebaseBoard.stocks.every(s => s.oldValue === null || s.oldValue === undefined);
+
+      // Play Raise_price or Down_price sound for everyone when prices update (suppressed during board reset or initial load)
+      if (!isFirstLoad && !isBoardReset && changedStocks.length > 0 && this.soundService) {
         const upCount = changedStocks.filter(s => s.isUp).length;
         const downCount = changedStocks.filter(s => !s.isUp).length;
         if (upCount > downCount) {
@@ -240,22 +475,30 @@ export class MarketController {
       }
 
       // Real-time Toast Notifications for non-GM Players when stock prices are updated by GM
-      if (this.state.role !== 'game_master' && changedStocks.length > 0) {
-        if (changedStocks.length === 1) {
-          const { symbol, currentVal, isUp } = changedStocks[0];
+      if (!isFirstLoad) {
+        if (!isBoardReset && this.state.role !== 'game_master' && changedStocks.length > 0) {
+          if (changedStocks.length === 1) {
+            const { symbol, currentVal, isUp } = changedStocks[0];
+            this.renderer.showTopToast(
+              isUp ? "STOCK PRICE INCREASED" : "STOCK PRICE DECREASED",
+              `ราคาหุ้น ${symbol} ${isUp ? 'ปรับขึ้นเป็น' : 'ปรับลดลงเหลือ'} ${currentVal.toLocaleString('en-US')} บาท`,
+              isUp ? "success" : "warning"
+            );
+          } else {
+            const upCount = changedStocks.filter(s => s.isUp).length;
+            const downCount = changedStocks.filter(s => !s.isUp).length;
+            const isUp = upCount >= downCount;
+            this.renderer.showTopToast(
+              isUp ? "MARKET PRICE INCREASED" : "MARKET PRICE DECREASED",
+              `ราคาหุ้นในตลาดถูกปรับเปลี่ยนทั้งหมด ${changedStocks.length} หุ้น`,
+              isUp ? "success" : "warning"
+            );
+          }
+        } else if (isBoardReset && this.state.role !== 'game_master') {
           this.renderer.showTopToast(
-            isUp ? "STOCK PRICE INCREASED" : "STOCK PRICE DECREASED",
-            `ราคาหุ้น ${symbol} ${isUp ? 'ปรับขึ้นเป็น' : 'ปรับลดลงเหลือ'} ${currentVal.toLocaleString('en-US')} บาท`,
-            isUp ? "success" : "warning"
-          );
-        } else {
-          const upCount = changedStocks.filter(s => s.isUp).length;
-          const downCount = changedStocks.filter(s => !s.isUp).length;
-          const isUp = upCount >= downCount;
-          this.renderer.showTopToast(
-            isUp ? "MARKET PRICE INCREASED" : "MARKET PRICE DECREASED",
-            `ราคาหุ้นในตลาดถูกปรับเปลี่ยนทั้งหมด ${changedStocks.length} หุ้น`,
-            isUp ? "success" : "warning"
+            "PRICE RESET",
+            "GM ได้ทำการรีเซ็ตราคาหุ้นกลับสู่ค่าเริ่มต้น",
+            "warning"
           );
         }
       }
@@ -270,10 +513,21 @@ export class MarketController {
           ? Array.from(this.renderer.priceGrid.querySelectorAll('.price-card')).find(c => c.querySelector('.card-icon') && c.querySelector('.card-icon').textContent.trim() === symbol) 
           : null;
 
-        const prevPrice = prevVal !== undefined ? prevVal : (stock.oldValue !== undefined ? stock.oldValue : currentVal);
-        const direction = (prevPrice !== undefined && prevPrice !== null && prevPrice !== currentVal)
-          ? (currentVal > prevPrice ? 'up' : 'down')
-          : null;
+        let direction = null;
+        if (isBoardReset) {
+          direction = null;
+        } else if (stock.direction) {
+          direction = stock.direction;
+        } else if (prevVal !== undefined && prevVal !== currentVal) {
+          direction = currentVal > prevVal ? 'up' : 'down';
+        } else if (Number(currentVal) === 100) {
+          direction = 'down';
+        } else if (stock.oldValue !== null && stock.oldValue !== undefined) {
+          if (stock.value > stock.oldValue) direction = 'up';
+          else if (stock.value < stock.oldValue) direction = 'down';
+        }
+
+        const prevPrice = prevVal !== undefined ? prevVal : stock.oldValue;
 
         if (card) {
           card.setAttribute('data-price', currentVal);
@@ -347,7 +601,11 @@ export class MarketController {
 
         // 1. Check if room was reset: Kick all participants to lobby & suppress GM takeover modal
         if (roomData.isReset || roomData.status === 'RESET') {
+          if (this.state.role === 'game_master') {
+            return; // GM has their own dedicated completion alert in MarketBoardController
+          }
           this.renderer.hideGMTransferModal();
+          this.renderer.hidePlayerNameModal();
           this.unsubscribeAll();
           if (this.playerSessionService && code) {
             this.playerSessionService.clearRoomSession(code);
@@ -376,6 +634,25 @@ export class MarketController {
         const currentUser = this.firebaseService.getCurrentUser();
         const currentUid = currentUser ? currentUser.uid : user.uid;
 
+        // Check if this player was individually kicked by GM
+        if (roomData.kickedMembers && roomData.kickedMembers[currentUid]) {
+          this.renderer.hideGMTransferModal();
+          this.renderer.hideKickPlayerModal();
+          this.renderer.hidePlayerNameModal();
+          this.unsubscribeAll();
+          if (this.playerSessionService && code) {
+            this.playerSessionService.clearRoomSession(code);
+          }
+          this.firebaseService.clearKickedMember(code, currentUid).catch(() => {});
+          this.state.reset();
+          this.renderer.showLobby();
+          this.renderer.showErrorAlert(
+            "ถูกให้ออกจากห้อง",
+            "คุณถูกผู้ดูแลห้อง (GM) บังคับให้ออกจากห้องเกม และข้อมูลการเล่นทั้งหมดของคุณถูกรีเซ็ตเรียบร้อยแล้ว"
+          );
+          return;
+        }
+
         const orders = roomData.pendingOrders || {};
         this.state.updatePendingOrders(orders);
 
@@ -384,11 +661,12 @@ export class MarketController {
 
         // GM Disconnect / Takeover Transfer Election Handler (Suppressed during room reset)
         const members = roomData.members || {};
-        const hasGM = Object.values(members).some(m => m && m.role === 'game_master');
+        const hasGM = Object.values(members).some(m => m && m.role === 'game_master' && m.online !== false);
         const transferReq = roomData.gmTransferRequest;
         const isResetState = Boolean(roomData.isReset || roomData.status === 'RESET');
+        const activeMembersCount = Object.values(members).filter(m => m && m.online !== false).length;
 
-        if (!isResetState && !hasGM && Object.keys(members).length > 0 && (!transferReq || (!transferReq.active && !transferReq.claimedBy))) {
+        if (!isResetState && !hasGM && activeMembersCount > 0 && (!transferReq || (!transferReq.active && !transferReq.claimedBy))) {
           this.firebaseService.triggerGMTransfer(code);
         }
 
@@ -445,7 +723,11 @@ export class MarketController {
         if (this.prevMemberUids) {
           this.prevMemberUids.forEach(uid => {
             if (!currentMemberUids.has(uid)) {
-              this.state.purgeUserData(uid);
+              if (typeof this.state.purgeUserData === 'function') {
+                this.state.purgeUserData(uid);
+              } else if (typeof this.state.removeMemberFromHistory === 'function') {
+                this.state.removeMemberFromHistory(uid);
+              }
             }
           });
         }
@@ -458,6 +740,8 @@ export class MarketController {
         // Check if player was evicted/removed from room (e.g. by GM Room Reset)
         if (this.state.role === 'player' && (!roomData.members || !roomData.members[currentUid])) {
           this.renderer.hideGMTransferModal();
+          this.renderer.hideKickPlayerModal();
+          this.renderer.hidePlayerNameModal();
           this.unsubscribeAll();
           if (this.playerSessionService && code) {
             this.playerSessionService.clearRoomSession(code);
@@ -473,6 +757,9 @@ export class MarketController {
 
         if (roomData.members && roomData.members[currentUid]) {
           const memberData = roomData.members[currentUid];
+          if (memberData.online === false && !this.isBeingKicked) {
+            this.firebaseService.setMemberOnlineStatus(code, currentUid, true);
+          }
           const prevRole = this.state.role;
           this.state.updatePortfolioFromMemberData(memberData);
 
@@ -708,6 +995,8 @@ export class MarketController {
       this.roomListenerUnsubscribe();
       this.roomListenerUnsubscribe = null;
     }
+    this.hasReceivedInitialBoard = false;
+    this.prevMemberUids = null;
   }
 
   /**
@@ -736,9 +1025,28 @@ export class MarketController {
     } else {
       try {
         await this.firebaseService.removeMemberFromRoom(roomCode, currentUid);
+        const roomSnap = await this.firebaseService.getRoomStateSnapshot(roomCode);
+        const roomData = roomSnap ? roomSnap.val() : null;
+        const members = roomData ? (roomData.members || {}) : {};
+        if (Object.keys(members).length === 0) {
+          await this.firebaseService.deleteRoomData(roomCode);
+        }
       } catch (e) {
-        console.error("[MarketController] Failed to remove player node on leave:", e);
+        console.error("[MarketController] Failed to remove player on leave:", e);
       }
+    }
+
+    // Always clear local room session and Firebase savedMember session token on explicit Leave Room
+    if (this.playerSessionService && roomCode) {
+      const sessionToken = this.playerSessionService.getOrCreateSessionToken(roomCode);
+      if (sessionToken) {
+        try {
+          await this.firebaseService.updateRoom(roomCode, {
+            [`savedMembers/${sessionToken}`]: null
+          });
+        } catch (e) {}
+      }
+      this.playerSessionService.clearRoomSession(roomCode);
     }
   }
 
@@ -800,7 +1108,8 @@ export class MarketController {
       },
       async (orderId) => {
         await this.tradeController.rejectPlayerOrder(orderId);
-      }
+      },
+      roomData.members
     );
     this.renderer.updateGMPlayerSalaryUI(
       roomData.members,

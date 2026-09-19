@@ -32,6 +32,16 @@ export class MarketRenderer {
     this.roleOptPlayerBtn = document.getElementById('roleOptPlayerBtn');
     this.roleOptCloseBtn = document.getElementById('roleOptCloseBtn');
 
+    // Player Name Modal
+    this.playerNameModal = document.getElementById('playerNameModal');
+    this.playerNameInput = document.getElementById('playerNameInput');
+    this.playerNameErrorText = document.getElementById('playerNameErrorText');
+    this.playerNameConfirmBtn = document.getElementById('playerNameConfirmBtn');
+    this.playerNameCloseBtn = document.getElementById('playerNameCloseBtn');
+    this.playerNameModalTitle = document.getElementById('playerNameModalTitle');
+    this.playerNameModalSubtitle = document.getElementById('playerNameModalSubtitle');
+    this.editPlayerNameBtn = document.getElementById('editPlayerNameBtn');
+
     // Game Mode Selection Modal (GM) & Waiting Modal (Player)
     this.gameModeSelectionModal = document.getElementById('gameModeSelectionModal');
     this.gameModeBasicBtn = document.getElementById('gameModeBasicBtn');
@@ -39,6 +49,7 @@ export class MarketRenderer {
     this.gameModeCloseBtn = document.getElementById('gameModeCloseBtn');
     this.waitingForGMModal = document.getElementById('waitingForGMModal');
     this.waitingCloseBtn = document.getElementById('waitingCloseBtn');
+    this.waitingResetRoomBtn = document.getElementById('waitingResetRoomBtn');
     this.waitingRoomCodeBadge = document.getElementById('waitingRoomCodeBadge');
     
     // Room Full Alert Modal
@@ -65,6 +76,14 @@ export class MarketRenderer {
     this.confirmDirectTransferBtn = document.getElementById('confirmDirectTransferBtn');
     this.cancelDirectTransferBtn = document.getElementById('cancelDirectTransferBtn');
     this.closeDirectTransferModalBtn = document.getElementById('closeDirectTransferModalBtn');
+
+    // Kick Player Modal (Danger Zone)
+    this.openKickPlayerModalBtn = document.getElementById('openKickPlayerModalBtn');
+    this.kickPlayerModal = document.getElementById('kickPlayerModal');
+    this.kickPlayerList = document.getElementById('kickPlayerList');
+    this.confirmKickPlayerBtn = document.getElementById('confirmKickPlayerBtn');
+    this.cancelKickPlayerBtn = document.getElementById('cancelKickPlayerBtn');
+    this.closeKickPlayerModalBtn = document.getElementById('closeKickPlayerModalBtn');
 
     // Role & Room Controller Elements
     this.roleController = document.getElementById('roleController');
@@ -101,6 +120,7 @@ export class MarketRenderer {
   }
 
   showLobby() {
+    this.hidePlayerNameModal();
     if (this.lobbyScreen) {
       this.lobbyScreen.style.display = 'flex';
       this.lobbyScreen.removeAttribute('aria-hidden');
@@ -138,7 +158,7 @@ export class MarketRenderer {
   }
 
   updateRoomMembersUI(members = {}) {
-    const memberCount = Object.keys(members || {}).length;
+    const memberCount = Object.values(members || {}).filter(m => m && m.online !== false).length;
     this.updateRoomMembersDisplay(memberCount);
   }
 
@@ -151,8 +171,17 @@ export class MarketRenderer {
       this.userRoleBadge.textContent = (isMaster ? 'Game Master' : (playerName || 'Player_1')) + modeLabel;
       if (isMaster) {
         this.userRoleBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-red-400';
+        this.userRoleBadge.style.cursor = 'default';
+        this.userRoleBadge.removeAttribute('title');
+        if (this.editPlayerNameBtn) {
+          this.editPlayerNameBtn.style.display = 'none';
+        }
       } else {
-        this.userRoleBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-emerald-400';
+        this.userRoleBadge.className = 'text-[10px] md:text-xs font-black tracking-widest uppercase text-emerald-400 hover:underline cursor-pointer';
+        this.userRoleBadge.title = 'คลิกเพื่อแก้ไขชื่อผู้เล่น';
+        if (this.editPlayerNameBtn) {
+          this.editPlayerNameBtn.style.display = 'inline-flex';
+        }
       }
     }
 
@@ -664,15 +693,31 @@ export class MarketRenderer {
       modal.style.display = 'none';
     };
 
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    const handleOverlayClick = (e) => {
+      if (e.target === modal) {
+        handleClose();
+      }
+    };
+
     const cleanup = () => {
       if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
       if (cancelBtn) cancelBtn.removeEventListener('click', handleClose);
       if (closeBtn) closeBtn.removeEventListener('click', handleClose);
+      document.removeEventListener('keydown', handleKeyDown);
+      modal.removeEventListener('click', handleOverlayClick);
     };
 
     if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
     if (cancelBtn) cancelBtn.addEventListener('click', handleClose);
     if (closeBtn) closeBtn.addEventListener('click', handleClose);
+    document.addEventListener('keydown', handleKeyDown);
+    modal.addEventListener('click', handleOverlayClick);
   }
 
   hideDirectTransferModal() {
@@ -681,11 +726,160 @@ export class MarketRenderer {
     }
   }
 
+  showKickPlayerModal(players = [], onConfirm = null) {
+    const modal = this.kickPlayerModal;
+    const listContainer = this.kickPlayerList;
+    const confirmBtn = this.confirmKickPlayerBtn;
+    const cancelBtn = this.cancelKickPlayerBtn;
+    const closeBtn = this.closeKickPlayerModalBtn;
+    if (!modal || !listContainer) return;
+
+    let selectedUid = null;
+    listContainer.innerHTML = '';
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.5';
+      confirmBtn.style.cursor = 'not-allowed';
+    }
+
+    if (players.length === 0) {
+      listContainer.innerHTML = `<div class="kick-player-empty">ไม่มีผู้เล่นอื่นในห้องขณะนี้ (ไม่พบผู้เล่นที่สามารถบังคับออกได้)</div>`;
+    } else {
+      players.forEach(player => {
+        const item = document.createElement('div');
+        item.className = 'kick-player-item';
+        item.dataset.uid = player.uid;
+
+        const cashFormatted = (player.cash || 0).toLocaleString('en-US');
+        const initial = (player.displayName || 'P').charAt(0).toUpperCase();
+
+        item.innerHTML = `
+          <div class="kick-player-info">
+            <div class="kick-player-avatar">${initial}</div>
+            <div>
+              <div class="kick-player-name">${player.displayName || 'Player'}</div>
+              <div class="kick-player-stats">Cash: ${cashFormatted} ฿</div>
+            </div>
+          </div>
+          <div class="kick-player-radio-indicator"></div>
+        `;
+
+        item.addEventListener('click', () => {
+          listContainer.querySelectorAll('.kick-player-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedUid = player.uid;
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+          }
+        });
+
+        listContainer.appendChild(item);
+      });
+    }
+
+    modal.style.display = 'flex';
+
+    const handleConfirm = () => {
+      if (!selectedUid) return;
+      cleanup();
+      modal.style.display = 'none';
+      if (typeof onConfirm === 'function') {
+        const selectedPlayer = players.find(p => p.uid === selectedUid);
+        onConfirm(selectedUid, selectedPlayer);
+      }
+    };
+
+    const handleClose = () => {
+      cleanup();
+      modal.style.display = 'none';
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    const handleOverlayClick = (e) => {
+      if (e.target === modal) {
+        handleClose();
+      }
+    };
+
+    const cleanup = () => {
+      if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
+      if (cancelBtn) cancelBtn.removeEventListener('click', handleClose);
+      if (closeBtn) closeBtn.removeEventListener('click', handleClose);
+      document.removeEventListener('keydown', handleKeyDown);
+      modal.removeEventListener('click', handleOverlayClick);
+    };
+
+    if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
+    if (cancelBtn) cancelBtn.addEventListener('click', handleClose);
+    if (closeBtn) closeBtn.addEventListener('click', handleClose);
+    document.addEventListener('keydown', handleKeyDown);
+    modal.addEventListener('click', handleOverlayClick);
+  }
+
+  hideKickPlayerModal() {
+    if (this.kickPlayerModal) {
+      this.kickPlayerModal.style.display = 'none';
+    }
+  }
+
+  showPlayerNameModal({ title = "ตั้งชื่อผู้เล่นของคุณ", subtitle = "โปรดระบุชื่อที่ต้องการใช้แสดงในห้องเกม (1 - 20 ตัวอักษร)", confirmText = "เข้าสู่เกม", initialValue = "" } = {}) {
+    if (!this.playerNameModal) return;
+    if (this.playerNameModalTitle) this.playerNameModalTitle.textContent = title;
+    if (this.playerNameModalSubtitle) this.playerNameModalSubtitle.textContent = subtitle;
+    if (this.playerNameConfirmBtn) {
+      this.playerNameConfirmBtn.textContent = confirmText;
+      this.playerNameConfirmBtn.disabled = false;
+      this.playerNameConfirmBtn.style.opacity = '1';
+      this.playerNameConfirmBtn.style.cursor = 'pointer';
+    }
+    if (this.playerNameInput) {
+      this.playerNameInput.value = initialValue;
+    }
+    if (this.playerNameErrorText) {
+      this.playerNameErrorText.textContent = '';
+      this.playerNameErrorText.style.display = 'none';
+    }
+    this.playerNameModal.style.display = 'flex';
+    setTimeout(() => {
+      if (this.playerNameInput) {
+        this.playerNameInput.focus();
+        this.playerNameInput.select();
+      }
+    }, 100);
+  }
+
+  hidePlayerNameModal() {
+    if (this.playerNameModal) {
+      this.playerNameModal.style.display = 'none';
+    }
+    if (this.playerNameErrorText) {
+      this.playerNameErrorText.textContent = '';
+      this.playerNameErrorText.style.display = 'none';
+    }
+  }
+
+  showPlayerNameError(message) {
+    if (this.playerNameErrorText) {
+      this.playerNameErrorText.textContent = message;
+      this.playerNameErrorText.style.display = 'block';
+    }
+    if (this.playerNameInput) {
+      this.playerNameInput.focus();
+    }
+  }
+
   // Portfolio & Orders Delegations
   updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders = {}, userUid = null) { 
     this.portfolioRenderer.updatePortfolioUI(stats, portfolio, boardStocks, pendingOrders, userUid); 
   }
-  updateGMPendingOrdersUI(orders, onApprove, onReject) { this.portfolioRenderer.updateGMPendingOrdersUI(this.gmPendingOrdersBody, orders, onApprove, onReject); }
+  updateGMPendingOrdersUI(orders, onApprove, onReject, members = {}) { this.portfolioRenderer.updateGMPendingOrdersUI(this.gmPendingOrdersBody, orders, onApprove, onReject, members); }
   updateGMPlayerSalaryUI(members, onPaySalary) { 
     this.portfolioRenderer.updateGMPlayerSalaryUI(this.gmPlayerSalaryBody, members, onPaySalary); 
   }

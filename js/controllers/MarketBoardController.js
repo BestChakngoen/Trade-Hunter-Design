@@ -269,6 +269,12 @@ export class MarketBoardController {
       const symbol = card.querySelector('.card-icon').textContent.trim();
       const isUp = btn.classList.contains('up');
       
+      const updatedStocks = isUp 
+        ? this.state.getUpdatedStocksForUp(symbol)
+        : this.state.getUpdatedStocksForDown(symbol);
+
+      if (!updatedStocks) return;
+
       // Save full room + board snapshot before changing stock price step
       const [boardSnap, roomSnap] = await Promise.all([
         this.firebaseService.getBoardSnapshot(this.state.roomCode),
@@ -287,23 +293,21 @@ export class MarketBoardController {
         this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
       }
 
-      const updatedStocks = isUp 
-        ? this.state.getUpdatedStocksForUp(symbol)
-        : this.state.getUpdatedStocksForDown(symbol);
-
-      if (updatedStocks) {
-        try {
-          await this.firebaseService.updateStocksBoard(this.state.roomCode, updatedStocks);
-          const updatedStock = updatedStocks.find(s => s.name === symbol);
-          const newPrice = updatedStock ? updatedStock.value.toLocaleString() : '';
-          this.renderer.showTopToast(
-            isUp ? "STOCK PRICE INCREASED" : "STOCK PRICE DECREASED",
-            `ปรับราคาหุ้น ${symbol} ${isUp ? 'เพิ่มขึ้นเป็น' : 'ลดลงเหลือ'} ${newPrice} บาท`,
-            isUp ? "success" : "warning"
-          );
-        } catch (error) {
-          console.error("Failed to update stock step in database:", error);
-        }
+      try {
+        await this.firebaseService.updateStocksBoard(this.state.roomCode, updatedStocks);
+        const updatedStock = updatedStocks.find(s => s.name === symbol);
+        const newPrice = updatedStock ? updatedStock.value.toLocaleString() : '';
+        const prevStock = boardData && Array.isArray(boardData.stocks) ? boardData.stocks.find(s => s.name === symbol) : null;
+        const isAtMin = !isUp && updatedStock && Number(updatedStock.value) <= 100 && prevStock && Number(prevStock.value) <= 100;
+        this.renderer.showTopToast(
+          isUp ? "STOCK PRICE INCREASED" : (isAtMin ? "STOCK PRICE AT MINIMUM" : "STOCK PRICE DECREASED"),
+          isAtMin
+            ? `ราคาหุ้น ${symbol} อยู่ที่ระดับต่ำสุดแล้ว (100 บาท)`
+            : `ปรับราคาหุ้น ${symbol} ${isUp ? 'เพิ่มขึ้นเป็น' : 'ลดลงเหลือ'} ${newPrice} บาท`,
+          isUp ? "success" : "warning"
+        );
+      } catch (error) {
+        console.error("Failed to update stock step in database:", error);
       }
     });
 
@@ -316,6 +320,22 @@ export class MarketBoardController {
 
     const handleBatchChange = async (isUp) => {
       if (this.state.role !== 'game_master' || this.state.isSpectating) return;
+
+      // Collect target stock symbols that are currently filtered & visible on the board
+      const visibleCards = this.state.getFilteredAndSortedCards();
+      const targetSymbols = new Set();
+      visibleCards.forEach(card => {
+        const iconEl = card.querySelector('.card-icon');
+        if (iconEl && iconEl.textContent) {
+          targetSymbols.add(iconEl.textContent.trim());
+        }
+      });
+
+      const updatedStocks = isUp
+        ? this.state.getBatchUpdatedStocksForUp(targetSymbols)
+        : this.state.getBatchUpdatedStocksForDown(targetSymbols);
+
+      if (!updatedStocks) return;
 
       const [boardSnap, roomSnap] = await Promise.all([
         this.firebaseService.getBoardSnapshot(this.state.roomCode),
@@ -334,31 +354,15 @@ export class MarketBoardController {
         this.renderer.updateHistoryControlsUI(isGM, this.state.canUndo(), this.state.canRedo());
       }
 
-      // Collect target stock symbols that are currently filtered & visible on the board
-      const visibleCards = this.state.getFilteredAndSortedCards();
-      const targetSymbols = new Set();
-      visibleCards.forEach(card => {
-        const iconEl = card.querySelector('.card-icon');
-        if (iconEl && iconEl.textContent) {
-          targetSymbols.add(iconEl.textContent.trim());
-        }
-      });
-
-      const updatedStocks = isUp
-        ? this.state.getBatchUpdatedStocksForUp(targetSymbols)
-        : this.state.getBatchUpdatedStocksForDown(targetSymbols);
-
-      if (updatedStocks) {
-        try {
-          await this.firebaseService.updateStocksBoard(this.state.roomCode, updatedStocks);
-          this.renderer.showTopToast(
-            isUp ? "BATCH PRICE INCREASED" : "BATCH PRICE DECREASED",
-            `ปรับราคาหุ้นกลุ่มที่แสดงอยู่ (+1 / -1 ช่อง) จำนวน ${targetSymbols.size} หุ้น`,
-            isUp ? "success" : "warning"
-          );
-        } catch (error) {
-          console.error("Failed to update batch stock step in database:", error);
-        }
+      try {
+        await this.firebaseService.updateStocksBoard(this.state.roomCode, updatedStocks);
+        this.renderer.showTopToast(
+          isUp ? "BATCH PRICE INCREASED" : "BATCH PRICE DECREASED",
+          `ปรับราคาหุ้นกลุ่มที่แสดงอยู่ (+1 / -1 ช่อง) จำนวน ${targetSymbols.size} หุ้น`,
+          isUp ? "success" : "warning"
+        );
+      } catch (error) {
+        console.error("Failed to update batch stock step in database:", error);
       }
     };
 
@@ -551,14 +555,14 @@ export class MarketBoardController {
 
           this.updateViewGrid();
           closeConfirm();
-          this.renderer.showTopToast("GAME RESET", "รีเซ็ตเซสชันเกมทั้งหมดกลับสู่ค่าเริ่มต้นเรียบร้อยแล้ว", "warning");
+          this.renderer.showTopToast("PRICE RESET", "รีเซ็ตราคาหุ้นกลับสู่ค่าเริ่มต้นเรียบร้อยแล้ว", "warning");
         } catch (error) {
-          console.error("Failed to reset game in database:", error);
+          console.error("Failed to reset price in database:", error);
         }
       });
     }
 
-    // Reset Room Data (Purge room data and return everyone to lobby)
+    // Reset Game (Purge room data and return everyone to lobby)
     if (this.renderer.resetRoomDataBtn) {
       this.renderer.resetRoomDataBtn.addEventListener('click', () => {
         if (this.state.role !== 'game_master' || this.state.isSpectating) return;
@@ -594,6 +598,11 @@ export class MarketBoardController {
 
           const resetStocks = this.state.getResetStocks();
 
+          // Unsubscribe GM listeners first to prevent receiving player-kick reset event
+          if (this.marketController) {
+            this.marketController.unsubscribeAll();
+          }
+
           // Reset room state on cloud and kick all participants atomically
           await this.firebaseService.resetRoomWithKickAll(code, resetStocks);
 
@@ -604,20 +613,18 @@ export class MarketBoardController {
           this.renderer.updateHistoryControlsUI(true, false, false);
           this.state.resetFilters();
 
-          if (this.marketController) {
-            this.marketController.unsubscribeAll();
-          }
           if (this.playerSessionService && code) {
             this.playerSessionService.clearRoomSession(code);
           }
 
           this.state.reset();
           this.renderer.hideGMTransferModal();
+          this.renderer.hidePlayerNameModal();
           this.renderer.showLobby();
-          this.renderer.showErrorAlert("รีเซ็ตห้องสำเร็จ", "ทำการรีเซ็ตข้อมูลห้องและนำผู้เล่นทุกคนรวมทั้ง GM กลับสู่ล็อบบี้เรียบร้อยแล้ว");
+          this.renderer.showErrorAlert("รีเซ็ตเกมสำเร็จ", "ทำการรีเซ็ตข้อมูลเกมและนำผู้เล่นทุกคนรวมทั้ง GM กลับสู่ล็อบบี้เรียบร้อยแล้ว");
         } catch (error) {
-          console.error("Failed to reset room data in database:", error);
-          this.renderer.showErrorAlert("เกิดข้อผิดพลาด", "ไม่สามารถรีเซ็ตห้องได้ โปรดลองอีกครั้ง");
+          console.error("Failed to reset game in database:", error);
+          this.renderer.showErrorAlert("เกิดข้อผิดพลาด", "ไม่สามารถรีเซ็ตเกมได้ โปรดลองอีกครั้ง");
         }
       });
     }

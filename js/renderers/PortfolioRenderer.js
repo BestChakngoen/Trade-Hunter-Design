@@ -95,10 +95,18 @@ export class PortfolioRenderer {
     }
   }
 
-  updateGMPendingOrdersUI(gmPendingOrdersBody, orders, onApprove, onReject) {
+  updateGMPendingOrdersUI(gmPendingOrdersBody, orders = {}, onApprove = null, onReject = null, members = {}) {
     if (!gmPendingOrdersBody) return;
     
-    const orderList = Object.values(orders);
+    const orderList = Object.values(orders || {}).filter(order => {
+      if (!order) return false;
+      if (members && Object.keys(members).length > 0) {
+        if (!order.uid || !members[order.uid] || members[order.uid].online === false) {
+          return false;
+        }
+      }
+      return true;
+    });
     const badgeEl = document.getElementById('gmPendingBadge');
     const tabMgmtBadge = document.getElementById('tabMgmtBadge');
     
@@ -225,9 +233,11 @@ export class PortfolioRenderer {
     if (!gmPlayerSalaryBody) return;
 
     const memberList = Object.entries(members || {}).filter(([uid, member]) => {
+      if (!member) return false;
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
-      return role !== 'game_master' && name !== 'GM';
+      const isOnline = member.online !== false;
+      return role !== 'game_master' && name !== 'GM' && isOnline;
     });
 
     if (memberList.length === 0) {
@@ -272,9 +282,11 @@ export class PortfolioRenderer {
     if (!gmPlayerDividendBody) return;
 
     const memberList = Object.entries(members || {}).filter(([uid, member]) => {
+      if (!member) return false;
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
-      return role !== 'game_master' && name !== 'GM';
+      const isOnline = member.online !== false;
+      return role !== 'game_master' && name !== 'GM' && isOnline;
     });
 
     if (memberList.length === 0) {
@@ -391,9 +403,11 @@ export class PortfolioRenderer {
     if (!gmPlayerDebtInterestBody) return;
 
     const memberList = Object.entries(members || {}).filter(([uid, member]) => {
+      if (!member) return false;
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
-      return role !== 'game_master' && name !== 'GM';
+      const isOnline = member.online !== false;
+      return role !== 'game_master' && name !== 'GM' && isOnline;
     });
 
     if (memberList.length === 0) {

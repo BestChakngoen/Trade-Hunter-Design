@@ -28,6 +28,9 @@ export class CardGridRenderer {
       isUp = true;
     } else if (direction === 'down') {
       isDown = true;
+    } else if (Number(currentPrice) === 100) {
+      // Minimum price floor remains red
+      isDown = true;
     } else if (prevPrice !== undefined && prevPrice !== null && !isNaN(prevPrice)) {
       const cur = Number(currentPrice);
       const prev = Number(prevPrice);
@@ -112,12 +115,26 @@ export class CardGridRenderer {
       const stock = boardStocks ? boardStocks[symbol] : null;
       const currentPrice = stock ? stock.value : parseFloat(card.getAttribute('data-price') || 0);
 
-      // Determine previous price: if stock.oldValue exists and is valid, use it; otherwise fallback to currentPrice (neutral)
-      let prevPrice = (stock && stock.oldValue !== undefined && stock.oldValue !== null)
-        ? stock.oldValue
-        : currentPrice;
+      let direction = null;
+      let prevPrice = null;
 
-      this.setPriceBoxStyle(priceBox, valueEl, currentPrice, prevPrice);
+      if (stock) {
+        if (stock.direction) {
+          direction = stock.direction;
+        } else if (stock.oldValue !== null && stock.oldValue !== undefined) {
+          prevPrice = stock.oldValue;
+          if (stock.value > stock.oldValue) direction = 'up';
+          else if (stock.value < stock.oldValue) direction = 'down';
+          else if (stock.value === 100) direction = 'down';
+        } else if (stock.value === 100) {
+          direction = 'down';
+        } else {
+          // Reset or initial baseline: white
+          direction = null;
+        }
+      }
+
+      this.setPriceBoxStyle(priceBox, valueEl, currentPrice, prevPrice, direction);
     });
   }
 
@@ -231,7 +248,28 @@ export class CardGridRenderer {
     this.confirmModal.style.display = 'none';
   }
 
+  _captureScrollState() {
+    const pageShell = document.querySelector('.page-shell');
+    const isShellVisible = Boolean(
+      pageShell && 
+      pageShell.style.display !== 'none' && 
+      (!window.getComputedStyle || window.getComputedStyle(pageShell).display !== 'none')
+    );
+    const shellScroll = (pageShell && isShellVisible) ? pageShell.scrollTop : 0;
+    const winScroll = isShellVisible ? (window.scrollY || document.documentElement.scrollTop || 0) : 0;
+    return { pageShell, shellScroll, winScroll, isShellVisible };
+  }
+
+  _restoreScrollState(state) {
+    if (!state || !state.isShellVisible) return;
+    if (state.pageShell && typeof state.pageShell.scrollTop === 'number') {
+      state.pageShell.scrollTop = state.shellScroll;
+    }
+    window.scrollTo(0, state.winScroll);
+  }
+
   showErrorAlert(title, text) {
+    const scrollState = this._captureScrollState();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -244,6 +282,27 @@ export class CardGridRenderer {
         color: '#f8fafc',
         iconColor: '#ef4444',
         confirmButtonText: 'OK',
+        heightAuto: false,
+        scrollbarPadding: false,
+        returnFocus: false,
+        showClass: {
+          popup: 'swal2-noanimation',
+          backdrop: 'swal2-noanimation',
+          icon: 'swal2-noanimation'
+        },
+        hideClass: {
+          popup: '',
+          backdrop: ''
+        },
+        didOpen: () => {
+          this._restoreScrollState(scrollState);
+        },
+        willClose: () => {
+          this._restoreScrollState(scrollState);
+        },
+        didClose: () => {
+          this._restoreScrollState(scrollState);
+        },
         customClass: {
           popup: 'trade-alert-popup',
           title: 'trade-alert-title',
@@ -258,6 +317,7 @@ export class CardGridRenderer {
   }
 
   showSuccessAlert(title, text) {
+    const scrollState = this._captureScrollState();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -270,6 +330,27 @@ export class CardGridRenderer {
         color: '#f8fafc',
         iconColor: '#2563eb',
         confirmButtonText: 'OK',
+        heightAuto: false,
+        scrollbarPadding: false,
+        returnFocus: false,
+        showClass: {
+          popup: 'swal2-noanimation',
+          backdrop: 'swal2-noanimation',
+          icon: 'swal2-noanimation'
+        },
+        hideClass: {
+          popup: '',
+          backdrop: ''
+        },
+        didOpen: () => {
+          this._restoreScrollState(scrollState);
+        },
+        willClose: () => {
+          this._restoreScrollState(scrollState);
+        },
+        didClose: () => {
+          this._restoreScrollState(scrollState);
+        },
         customClass: {
           popup: 'trade-alert-popup',
           title: 'trade-alert-title',
@@ -284,6 +365,7 @@ export class CardGridRenderer {
   }
 
   showConfirmAlert(title, text, confirmText = 'YES', cancelText = 'NO') {
+    const scrollState = this._captureScrollState();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -298,6 +380,27 @@ export class CardGridRenderer {
         showCancelButton: true,
         confirmButtonText: confirmText,
         cancelButtonText: cancelText,
+        heightAuto: false,
+        scrollbarPadding: false,
+        returnFocus: false,
+        showClass: {
+          popup: 'swal2-noanimation',
+          backdrop: 'swal2-noanimation',
+          icon: 'swal2-noanimation'
+        },
+        hideClass: {
+          popup: '',
+          backdrop: ''
+        },
+        didOpen: () => {
+          this._restoreScrollState(scrollState);
+        },
+        willClose: () => {
+          this._restoreScrollState(scrollState);
+        },
+        didClose: () => {
+          this._restoreScrollState(scrollState);
+        },
         customClass: {
           popup: 'trade-alert-popup',
           title: 'trade-alert-title',
@@ -315,6 +418,7 @@ export class CardGridRenderer {
   }
 
   showAutoDismissModal(title, text, duration = 3500) {
+    const scrollState = this._captureScrollState();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -329,6 +433,27 @@ export class CardGridRenderer {
         showConfirmButton: false,
         timer: duration,
         timerProgressBar: true,
+        heightAuto: false,
+        scrollbarPadding: false,
+        returnFocus: false,
+        showClass: {
+          popup: 'swal2-noanimation',
+          backdrop: 'swal2-noanimation',
+          icon: 'swal2-noanimation'
+        },
+        hideClass: {
+          popup: '',
+          backdrop: ''
+        },
+        didOpen: () => {
+          this._restoreScrollState(scrollState);
+        },
+        willClose: () => {
+          this._restoreScrollState(scrollState);
+        },
+        didClose: () => {
+          this._restoreScrollState(scrollState);
+        },
         customClass: {
           popup: 'trade-alert-popup',
           title: 'trade-alert-title',
