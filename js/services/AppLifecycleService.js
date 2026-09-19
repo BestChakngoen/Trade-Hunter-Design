@@ -75,9 +75,13 @@ export class AppLifecycleService {
       const code = this.state.roomCode;
       if (!code || this.state.role !== 'player') return;
 
-      const user = this.firebaseService.getCurrentUser();
+      let user = this.firebaseService.getCurrentUser();
+      if (!user) {
+        // Allow brief moment for auth token re-establishment after waking from device sleep
+        await new Promise(r => setTimeout(r, 350));
+        user = this.firebaseService.getCurrentUser();
+      }
       const currentUid = user ? user.uid : null;
-      if (!currentUid) return;
 
       try {
         const snap = await this.firebaseService.getRoomStateSnapshot(code);
@@ -91,12 +95,12 @@ export class AppLifecycleService {
 
         const roomData = snap.val() || {};
         const isReset = Boolean(roomData.isReset || roomData.status === 'RESET');
-        const isKicked = Boolean(roomData.kickedMembers && roomData.kickedMembers[currentUid]);
+        const isKicked = Boolean(currentUid && roomData.kickedMembers && roomData.kickedMembers[currentUid]);
         const members = roomData.members || {};
-        const isNotInMembers = !members[currentUid];
+        const isNotInMembers = currentUid ? !members[currentUid] : false;
 
         if (isReset || isKicked || isNotInMembers) {
-          const kickReason = isKicked ? roomData.kickedMembers[currentUid].reason : null;
+          const kickReason = isKicked ? roomData.kickedMembers[currentUid]?.reason : (isReset ? 'ROOM_RESET' : null);
           if (typeof this.onEvicted === 'function') {
             this.onEvicted({ isReset, isKicked, kickReason, isNotInMembers, code, currentUid });
           }

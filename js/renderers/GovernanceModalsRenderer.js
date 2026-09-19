@@ -216,12 +216,16 @@ export class GovernanceModalsRenderer {
 
       const cashFormatted = (player.cash || 0).toLocaleString('en-US');
       const initial = (player.displayName || 'P').charAt(0).toUpperCase();
+      const isOnline = player.online !== false;
+      const statusBadge = isOnline 
+        ? `<span class="kick-status-badge online"><span class="kick-status-dot online"></span> ออนไลน์</span>`
+        : `<span class="kick-status-badge offline"><span class="kick-status-dot offline"></span> ออฟไลน์</span>`;
 
       item.innerHTML = `
         <div class="kick-player-info">
           <div class="kick-player-avatar">${initial}</div>
           <div>
-            <div class="kick-player-name">${player.displayName || 'Player'}</div>
+            <div class="kick-player-name">${player.displayName || 'Player'} ${statusBadge}</div>
             <div class="kick-player-stats">Cash: ${cashFormatted} ฿</div>
           </div>
         </div>
@@ -264,10 +268,11 @@ export class GovernanceModalsRenderer {
     const handleConfirm = () => {
       if (!this.selectedKickPlayerUid) return;
       const targetUid = this.selectedKickPlayerUid;
-      const targetPlayer = this.currentKickEligiblePlayers.find(p => p.uid === targetUid);
+      const targetPlayer = this.currentKickEligiblePlayers.find(p => p.uid === targetUid) || { uid: targetUid, displayName: 'ผู้เล่น' };
+      const callback = this.onKickPlayerConfirmCallback;
       this.hideKickPlayerModal();
-      if (typeof this.onKickPlayerConfirmCallback === 'function') {
-        this.onKickPlayerConfirmCallback(targetUid, targetPlayer);
+      if (typeof callback === 'function') {
+        callback(targetUid, targetPlayer);
       }
     };
 

@@ -113,6 +113,47 @@
   font-weight: 700;
   font-size: 0.95rem;
   color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kick-status-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+}
+
+.kick-status-badge.online {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.kick-status-badge.offline {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.kick-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.kick-status-dot.online {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.kick-status-dot.offline {
+  background: #64748b;
 }
 
 .kick-player-stats {

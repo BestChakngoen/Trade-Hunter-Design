@@ -260,8 +260,10 @@ export class ModalsRenderer {
     if (!this.playerNameModal) return;
     if (this.playerNameCloseBtn) {
       if (allowClose) {
+        this.playerNameCloseBtn.classList.remove('hidden');
         this.playerNameCloseBtn.style.removeProperty('display');
       } else {
+        this.playerNameCloseBtn.classList.add('hidden');
         this.playerNameCloseBtn.style.setProperty('display', 'none', 'important');
       }
     }
@@ -294,6 +296,7 @@ export class ModalsRenderer {
       this.playerNameModal.style.display = 'none';
     }
     if (this.playerNameCloseBtn) {
+      this.playerNameCloseBtn.classList.remove('hidden');
       this.playerNameCloseBtn.style.removeProperty('display');
     }
     if (this.playerNameErrorText) {

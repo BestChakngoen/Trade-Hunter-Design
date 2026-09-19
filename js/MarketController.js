@@ -77,7 +77,10 @@ export class MarketController {
     });
 
     this.isBeingKicked = false;
-    this._playerNameModalCleanup = null;
+  }
+
+  get _playerNameModalCleanup() {
+    return this.roomGovernanceController ? this.roomGovernanceController._playerNameModalCleanup : null;
   }
 
   // --- Backward Compatibility Getters & Setters ---

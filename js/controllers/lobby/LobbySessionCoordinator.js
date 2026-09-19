@@ -57,6 +57,12 @@ export class LobbySessionCoordinator {
       "หมดเวลาการเชื่อมต่อกับ Realtime Database"
     );
 
+    let user = this.firebaseService.getCurrentUser();
+    if (!user) {
+      await this.firebaseService.init();
+      user = this.firebaseService.getCurrentUser();
+    }
+
     if (roomSnapshot && roomSnapshot.exists()) {
       roomData = roomSnapshot.val();
       const members = roomData.members || {};
@@ -65,10 +71,26 @@ export class LobbySessionCoordinator {
       const isExpired = Boolean(expiresAt && expiresAt <= now);
       const isEnded = Boolean(roomData.isEnd);
       const isReset = Boolean(roomData.isReset || roomData.status === 'RESET');
+      const isKicked = Boolean(user && roomData.kickedMembers && roomData.kickedMembers[user.uid]);
 
-      // Safe Purge: If room is marked as RESET, or has 0 members and (isExpired, isEnded, or has no members)
+      if (isReset || isKicked) {
+        if (this.playerSessionService) {
+          this.playerSessionService.clearRoomSession(code);
+        }
+        const kickReason = isKicked ? roomData.kickedMembers[user.uid]?.reason : 'ROOM_RESET';
+        return {
+          isAllowed: false,
+          reason: kickReason || 'ROOM_RESET',
+          message: kickReason === 'ROOM_RESET'
+            ? "ห้องเกมนี้ถูกรีเซ็ตข้อมูลทั้งหมดโดย GM ระบบได้นำผู้เล่นทุกคนกลับสู่หน้าล็อบบี้แล้ว"
+            : "คุณถูกผู้ดูแลห้อง (GM) บังคับให้ออกจากห้องเกม และข้อมูลการเล่นทั้งหมดของคุณถูกรีเซ็ตเรียบร้อยแล้ว",
+          roomExists: true
+        };
+      }
+
+      // Safe Purge: If room has 0 members and is expired or ended
       const hasNoMembers = memberUids.length === 0;
-      if (isReset || hasNoMembers || (isExpired && hasNoMembers) || (isEnded && hasNoMembers)) {
+      if (hasNoMembers && (isExpired || isEnded)) {
         await this.firebaseService.deleteRoomData(code);
         if (this.playerSessionService) {
           this.playerSessionService.clearRoomSession(code);
@@ -79,12 +101,6 @@ export class LobbySessionCoordinator {
         // Room has active players - preserve it!
         roomExists = true;
       }
-    }
-
-    let user = this.firebaseService.getCurrentUser();
-    if (!user) {
-      await this.firebaseService.init();
-      user = this.firebaseService.getCurrentUser();
     }
 
     const members = roomData ? (roomData.members || {}) : {};

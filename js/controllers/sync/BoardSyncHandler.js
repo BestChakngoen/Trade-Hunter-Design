@@ -72,11 +72,14 @@ export class BoardSyncHandler {
       }
 
       // Check if this board update is a Reset action (e.g. GM clicked Reset Price or Room Reset)
-      const hasStocks = Array.isArray(firebaseBoard.stocks) && firebaseBoard.stocks.length > 0;
-      const allStocksReset = hasStocks && firebaseBoard.stocks.every(s => 
+      const stocksList = Array.isArray(firebaseBoard.stocks) 
+        ? firebaseBoard.stocks 
+        : (firebaseBoard.stocks && typeof firebaseBoard.stocks === 'object' ? Object.values(firebaseBoard.stocks) : []);
+      const hasStocks = stocksList.length > 0;
+      const allStocksReset = hasStocks && stocksList.every(s => 
         (s.oldValue === null || s.oldValue === undefined) && !s.direction
       );
-      const isBoardReset = allStocksReset && (Boolean(firebaseBoard.isReset) || isFirstLoad);
+      const isBoardReset = Boolean(firebaseBoard.isReset) || allStocksReset || isFirstLoad;
 
       // Play Raise_price or Down_price sound for everyone when prices update (suppressed during board reset or initial load)
       if (!isFirstLoad && !isBoardReset && changedStocks.length > 0 && this.soundService) {

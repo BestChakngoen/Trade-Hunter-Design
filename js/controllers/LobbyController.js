@@ -121,11 +121,23 @@ export class LobbyController {
     const sessionInfo = await this.sessionCoordinator.inspectRoomAndSession(code);
     if (!sessionInfo.isAllowed) {
       this.clearLobbyRoomCodeInput();
-      if (typeof this.renderer.triggerShakeCodeBox === 'function') {
-        this.renderer.triggerShakeCodeBox();
-      }
-      if (typeof this.renderer.showInvalidRoomModal === 'function') {
-        await this.renderer.showInvalidRoomModal(code);
+      if (sessionInfo.reason === 'ROOM_RESET') {
+        this.renderer.showErrorAlert(
+          "ห้องเกมได้รับการรีเซ็ต",
+          sessionInfo.message || "ห้องเกมนี้ถูกรีเซ็ตข้อมูลทั้งหมดโดย GM ระบบได้นำผู้เล่นทุกคนกลับสู่หน้าล็อบบี้แล้ว"
+        );
+      } else if (sessionInfo.reason === 'GM_KICKED') {
+        this.renderer.showErrorAlert(
+          "ถูกให้ออกจากห้อง",
+          sessionInfo.message || "คุณถูกผู้ดูแลห้อง (GM) บังคับให้ออกจากห้องเกม และข้อมูลการเล่นทั้งหมดของคุณถูกรีเซ็ตเรียบร้อยแล้ว"
+        );
+      } else {
+        if (typeof this.renderer.triggerShakeCodeBox === 'function') {
+          this.renderer.triggerShakeCodeBox();
+        }
+        if (typeof this.renderer.showInvalidRoomModal === 'function') {
+          await this.renderer.showInvalidRoomModal(code);
+        }
       }
       this.clearLobbyRoomCodeInput();
       return false;

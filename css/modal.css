@@ -204,6 +204,10 @@
   transform: scale(0.92);
 }
 
+.apple-modal-close.hidden {
+  display: none !important;
+}
+
 .apple-modal-icon {
   width: 52px;
   height: 52px;
