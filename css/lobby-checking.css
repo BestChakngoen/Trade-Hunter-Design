@@ -1,0 +1,168 @@
+/* ==========================================================================
+   LOBBY CHECKING ANIMATION STYLES (css/lobby-checking.css)
+   สไตล์แอนิเมชันสำหรับสถานะกำลังตรวจสอบรหัสห้อง (CHECKING...)
+   ========================================================================== */
+
+/* บังคับซ่อนปุ่มจอย (Joy Button) 100% ขณะกำลังทำการ checking */
+form.is-checking #joinRoomBtn,
+form.is-checking .lobby-joy-btn,
+.lobby-joy-btn.is-checking {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* คอนเทนเนอร์สถานะ Checking: ซ่อนไว้เป็นค่าเริ่มต้น (ไม่แสดงก่อนกดปุ่ม) */
+.lobby-checking-indicator {
+  display: none !important;
+  position: relative !important;
+  z-index: 25 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: translateY(var(--lobby-joy-btn-y)) !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+/* แสดงสถานะ Checking เฉพาะเมื่อกดจอย หรือกำลังตรวจสอบรหัสเท่านั้น */
+form.is-checking .lobby-checking-indicator,
+.lobby-checking-indicator.active {
+  display: flex !important;
+  animation: checkingFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* ข้อความและแอนิเมชัน CHECKING (ไม่ใส่แคปซูลแก้ว เป็นข้อความลอยแบบโปร่งใส) */
+.checking-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+  font-size: clamp(1.25rem, 3.2vw, 1.8rem) !important;
+  letter-spacing: 0.08em !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95), 0 0 16px rgba(255, 255, 255, 0.45) !important;
+}
+
+/* ไอคอน Spinner หมุนอย่างลื่นไหล 60fps */
+.checking-spinner {
+  width: 1.25em !important;
+  height: 1.25em !important;
+  flex-shrink: 0 !important;
+  animation: checkingSpin 0.75s linear infinite !important;
+  will-change: transform;
+}
+
+.checking-spinner .spinner-track {
+  stroke: rgba(255, 255, 255, 0.25);
+}
+
+.checking-spinner .spinner-head {
+  stroke: #ffffff;
+}
+
+/* ตัวหนังสือคำว่า CHECKING */
+.checking-text {
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* แอนิเมชันจุด 3 จุด (...) เด้งสลับจังหวะ */
+.checking-dots {
+  display: inline-flex !important;
+  letter-spacing: 0.04em !important;
+}
+
+.checking-dots .dot {
+  display: inline-block !important;
+  animation: checkingDotBounce 1.2s ease-in-out infinite both !important;
+  will-change: transform, opacity;
+}
+
+.checking-dots .dot-1 {
+  animation-delay: 0s !important;
+}
+
+.checking-dots .dot-2 {
+  animation-delay: 0.2s !important;
+}
+
+.checking-dots .dot-3 {
+  animation-delay: 0.4s !important;
+}
+
+/* Keyframes แอนิเมชันหมุน Spinner */
+@keyframes checkingSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Keyframes จุด 3 จุด เด้งขึ้นลงและกระพริบ */
+@keyframes checkingDotBounce {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Keyframes ปรากฏตัวแบบนุ่มนวล */
+@keyframes checkingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--lobby-joy-btn-y)) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(var(--lobby-joy-btn-y)) scale(1);
+  }
+}
+
+/* แอนิเมชันของช่องกรอกรหัสเมื่อกำลังตรวจสอบ */
+form.is-checking .lobby-code-box {
+  animation: codeBoxCheckingGlow 1.4s ease-in-out infinite !important;
+  will-change: filter;
+}
+
+form.is-checking .lobby-key-submit-btn {
+  pointer-events: none !important;
+  opacity: 0.7 !important;
+}
+
+@keyframes codeBoxCheckingGlow {
+  0%, 100% {
+    filter: drop-shadow(0 2px 8px rgba(52, 211, 153, 0.25));
+  }
+  50% {
+    filter: drop-shadow(0 4px 18px rgba(52, 211, 153, 0.65));
+  }
+}
+
+/* รองรับ prefers-reduced-motion สำหรับการเข้าถึง */
+@media (prefers-reduced-motion: reduce) {
+  .lobby-checking-indicator,
+  form.is-checking .lobby-code-box,
+  .checking-spinner,
+  .checking-dots .dot,
+  .checking-text {
+    animation: none !important;
+  }
+  .checking-dots .dot {
+    opacity: 1 !important;
+  }
+}

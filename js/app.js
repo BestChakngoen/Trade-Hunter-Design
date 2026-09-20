@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     await firebaseService.init();
-    controller.init();
+    await controller.init();
   } catch (error) {
     console.error("Initialization error:", error);
     renderer.showErrorAlert("การเชื่อมต่อล้มเหลว", "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์หลักของ Firebase ได้");

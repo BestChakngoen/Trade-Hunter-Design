@@ -25,6 +25,7 @@ export class MarketRenderer {
     this.lobbyForm = document.getElementById('lobbyForm');
     this.roomCodeInput = document.getElementById('roomCodeInput');
     this.joinRoomBtn = document.getElementById('joinRoomBtn');
+    this.lobbyCheckingIndicator = document.getElementById('lobbyCheckingIndicator');
 
     // Role & Room Controller Elements
     this.roleController = document.getElementById('roleController');
@@ -153,7 +154,7 @@ export class MarketRenderer {
   }
 
   updateRoomMembersUI(members = {}) {
-    const memberCount = Object.values(members || {}).filter(m => m && m.online !== false).length;
+    const memberCount = Object.values(members || {}).length;
     this.updateRoomMembersDisplay(memberCount);
   }
 

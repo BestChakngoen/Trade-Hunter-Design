@@ -1,4 +1,4 @@
-import { ref, get, set, update, onValue, onDisconnect, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { ref, get, set, update, onValue, onDisconnect, runTransaction, goOnline } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 /**
  * RoomRepository - Manages Realtime Database operations for game room lifecycle,
@@ -12,6 +12,16 @@ export class RoomRepository {
 
   get realtimeDb() {
     return this.firebaseService.realtimeDb;
+  }
+
+  ensureConnection() {
+    try {
+      if (this.realtimeDb) {
+        goOnline(this.realtimeDb);
+      }
+    } catch (e) {
+      console.warn("[RoomRepository] Failed to reconnect Firebase:", e);
+    }
   }
 
   getRoomRef(roomCode) {
@@ -229,7 +239,7 @@ export class RoomRepository {
 
       const members = currentData.members || {};
       
-      // Rejoining player
+      // Rejoining player with same UID
       if (members[userObj.uid]) {
         currentData.members[userObj.uid].online = true;
         if (clientIp && clientIp !== 'unknown') {
@@ -237,6 +247,49 @@ export class RoomRepository {
         }
         currentData.lastActiveAt = Date.now();
         return currentData;
+      }
+
+      // Rejoining player with matching sessionToken (e.g. computer restarted or browser reopened with new anonymous UID)
+      if (userObj.sessionToken) {
+        const existingUidWithToken = Object.keys(members).find(uid => members[uid] && members[uid].sessionToken === userObj.sessionToken);
+        if (existingUidWithToken && existingUidWithToken !== userObj.uid) {
+          const oldMemberData = members[existingUidWithToken];
+          delete currentData.members[existingUidWithToken];
+
+          // Migrate pending orders from old UID to new UID
+          if (currentData.pendingOrders) {
+            Object.values(currentData.pendingOrders).forEach(order => {
+              if (order && order.uid === existingUidWithToken) {
+                order.uid = userObj.uid;
+              }
+            });
+          }
+
+          // Migrate player notification tracking maps
+          ['lastSalaryReceived', 'lastDividendReceived', 'lastDebtInterestReceived', 'lastProcessedOrder'].forEach(mapKey => {
+            if (currentData[mapKey] && currentData[mapKey][existingUidWithToken]) {
+              currentData[mapKey][userObj.uid] = currentData[mapKey][existingUidWithToken];
+              delete currentData[mapKey][existingUidWithToken];
+            }
+          });
+
+          // Register new UID entry preserving portfolio and identity
+          currentData.members[userObj.uid] = {
+            ...oldMemberData,
+            online: true,
+            ip: clientIp || userObj.ip || oldMemberData.ip || 'unknown',
+            lastActiveAt: Date.now()
+          };
+
+          if (currentData.savedMembers && currentData.savedMembers[userObj.sessionToken]) {
+            currentData.savedMembers[userObj.sessionToken].ip = clientIp || userObj.ip || 'unknown';
+            currentData.savedMembers[userObj.sessionToken].lastActiveAt = Date.now();
+          }
+
+          currentData.lastActiveAt = Date.now();
+          assignedRole = oldMemberData.role || userObj.role;
+          return currentData;
+        }
       }
 
       if (!currentData.members) {

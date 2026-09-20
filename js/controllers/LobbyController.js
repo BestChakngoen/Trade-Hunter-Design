@@ -48,14 +48,22 @@ export class LobbyController {
 
       this.isSubmitting = true;
 
+      const form = this.renderer.lobbyForm;
       const btn = this.renderer.joinRoomBtn;
-      let originalBtnHtml = '';
+      const indicator = this.renderer.lobbyCheckingIndicator || document.getElementById('lobbyCheckingIndicator');
+
+      if (form) {
+        form.classList.add('is-checking');
+      }
+
+      // Hide join button and show dedicated animated checking indicator
       if (btn) {
-        originalBtnHtml = btn.innerHTML;
         btn.disabled = true;
-        btn.style.opacity = '0.7';
-        btn.style.cursor = 'not-allowed';
-        btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="animate-spin h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> CHECKING...</span>`;
+        btn.classList.add('is-checking');
+        btn.style.setProperty('display', 'none', 'important');
+      }
+      if (indicator) {
+        indicator.style.setProperty('display', 'flex', 'important');
       }
 
       try {
@@ -73,11 +81,16 @@ export class LobbyController {
         this.renderer.showErrorAlert("เกิดข้อผิดพลาด", err.message || "ไม่สามารถระบุการเชื่อมต่อห้องเกมได้");
       } finally {
         this.isSubmitting = false;
+        if (form) {
+          form.classList.remove('is-checking');
+        }
+        if (indicator) {
+          indicator.style.setProperty('display', 'none', 'important');
+        }
         if (btn) {
+          btn.classList.remove('is-checking');
+          btn.style.removeProperty('display');
           btn.disabled = false;
-          btn.style.opacity = '1';
-          btn.style.cursor = 'pointer';
-          btn.innerHTML = originalBtnHtml;
         }
       }
     });
@@ -162,7 +175,23 @@ export class LobbyController {
     let isRestoredPlayer = false;
 
     // 2. Resolve Role & Player Name
-    if (!hasActiveGM) {
+    const existingMemberByToken = sessionToken 
+      ? Object.values(members || {}).find(m => m && m.sessionToken === sessionToken) 
+      : null;
+    const isReturningPlayer = (savedMember && savedMember.role === 'player') ||
+      (members[user.uid] && members[user.uid].role === 'player') ||
+      (existingMemberByToken && existingMemberByToken.role === 'player');
+
+    if (isReturningPlayer) {
+      role = 'player';
+      const sourceMember = (members[user.uid] && members[user.uid].role === 'player')
+        ? members[user.uid]
+        : (existingMemberByToken || savedMember);
+      displayName = sourceMember.displayName || 'Player';
+      restoredPortfolio = sourceMember.portfolio || { cash: 20000 };
+      restoredBackupProfile = sourceMember.backupPlayerProfile || null;
+      isRestoredPlayer = true;
+    } else if (!hasActiveGM) {
       role = await this.promptRoleSelection(code);
       if (!role) return false;
 
@@ -178,44 +207,6 @@ export class LobbyController {
           };
         }
       } else {
-        if (roomExists && savedMember && savedMember.role === 'player') {
-          displayName = savedMember.displayName || 'Player';
-          restoredPortfolio = savedMember.portfolio || { cash: 20000 };
-          restoredBackupProfile = savedMember.backupPlayerProfile || null;
-          isRestoredPlayer = true;
-        } else if (roomExists && members[user.uid] && members[user.uid].role === 'player') {
-          displayName = members[user.uid].displayName || 'Player';
-          restoredPortfolio = members[user.uid].portfolio || { cash: 20000 };
-          restoredBackupProfile = members[user.uid].backupPlayerProfile || null;
-          isRestoredPlayer = true;
-        } else {
-          const existingNames = new Set(
-            Object.values(members || {})
-              .filter(m => m && m.role === 'player' && m.displayName)
-              .map(m => m.displayName)
-          );
-          let nextIndex = 1;
-          while (existingNames.has(`Player_${nextIndex}`)) {
-            nextIndex++;
-          }
-          const defaultName = `Player_${nextIndex}`;
-          displayName = await this.promptPlayerNameSelection(code, defaultName, existingNames);
-          if (!displayName) return false;
-        }
-      }
-    } else {
-      role = 'player';
-      if (roomExists && savedMember && savedMember.role === 'player') {
-        displayName = savedMember.displayName || 'Player';
-        restoredPortfolio = savedMember.portfolio || { cash: 20000 };
-        restoredBackupProfile = savedMember.backupPlayerProfile || null;
-        isRestoredPlayer = true;
-      } else if (roomExists && members[user.uid] && members[user.uid].role === 'player') {
-        displayName = members[user.uid].displayName || 'Player';
-        restoredPortfolio = members[user.uid].portfolio || null;
-        restoredBackupProfile = members[user.uid].backupPlayerProfile || null;
-        isRestoredPlayer = true;
-      } else {
         const existingNames = new Set(
           Object.values(members || {})
             .filter(m => m && m.role === 'player' && m.displayName)
@@ -229,6 +220,20 @@ export class LobbyController {
         displayName = await this.promptPlayerNameSelection(code, defaultName, existingNames);
         if (!displayName) return false;
       }
+    } else {
+      role = 'player';
+      const existingNames = new Set(
+        Object.values(members || {})
+          .filter(m => m && m.role === 'player' && m.displayName)
+          .map(m => m.displayName)
+      );
+      let nextIndex = 1;
+      while (existingNames.has(`Player_${nextIndex}`)) {
+        nextIndex++;
+      }
+      const defaultName = `Player_${nextIndex}`;
+      displayName = await this.promptPlayerNameSelection(code, defaultName, existingNames);
+      if (!displayName) return false;
     }
 
     // 3. Setup or Join Room via RoomSetupService

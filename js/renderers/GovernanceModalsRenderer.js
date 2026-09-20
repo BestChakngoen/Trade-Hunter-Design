@@ -216,16 +216,12 @@ export class GovernanceModalsRenderer {
 
       const cashFormatted = (player.cash || 0).toLocaleString('en-US');
       const initial = (player.displayName || 'P').charAt(0).toUpperCase();
-      const isOnline = player.online !== false;
-      const statusBadge = isOnline 
-        ? `<span class="kick-status-badge online"><span class="kick-status-dot online"></span> ออนไลน์</span>`
-        : `<span class="kick-status-badge offline"><span class="kick-status-dot offline"></span> ออฟไลน์</span>`;
 
       item.innerHTML = `
         <div class="kick-player-info">
           <div class="kick-player-avatar">${initial}</div>
           <div>
-            <div class="kick-player-name">${player.displayName || 'Player'} ${statusBadge}</div>
+            <div class="kick-player-name">${player.displayName || 'Player'}</div>
             <div class="kick-player-stats">Cash: ${cashFormatted} ฿</div>
           </div>
         </div>

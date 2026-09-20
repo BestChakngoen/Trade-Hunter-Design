@@ -61,6 +61,20 @@
             <img src="Assets/UI_Lobby/JoyButton.png" class="lobby-joy-btn-img" alt="JOIN!" />
             <span class="lobby-joy-btn-text">JOIN</span>
           </button>
+          <div id="lobbyCheckingIndicator" class="lobby-checking-indicator" style="display: none;" aria-live="polite">
+            <div class="checking-badge">
+              <svg class="checking-spinner" viewBox="0 0 24 24" fill="none">
+                <circle class="spinner-track" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.8" stroke-opacity="0.25"></circle>
+                <path class="spinner-head" d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"></path>
+              </svg>
+              <span class="checking-text">CHECKING</span>
+              <span class="checking-dots">
+                <span class="dot dot-1">.</span>
+                <span class="dot dot-2">.</span>
+                <span class="dot dot-3">.</span>
+              </span>
+            </div>
+          </div>
         </div>
       </form>
     </main>

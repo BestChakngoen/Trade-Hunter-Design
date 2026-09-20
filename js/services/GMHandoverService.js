@@ -15,7 +15,7 @@ export class GMHandoverService {
   static getEligiblePlayers(members, currentGmUid) {
     if (!members) return [];
     return Object.entries(members)
-      .filter(([uid, data]) => uid !== currentGmUid && data && data.role === 'player' && data.online !== false)
+      .filter(([uid, data]) => uid !== currentGmUid && data && data.role === 'player')
       .map(([uid, data]) => ({
         uid,
         displayName: data.displayName || 'Player',

@@ -4,13 +4,14 @@
  * Adheres to Single Responsibility Principle (SRP).
  */
 export class AppLifecycleService {
-  constructor({ state, renderer, firebaseService, playerSessionService, onEvicted, onRoomExpired }) {
+  constructor({ state, renderer, firebaseService, playerSessionService, onEvicted, onRoomExpired, onResync = null }) {
     this.state = state;
     this.renderer = renderer;
     this.firebaseService = firebaseService;
     this.playerSessionService = playerSessionService;
     this.onEvicted = onEvicted;
     this.onRoomExpired = onRoomExpired;
+    this.onResync = onResync;
   }
 
   /**
@@ -75,6 +76,11 @@ export class AppLifecycleService {
       const code = this.state.roomCode;
       if (!code || this.state.role !== 'player') return;
 
+      // 1. Ensure Firebase connection is re-established immediately
+      if (typeof this.firebaseService.ensureConnection === 'function') {
+        this.firebaseService.ensureConnection();
+      }
+
       let user = this.firebaseService.getCurrentUser();
       if (!user) {
         // Allow brief moment for auth token re-establishment after waking from device sleep
@@ -103,6 +109,23 @@ export class AppLifecycleService {
           const kickReason = isKicked ? roomData.kickedMembers[currentUid]?.reason : (isReset ? 'ROOM_RESET' : null);
           if (typeof this.onEvicted === 'function') {
             this.onEvicted({ isReset, isKicked, kickReason, isNotInMembers, code, currentUid });
+          }
+          return;
+        }
+
+        // Active player returned: mark online and resync real-time data
+        if (currentUid && members[currentUid]) {
+          const memberData = members[currentUid];
+          if (memberData.online === false) {
+            await this.firebaseService.setMemberOnlineStatus(code, currentUid, true);
+          }
+
+          // Update state portfolio from the latest snapshot
+          this.state.updatePortfolioFromMemberData(memberData);
+
+          // Invoke dedicated onResync handler to update UI and board state
+          if (typeof this.onResync === 'function') {
+            await this.onResync(roomData, memberData);
           }
         }
       } catch (e) {

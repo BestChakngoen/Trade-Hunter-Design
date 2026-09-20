@@ -107,6 +107,7 @@ export class FirebaseService {
   async setStocksBoard(roomCode, stocks, isReset = false) { await this.boardRepo.setStocksBoard(roomCode, stocks, isReset); }
 
   // --- Room Domain Delegations (RoomRepository) ---
+  ensureConnection() { this.roomRepo.ensureConnection(); }
   getRoomRef(roomCode) { return this.roomRepo.getRoomRef(roomCode); }
   async getRoomStateSnapshot(roomCode) { return await this.roomRepo.getRoomStateSnapshot(roomCode); }
   getUserInBoardRef(roomCode, userId) { return this.roomRepo.getUserInBoardRef(roomCode, userId); }

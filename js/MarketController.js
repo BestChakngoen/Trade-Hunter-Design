@@ -73,7 +73,8 @@ export class MarketController {
       firebaseService: this.firebaseService,
       playerSessionService: this.playerSessionService,
       onEvicted: (info) => this.handleEviction(info),
-      onRoomExpired: () => this.handleRoomExpired()
+      onRoomExpired: () => this.handleRoomExpired(),
+      onResync: async (roomData, memberData) => this.handlePlayerResync(roomData, memberData)
     });
 
     this.isBeingKicked = false;
@@ -130,7 +131,7 @@ export class MarketController {
     this.roomSyncHandler.isHandlingExpiry = val;
   }
 
-  init() {
+  async init() {
     this.renderer.ensureViewGraphButtons();
     this.renderer.applyBetaColors(this.state.originalCards);
     this.renderer.showLobby();
@@ -188,6 +189,86 @@ export class MarketController {
     this.roomGovernanceController.bindAll();
     this.appLifecycleService.bindGlobalProtectionEvents();
     this.appLifecycleService.bindLifecycleReverificationEvents();
+
+    // 4. Auto-reconnect to active room session if returning from browser/machine restart
+    await this.checkAndAutoReconnect();
+  }
+
+  /**
+   * Automatically checks for an existing active room session and reconnects seamlessly.
+   */
+  async checkAndAutoReconnect() {
+    if (!this.playerSessionService) return false;
+    const lastRoomCode = this.playerSessionService.getLastActiveRoomCode();
+    if (!lastRoomCode) return false;
+
+    const session = this.playerSessionService.getRoomSession(lastRoomCode);
+    if (!session || !session.sessionToken) return false;
+
+    try {
+      const sessionInfo = await this.lobbyController.sessionCoordinator.inspectRoomAndSession(lastRoomCode);
+      if (!sessionInfo || !sessionInfo.isAllowed || !sessionInfo.roomExists) {
+        this.playerSessionService.clearRoomSession(lastRoomCode);
+        return false;
+      }
+
+      const { roomData, savedMember, members } = sessionInfo;
+      const sessionToken = session.sessionToken;
+
+      const hasTokenInSaved = Boolean(savedMember || (roomData?.savedMembers && roomData.savedMembers[sessionToken]));
+      const hasTokenInMembers = Boolean(members && Object.values(members).some(m => m && m.sessionToken === sessionToken));
+
+      if (!hasTokenInSaved && !hasTokenInMembers) {
+        this.playerSessionService.clearRoomSession(lastRoomCode);
+        return false;
+      }
+
+      // Perform seamless join and activate realtime listeners
+      const joinSuccess = await this.lobbyController.joinOrCreateRoom(lastRoomCode);
+      if (joinSuccess) {
+        this.activateBoardRealtimeListener();
+        this.renderer.showTopToast("RECONNECTED", `เชื่อมต่อห้อง ${lastRoomCode} เดิมเรียบร้อยแล้ว`, "success");
+        return true;
+      }
+    } catch (e) {
+      console.warn("[MarketController] Auto-reconnect failed:", e);
+    }
+    return false;
+  }
+
+  /**
+   * Resyncs board state and player portfolio UI when waking up from background or device sleep.
+   */
+  async handlePlayerResync(roomData, memberData) {
+    if (!this.state.roomCode) return;
+    try {
+      // 1. Sync latest board state from server
+      const boardSnap = await this.firebaseService.getBoardSnapshot(this.state.roomCode);
+      if (boardSnap && boardSnap.exists()) {
+        this.state.updateFromFirebaseBoard(boardSnap.val());
+        this.renderer.updateStockPricesUI(this.state.boardStocks);
+      }
+
+      // 2. Sync latest portfolio and pending orders UI
+      const stats = this.state.getPortfolioStats();
+      const orders = roomData.pendingOrders || {};
+      const user = this.firebaseService.getCurrentUser();
+      const uid = user ? user.uid : null;
+
+      this.renderer.updatePortfolioUI(stats, this.state.portfolio, this.state.boardStocks, orders, uid);
+      const debtData = TradeService.calculateDebtInstrumentsValue(this.state.portfolio?.debt);
+      this.renderer.updateDebtInstrumentsUI(
+        debtData,
+        async (key) => { await this.tradeController.submitDebtOrder('INVEST', key); },
+        async (key) => { await this.tradeController.submitDebtOrder('REDEEM', key); }
+      );
+      this.renderer.updatePlayerPendingOrdersUI(orders, uid);
+      if (this.tradeController && this.tradeController.refreshDropdownOptions) {
+        this.tradeController.refreshDropdownOptions();
+      }
+    } catch (err) {
+      console.warn("[MarketController] Error in handlePlayerResync:", err);
+    }
   }
 
   // --- Room Governance Proxies (Backward Compatibility) ---

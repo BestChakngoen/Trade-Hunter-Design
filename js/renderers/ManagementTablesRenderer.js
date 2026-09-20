@@ -16,7 +16,7 @@ export class ManagementTablesRenderer {
     const orderList = Object.values(orders || {}).filter(order => {
       if (!order) return false;
       if (members && Object.keys(members).length > 0) {
-        if (!order.uid || !members[order.uid] || members[order.uid].online === false) {
+        if (!order.uid || !members[order.uid]) {
           return false;
         }
       }
@@ -108,8 +108,7 @@ export class ManagementTablesRenderer {
       if (!member) return false;
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
-      const isOnline = member.online !== false;
-      return role !== 'game_master' && name !== 'GM' && isOnline;
+      return role !== 'game_master' && name !== 'GM';
     });
 
     if (memberList.length === 0) {
@@ -160,8 +159,7 @@ export class ManagementTablesRenderer {
       if (!member) return false;
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
-      const isOnline = member.online !== false;
-      return role !== 'game_master' && name !== 'GM' && isOnline;
+      return role !== 'game_master' && name !== 'GM';
     });
 
     if (memberList.length === 0) {
@@ -241,8 +239,7 @@ export class ManagementTablesRenderer {
       if (!member) return false;
       const role = (member.role || '').toLowerCase();
       const name = (member.displayName || '').toUpperCase();
-      const isOnline = member.online !== false;
-      return role !== 'game_master' && name !== 'GM' && isOnline;
+      return role !== 'game_master' && name !== 'GM';
     });
 
     if (memberList.length === 0) {
