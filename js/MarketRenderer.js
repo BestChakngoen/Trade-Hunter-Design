@@ -138,6 +138,38 @@ export class MarketRenderer {
     }
   }
 
+  /**
+   * Sets lobby form into animated Checking... state, toggling join button and checking indicator.
+   * @param {boolean} isChecking
+   */
+  setLobbyChecking(isChecking) {
+    const form = this.lobbyForm;
+    const btn = this.joinRoomBtn;
+    const indicator = this.lobbyCheckingIndicator || (typeof document !== 'undefined' ? document.getElementById('lobbyCheckingIndicator') : null);
+
+    if (isChecking) {
+      if (form) form.classList.add('is-checking');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('is-checking');
+        btn.style.setProperty('display', 'none', 'important');
+      }
+      if (indicator) {
+        indicator.style.setProperty('display', 'flex', 'important');
+      }
+    } else {
+      if (form) form.classList.remove('is-checking');
+      if (indicator) {
+        indicator.style.setProperty('display', 'none', 'important');
+      }
+      if (btn) {
+        btn.classList.remove('is-checking');
+        btn.style.removeProperty('display');
+        btn.disabled = false;
+      }
+    }
+  }
+
   updateRoomCodeDisplay(roomCode) {
     if (this.userRoomCodeBadge) {
       this.userRoomCodeBadge.textContent = roomCode ? roomCode.toUpperCase() : '-';

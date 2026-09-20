@@ -16,3 +16,5 @@ export const update = async (r, val) => {};
 export const onValue = (r, cb) => () => {};
 export const onDisconnect = () => ({ cancel: () => {}, remove: async () => {}, set: async () => {} });
 export const runTransaction = async (r, cb) => ({ committed: true, result: { committed: true } });
+export const goOnline = () => {};
+

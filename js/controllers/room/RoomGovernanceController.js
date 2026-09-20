@@ -90,10 +90,27 @@ export class RoomGovernanceController {
         try {
           const res = await this.firebaseService.transferGMRoleDirectly(code, currentUid, targetUid);
           if (res && res.success) {
-            this.state.setRole('player');
-            if (res.formerGmRestoredProfile?.displayName) {
-              this.state.setPlayerName(res.formerGmRestoredProfile.displayName);
+            let restoredName = res.formerGmRestoredProfile?.displayName;
+            if (!restoredName || restoredName === 'GM') {
+              try {
+                if (typeof localStorage !== 'undefined') {
+                  restoredName = localStorage.getItem('traderHunter_playerName') || '';
+                }
+              } catch (e) {}
             }
+            if (!restoredName || restoredName === 'GM') {
+              restoredName = (this.state.playerName && this.state.playerName !== 'GM') ? this.state.playerName : 'Player_1';
+            }
+
+            this.state.setRole('player');
+            this.state.setPlayerName(restoredName);
+            this.state.isSpectating = false;
+            this.renderer.hideKickPlayerModal();
+            if (this.renderer.spectatorToggleBtn) this.renderer.spectatorToggleBtn.style.display = 'none';
+            this.renderer.updateSpectatorButtonUI(false);
+            this.firebaseService.configureDisconnectCleanup(code, currentUid, false);
+            this.renderer.updateControlsVisibility('player', restoredName, this.state.gameMode);
+
             this.renderer.showTopToast(
               "GM HANDOVER SUCCESS",
               `ส่งมอบตำแหน่ง GM ให้กับ "${targetPlayer.displayName}" สำเร็จแล้ว!`,
@@ -102,22 +119,18 @@ export class RoomGovernanceController {
             if (res.formerGmRestoredProfile) {
               this.renderer.showTopToast(
                 "DATA RESTORED",
-                `โหลดข้อมูลเดิมของ ${res.formerGmRestoredProfile.displayName} เรียบร้อยแล้ว`,
+                `โหลดข้อมูลเดิมของ ${restoredName} เรียบร้อยแล้ว`,
                 "approved"
               );
             }
 
             // Automatically prompt the former GM to set their player name (forced: no close button)
             setTimeout(() => {
-              const prevDisplayName = res.formerGmRestoredProfile?.displayName;
-              const prefillName = (prevDisplayName && prevDisplayName !== 'GM') 
-                ? prevDisplayName 
-                : ((this.state.playerName && this.state.playerName !== 'GM') ? this.state.playerName : '');
               this.openPlayerNameModal({
                 title: "แก้ไขชื่อผู้เล่น",
                 subtitle: "คุณได้เปลี่ยนบทบาทเป็นผู้เล่นแล้ว โปรดระบุชื่อที่ต้องการใช้แสดงในห้องเกม (1 - 20 ตัวอักษร)",
                 confirmText: "บันทึกชื่อ",
-                initialValue: prefillName,
+                initialValue: restoredName,
                 allowClose: false
               });
             }, 300);
@@ -264,13 +277,6 @@ export class RoomGovernanceController {
       if (upper === 'GM' || upper === 'GAME MASTER' || upper === 'GAME_MASTER') {
         this.renderer.showPlayerNameError("สงวนสิทธิ์ห้ามใช้ชื่อ GM หรือ Game Master");
         return;
-      }
-
-      if (raw === this.state.playerName && this.state.playerName !== 'GM') {
-        handleClose();
-        return;
-      }
-
       btnConfirm.disabled = true;
       btnConfirm.style.opacity = '0.6';
 

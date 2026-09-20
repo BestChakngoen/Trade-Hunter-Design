@@ -48,22 +48,8 @@ export class LobbyController {
 
       this.isSubmitting = true;
 
-      const form = this.renderer.lobbyForm;
-      const btn = this.renderer.joinRoomBtn;
-      const indicator = this.renderer.lobbyCheckingIndicator || document.getElementById('lobbyCheckingIndicator');
-
-      if (form) {
-        form.classList.add('is-checking');
-      }
-
-      // Hide join button and show dedicated animated checking indicator
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add('is-checking');
-        btn.style.setProperty('display', 'none', 'important');
-      }
-      if (indicator) {
-        indicator.style.setProperty('display', 'flex', 'important');
+      if (typeof this.renderer.setLobbyChecking === 'function') {
+        this.renderer.setLobbyChecking(true);
       }
 
       try {
@@ -81,16 +67,8 @@ export class LobbyController {
         this.renderer.showErrorAlert("เกิดข้อผิดพลาด", err.message || "ไม่สามารถระบุการเชื่อมต่อห้องเกมได้");
       } finally {
         this.isSubmitting = false;
-        if (form) {
-          form.classList.remove('is-checking');
-        }
-        if (indicator) {
-          indicator.style.setProperty('display', 'none', 'important');
-        }
-        if (btn) {
-          btn.classList.remove('is-checking');
-          btn.style.removeProperty('display');
-          btn.disabled = false;
+        if (typeof this.renderer.setLobbyChecking === 'function') {
+          this.renderer.setLobbyChecking(false);
         }
       }
     });

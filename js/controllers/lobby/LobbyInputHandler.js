@@ -79,13 +79,9 @@ export class LobbyInputHandler {
       });
     }
 
-    // 6. Pre-fill last active room code if available
+    // 6. Pre-fill last active room code if available with animated checking indicator
     if (this.playerSessionService) {
-      const lastCode = this.playerSessionService.getLastActiveRoomCode();
-      if (lastCode && !input.value) {
-        input.value = lastCode;
-        this.updateRoomCodeSlots(lastCode);
-      }
+      this.prefillLastActiveRoomCode();
     }
 
     // 7. Extra submit buttons
@@ -100,6 +96,38 @@ export class LobbyInputHandler {
       this.renderer.joinRoomBtn.addEventListener('click', (e) => {
         if (this.triggerShakeIfEmpty(e)) return;
       });
+    }
+  }
+
+  /**
+   * Pre-fills last active room code if available, displaying the animated Checking... indicator
+   * so the user visually sees that the system is actively retrieving and populating their prior session.
+   */
+  async prefillLastActiveRoomCode() {
+    if (!this.playerSessionService) return;
+    const input = this.renderer.roomCodeInput;
+    if (!input || input.value) return;
+
+    const lastCode = this.playerSessionService.getLastActiveRoomCode();
+    if (!lastCode) return;
+
+    // Show animated Checking... indicator while retrieving and setting up old room code
+    if (typeof this.renderer.setLobbyChecking === 'function') {
+      this.renderer.setLobbyChecking(true);
+    }
+
+    try {
+      // Brief smooth transition to visually signify checking/retrieval is occurring
+      await new Promise(resolve => setTimeout(resolve, 450));
+
+      if (!input.value) {
+        input.value = lastCode;
+        this.updateRoomCodeSlots(lastCode);
+      }
+    } finally {
+      if (typeof this.renderer.setLobbyChecking === 'function') {
+        this.renderer.setLobbyChecking(false);
+      }
     }
   }
 

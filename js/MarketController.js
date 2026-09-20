@@ -205,6 +205,10 @@ export class MarketController {
     const session = this.playerSessionService.getRoomSession(lastRoomCode);
     if (!session || !session.sessionToken) return false;
 
+    if (typeof this.renderer.setLobbyChecking === 'function') {
+      this.renderer.setLobbyChecking(true);
+    }
+
     try {
       const sessionInfo = await this.lobbyController.sessionCoordinator.inspectRoomAndSession(lastRoomCode);
       if (!sessionInfo || !sessionInfo.isAllowed || !sessionInfo.roomExists) {
@@ -232,6 +236,10 @@ export class MarketController {
       }
     } catch (e) {
       console.warn("[MarketController] Auto-reconnect failed:", e);
+    } finally {
+      if (typeof this.renderer.setLobbyChecking === 'function') {
+        this.renderer.setLobbyChecking(false);
+      }
     }
     return false;
   }

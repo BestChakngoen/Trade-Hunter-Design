@@ -162,8 +162,19 @@ export class GovernanceRepository {
 
     // 2. Restore former GM back to player mode
     let formerGmRestoredProfile = null;
+    const gmSessionToken = members[currentGmUid]?.sessionToken;
+    const savedMemberProfile = (roomData.savedMembers && gmSessionToken) ? roomData.savedMembers[gmSessionToken] : null;
+
     if (members[currentGmUid].backupPlayerProfile) {
       const backup = members[currentGmUid].backupPlayerProfile;
+      updates[`members/${currentGmUid}/role`] = 'player';
+      updates[`members/${currentGmUid}/displayName`] = backup.displayName || 'Player';
+      updates[`members/${currentGmUid}/portfolio`] = backup.portfolio ? JSON.parse(JSON.stringify(backup.portfolio)) : { cash: 20000 };
+      updates[`members/${currentGmUid}/backupPlayerProfile`] = null;
+      updates[`members/${currentGmUid}/online`] = true;
+      formerGmRestoredProfile = backup;
+    } else if (savedMemberProfile && savedMemberProfile.backupPlayerProfile) {
+      const backup = savedMemberProfile.backupPlayerProfile;
       updates[`members/${currentGmUid}/role`] = 'player';
       updates[`members/${currentGmUid}/displayName`] = backup.displayName || 'Player';
       updates[`members/${currentGmUid}/portfolio`] = backup.portfolio ? JSON.parse(JSON.stringify(backup.portfolio)) : { cash: 20000 };
@@ -176,16 +187,26 @@ export class GovernanceRepository {
           .filter(m => m && m.role === 'player' && m.displayName && m !== members[currentGmUid])
           .map(m => m.displayName)
       );
-      let nextIdx = 1;
-      while (existingNames.has(`Player_${nextIdx}`)) nextIdx++;
-      const newName = `Player_${nextIdx}`;
 
+      // Check if savedMemberProfile has a custom player displayName that is not 'GM' and not taken
+      let resolvedName = null;
+      if (savedMemberProfile && savedMemberProfile.displayName && savedMemberProfile.displayName !== 'GM' && !existingNames.has(savedMemberProfile.displayName)) {
+        resolvedName = savedMemberProfile.displayName;
+      }
+
+      if (!resolvedName) {
+        let nextIdx = 1;
+        while (existingNames.has(`Player_${nextIdx}`)) nextIdx++;
+        resolvedName = `Player_${nextIdx}`;
+      }
+
+      const restoredPortfolio = (savedMemberProfile && savedMemberProfile.portfolio) ? JSON.parse(JSON.stringify(savedMemberProfile.portfolio)) : { cash: 20000 };
       updates[`members/${currentGmUid}/role`] = 'player';
-      updates[`members/${currentGmUid}/displayName`] = newName;
-      updates[`members/${currentGmUid}/portfolio`] = { cash: 20000 };
+      updates[`members/${currentGmUid}/displayName`] = resolvedName;
+      updates[`members/${currentGmUid}/portfolio`] = restoredPortfolio;
       updates[`members/${currentGmUid}/backupPlayerProfile`] = null;
       updates[`members/${currentGmUid}/online`] = true;
-      formerGmRestoredProfile = { displayName: newName, portfolio: { cash: 20000 } };
+      formerGmRestoredProfile = { displayName: resolvedName, portfolio: restoredPortfolio };
     }
 
     // 3. Update savedMembers persistent snapshots if node exists

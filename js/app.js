@@ -3,9 +3,16 @@ import { MarketState } from './MarketState.js';
 import { MarketRenderer } from './MarketRenderer.js';
 import { MarketController } from './MarketController.js';
 import { InAppBrowserService } from './services/InAppBrowserService.js';
+import { BrowserSupportService } from './services/BrowserSupportService.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize In-App Browser detection & guidance for LINE, Facebook, Instagram
+  // 1. Verify Browser feature support (WebSocket, Storage, Crypto, Fetch)
+  const isSupported = BrowserSupportService.notifyIfUnsupported();
+  if (!isSupported) {
+    return;
+  }
+
+  // 2. Initialize In-App Browser detection & guidance for LINE, Facebook, Instagram
   const inAppBrowserService = new InAppBrowserService();
   inAppBrowserService.init();
 
