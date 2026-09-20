@@ -277,6 +277,7 @@ export class RoomGovernanceController {
       if (upper === 'GM' || upper === 'GAME MASTER' || upper === 'GAME_MASTER') {
         this.renderer.showPlayerNameError("สงวนสิทธิ์ห้ามใช้ชื่อ GM หรือ Game Master");
         return;
+      }
       btnConfirm.disabled = true;
       btnConfirm.style.opacity = '0.6';
 
