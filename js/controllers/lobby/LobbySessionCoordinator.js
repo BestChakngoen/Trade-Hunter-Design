@@ -71,26 +71,10 @@ export class LobbySessionCoordinator {
       const isExpired = Boolean(expiresAt && expiresAt <= now);
       const isEnded = Boolean(roomData.isEnd);
       const isReset = Boolean(roomData.isReset || roomData.status === 'RESET');
-      const isKicked = Boolean(user && roomData.kickedMembers && roomData.kickedMembers[user.uid]);
-
-      if (isReset || isKicked) {
-        if (this.playerSessionService) {
-          this.playerSessionService.clearRoomSession(code);
-        }
-        const kickReason = isKicked ? roomData.kickedMembers[user.uid]?.reason : 'ROOM_RESET';
-        return {
-          isAllowed: false,
-          reason: kickReason || 'ROOM_RESET',
-          message: kickReason === 'ROOM_RESET'
-            ? "ห้องเกมนี้ถูกรีเซ็ตข้อมูลทั้งหมดโดย GM ระบบได้นำผู้เล่นทุกคนกลับสู่หน้าล็อบบี้แล้ว"
-            : "คุณถูกผู้ดูแลห้อง (GM) บังคับให้ออกจากห้องเกม และข้อมูลการเล่นทั้งหมดของคุณถูกรีเซ็ตเรียบร้อยแล้ว",
-          roomExists: true
-        };
-      }
-
-      // Safe Purge: If room has 0 members and is expired or ended
       const hasNoMembers = memberUids.length === 0;
-      if (hasNoMembers && (isExpired || isEnded)) {
+
+      // Safe Purge: If room was reset, or has 0 members and is expired/ended
+      if (isReset || (hasNoMembers && (isExpired || isEnded))) {
         await this.firebaseService.deleteRoomData(code);
         if (this.playerSessionService) {
           this.playerSessionService.clearRoomSession(code);
@@ -100,6 +84,23 @@ export class LobbySessionCoordinator {
       } else {
         // Room has active players - preserve it!
         roomExists = true;
+      }
+
+      // Check if user was individually kicked from an active room session
+      if (roomExists && roomData) {
+        const isKicked = Boolean(user && roomData.kickedMembers && roomData.kickedMembers[user.uid]);
+        if (isKicked) {
+          if (this.playerSessionService) {
+            this.playerSessionService.clearRoomSession(code);
+          }
+          const kickReason = roomData.kickedMembers[user.uid]?.reason || 'KICKED';
+          return {
+            isAllowed: false,
+            reason: kickReason,
+            message: "คุณถูกผู้ดูแลห้อง (GM) บังคับให้ออกจากห้องเกม และข้อมูลการเล่นทั้งหมดของคุณถูกรีเซ็ตเรียบร้อยแล้ว",
+            roomExists: true
+          };
+        }
       }
     }
 
