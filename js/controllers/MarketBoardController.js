@@ -23,7 +23,12 @@ export class MarketBoardController {
       firebaseService: this.firebaseService,
       marketController: this.marketController,
       playerSessionService: this.playerSessionService,
-      onPriceReset: () => this.updateViewGrid()
+      onPriceReset: () => this.updateViewGrid(),
+      onBecomeGM: () => {
+        this.state.setRole('game_master');
+        this.state.setPlayerName('GM');
+        this.renderer.updateControlsVisibility('game_master', 'GM', this.state.gameMode);
+      }
     });
   }
 
@@ -52,6 +57,10 @@ export class MarketBoardController {
   // --- Danger Zone Proxies (Backward Compatibility) ---
   bindDangerZone() {
     this.dangerZoneHandler.bindDangerZone();
+  }
+
+  bindPlayerDangerZone() {
+    this.dangerZoneHandler.bindPlayerDangerZone();
   }
 
   // --- Market Board Filtering & Visual Operations ---

@@ -142,6 +142,7 @@ export class FirebaseService {
   async triggerGMTransfer(roomCode) { await this.governanceRepo.triggerGMTransfer(roomCode); }
   async claimGMRoleWithTransaction(roomCode, userId, userName) { return await this.governanceRepo.claimGMRoleWithTransaction(roomCode, userId, userName); }
   async transferGMRoleDirectly(roomCode, currentGmUid, targetPlayerUid) { return await this.governanceRepo.transferGMRoleDirectly(roomCode, currentGmUid, targetPlayerUid); }
+  async forceClaimGMRole(roomCode, claimingUid, claimingPlayerName) { return await this.governanceRepo.forceClaimGMRole(roomCode, claimingUid, claimingPlayerName); }
   async kickPlayerAndPurgeData(roomCode, targetUid) { return await this.governanceRepo.kickPlayerAndPurgeData(roomCode, targetUid); }
   async clearKickedMember(roomCode, uid) { await this.governanceRepo.clearKickedMember(roomCode, uid); }
 }

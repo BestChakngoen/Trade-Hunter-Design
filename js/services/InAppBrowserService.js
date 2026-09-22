@@ -90,7 +90,7 @@ export class InAppBrowserService {
     if (isAndroid) {
       actionBtnHtml = `
         <a href="${chromeIntentUrl}" class="iab-btn-primary" id="iabOpenChromeBtn">
-          เปิดใน Chrome 🚀
+          เปิดใน Chrome
         </a>
       `;
     } else {
@@ -110,7 +110,7 @@ export class InAppBrowserService {
         </div>
         <div class="iab-text-area">
           <div class="iab-title">
-            เปิดผ่าน ${appName} <span class="iab-top-arrow">↗️</span>
+            เปิดผ่าน ${appName}
           </div>
           <p class="iab-desc">
             ${isIOS 

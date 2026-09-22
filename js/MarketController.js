@@ -155,6 +155,7 @@ export class MarketController {
     this.marketBoardController.bindHistoryButtons();
     this.marketBoardController.bindStockModals();
     this.marketBoardController.bindDangerZone();
+    this.marketBoardController.bindPlayerDangerZone();
     this.marketBoardController.bindSpectatorEvents();
 
     if (this.renderer.payAllDividendBtn) {

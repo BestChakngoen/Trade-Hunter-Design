@@ -226,9 +226,14 @@ export class MarketRenderer {
       gmBatchControls.style.display = isMaster ? 'inline-flex' : 'none';
     }
 
-    const dangerZone = document.querySelector('.danger-zone-section');
-    if (dangerZone) {
-      dangerZone.style.display = isMaster ? 'block' : 'none';
+    const gmDangerZone = document.querySelector('.danger-zone-section');
+    if (gmDangerZone) {
+      gmDangerZone.style.display = isMaster ? 'block' : 'none';
+    }
+
+    const playerDangerZone = document.getElementById('playerDangerZone');
+    if (playerDangerZone) {
+      playerDangerZone.style.display = (!isMaster) ? 'block' : 'none';
     }
 
     this.updateHistoryControlsUI(isMaster);

@@ -1,16 +1,19 @@
 /**
  * DangerZoneHandler - Dedicated controller responsible for Danger Zone operations
  * including resetting market stock prices and atomic room purging with kick-all to lobby.
+ * Also handles Player Danger Zone emergency actions (Become GM, Reset Game) for cases
+ * where the GM is stuck or offline.
  * Adheres to Single Responsibility Principle (SRP).
  */
 export class DangerZoneHandler {
-  constructor({ state, renderer, firebaseService, marketController = null, playerSessionService = null, onPriceReset = null }) {
+  constructor({ state, renderer, firebaseService, marketController = null, playerSessionService = null, onPriceReset = null, onBecomeGM = null }) {
     this.state = state;
     this.renderer = renderer;
     this.firebaseService = firebaseService;
     this.marketController = marketController;
     this.playerSessionService = playerSessionService;
     this.onPriceReset = onPriceReset;
+    this.onBecomeGM = onBecomeGM;
   }
 
   /**
@@ -162,6 +165,110 @@ export class DangerZoneHandler {
           this.renderer.showErrorAlert("รีเซ็ตเกมสำเร็จ", "ทำการรีเซ็ตข้อมูลเกมและนำผู้เล่นทุกคนรวมทั้ง GM กลับสู่ล็อบบี้เรียบร้อยแล้ว");
         } catch (error) {
           console.error("Failed to reset game in database:", error);
+          this.renderer.showErrorAlert("เกิดข้อผิดพลาด", "ไม่สามารถรีเซ็ตเกมได้ โปรดลองอีกครั้ง");
+        }
+      });
+    }
+  }
+
+  /**
+   * Binds Player Danger Zone emergency buttons:
+   * - Become GM: Claims GM role atomically when GM is stuck/offline.
+   * - Reset Game: Resets room and returns all players to lobby.
+   */
+  bindPlayerDangerZone() {
+    const becomeGmBtn = document.getElementById('playerBecomeGmBtn');
+    if (becomeGmBtn) {
+      becomeGmBtn.addEventListener('click', async () => {
+        if (this.state.role !== 'player') return;
+
+        const confirmResult = await this.renderer.showConfirmAlert(
+          "รับตำแหน่ง Game Master?",
+          "คุณต้องการเป็น Game Master หรือไม่? หากมี GM อยู่แล้ว จะถูก demote กลับเป็นผู้เล่นอัตโนมัติ ข้อมูลพอร์ตเดิมของคุณจะถูกบันทึกไว้",
+          "ยืนยัน",
+          "ยกเลิก"
+        );
+        if (!confirmResult || !confirmResult.isConfirmed) return;
+
+        try {
+          const currentUser = this.firebaseService.getCurrentUser();
+          const currentUid = currentUser ? currentUser.uid : null;
+          const playerName = this.state.playerName || 'Player';
+
+          const { success } = await this.firebaseService.forceClaimGMRole(
+            this.state.roomCode,
+            currentUid,
+            playerName
+          );
+
+          if (success) {
+            if (typeof this.onBecomeGM === 'function') {
+              this.onBecomeGM();
+            }
+            this.renderer.showTopToast(
+              "BECOME GM SUCCESS",
+              "คุณได้รับตำแหน่ง Game Master เรียบร้อยแล้ว!",
+              "success"
+            );
+          } else {
+            this.renderer.showErrorAlert(
+              "อ้างสิทธิ์ไม่สำเร็จ",
+              "ผู้เล่นคนอื่นอาจอ้างสิทธิ์ GM ไปก่อนแล้ว กรุณาลองใหม่อีกครั้ง"
+            );
+          }
+        } catch (error) {
+          console.error("[DangerZoneHandler] Failed to force-claim GM role:", error);
+          this.renderer.showErrorAlert("เกิดข้อผิดพลาด", "ไม่สามารถอ้างสิทธิ์ GM ได้ โปรดลองอีกครั้ง");
+        }
+      });
+    }
+
+    const playerResetGameBtn = document.getElementById('playerResetGameBtn');
+    if (playerResetGameBtn) {
+      playerResetGameBtn.addEventListener('click', async () => {
+        if (this.state.role !== 'player') return;
+
+        // First confirmation
+        const firstConfirm = await this.renderer.showConfirmAlert(
+          "รีเซ็ตเกม?",
+          "การดำเนินการนี้จะรีเซ็ตกระดานหุ้น ล้างคำสั่งซื้อขายทั้งหมด และนำผู้เล่นทุกคนรวมทั้งคุณกลับสู่หน้าล็อบบี้ คุณแน่ใจหรือไม่?",
+          "ใช่, รีเซ็ตเกม",
+          "ยกเลิก"
+        );
+        if (!firstConfirm || !firstConfirm.isConfirmed) return;
+
+        // Second confirmation (double safety)
+        const secondConfirm = await this.renderer.showConfirmAlert(
+          "⚠️ ยืนยันอีกครั้ง",
+          "ข้อมูลพอร์ตของผู้เล่นทุกคนจะถูกรีเซ็ตกลับค่าเริ่มต้น ไม่สามารถยกเลิกได้ ยืนยันการรีเซ็ตเกมหรือไม่?",
+          "ยืนยัน รีเซ็ต",
+          "ยกเลิก"
+        );
+        if (!secondConfirm || !secondConfirm.isConfirmed) return;
+
+        try {
+          const code = this.state.roomCode;
+          if (!code) return;
+
+          const resetStocks = this.state.getResetStocks();
+
+          if (this.marketController) {
+            this.marketController.unsubscribeAll();
+          }
+
+          await this.firebaseService.resetRoomWithKickAll(code, resetStocks);
+
+          if (this.playerSessionService && code) {
+            this.playerSessionService.clearRoomSession(code);
+          }
+
+          this.state.reset();
+          this.renderer.hideGMTransferModal();
+          this.renderer.hidePlayerNameModal();
+          this.renderer.showLobby();
+          this.renderer.showErrorAlert("รีเซ็ตเกมสำเร็จ", "ทำการรีเซ็ตข้อมูลเกมและนำผู้เล่นทุกคนกลับสู่ล็อบบี้เรียบร้อยแล้ว");
+        } catch (error) {
+          console.error("[DangerZoneHandler] Player failed to reset game:", error);
           this.renderer.showErrorAlert("เกิดข้อผิดพลาด", "ไม่สามารถรีเซ็ตเกมได้ โปรดลองอีกครั้ง");
         }
       });

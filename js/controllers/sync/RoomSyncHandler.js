@@ -277,7 +277,17 @@ export class RoomSyncHandler {
           if (this.renderer.spectatorToggleBtn) this.renderer.spectatorToggleBtn.style.display = 'none';
           this.renderer.updateSpectatorButtonUI(false);
           this.firebaseService.configureDisconnectCleanup(code, currentUid, false);
+
+          // Show who claimed GM role (from gmTransferRequest) or generic message
+          const claimedByName = roomData.gmTransferRequest?.claimedByName;
+          const takenByMsg = claimedByName
+            ? `ผู้เล่น "${claimedByName}" ได้อ้างสิทธิ์ตำแหน่ง GM แทนคุณแล้ว`
+            : 'ตำแหน่ง GM ของคุณถูกโอนให้ผู้เล่นคนอื่นแล้ว';
+          this.renderer.showTopToast("GM ROLE TAKEN", takenByMsg, "rejected");
+
+          // Notify that portfolio was restored
           this.renderer.showTopToast("ROLE RESTORED", `คุณได้กลับสู่บทบาทผู้เล่น (${memberData.displayName}) และข้อมูลพอร์ตเดิมได้รับการกู้คืนแล้ว`, "approved");
+
           if (this.marketController && !this.marketController._playerNameModalCleanup) {
             setTimeout(() => {
               const prefill = (memberData.displayName && memberData.displayName !== 'GM') ? memberData.displayName : '';

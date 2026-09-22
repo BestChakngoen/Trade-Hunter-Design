@@ -255,6 +255,115 @@ export class GovernanceRepository {
     };
   }
 
+  // Realtime Database: Force-claim GM role from any player without conditions (atomic transaction)
+  async forceClaimGMRole(roomCode, claimingUid, claimingPlayerName) {
+    if (!roomCode || !claimingUid) {
+      return { success: false, reason: 'Missing required parameters' };
+    }
+
+    let claimSuccess = false;
+
+    const roomRef = this.getRoomRef(roomCode);
+    const result = await runTransaction(roomRef, (currentData) => {
+      if (currentData === null) return currentData;
+
+      const members = currentData.members || {};
+      const claimingMember = members[claimingUid];
+
+      // Claiming player must exist in the room and must not already be GM
+      if (!claimingMember || claimingMember.role === 'game_master') return;
+
+      // 1. Backup claiming player's current portfolio before promoting
+      const claimingBackup = {
+        displayName: claimingMember.displayName || claimingPlayerName || 'Player',
+        portfolio: claimingMember.portfolio
+          ? JSON.parse(JSON.stringify(claimingMember.portfolio))
+          : { cash: 20000 },
+        timestamp: Date.now()
+      };
+
+      // 2. Find and demote the current GM (if any) back to player
+      const currentGmEntry = Object.entries(members).find(([, m]) => m && m.role === 'game_master');
+      if (currentGmEntry) {
+        const [gmUid, gmData] = currentGmEntry;
+        const backup = gmData.backupPlayerProfile;
+
+        if (backup) {
+          // Restore GM's original player profile
+          currentData.members[gmUid].role = 'player';
+          currentData.members[gmUid].displayName = backup.displayName || 'Player';
+          currentData.members[gmUid].portfolio = backup.portfolio
+            ? JSON.parse(JSON.stringify(backup.portfolio))
+            : { cash: 20000 };
+          currentData.members[gmUid].backupPlayerProfile = null;
+        } else {
+          // No backup — assign auto name and fresh portfolio
+          const existingNames = new Set(
+            Object.entries(members)
+              .filter(([uid, m]) => uid !== gmUid && m && m.role === 'player' && m.displayName)
+              .map(([, m]) => m.displayName)
+          );
+          let nextIdx = 1;
+          while (existingNames.has(`Player_${nextIdx}`)) nextIdx++;
+
+          currentData.members[gmUid].role = 'player';
+          currentData.members[gmUid].displayName = `Player_${nextIdx}`;
+          currentData.members[gmUid].portfolio = { cash: 20000 };
+          currentData.members[gmUid].backupPlayerProfile = null;
+        }
+
+        // Sync savedMembers for former GM
+        if (currentData.savedMembers && gmData.sessionToken && currentData.savedMembers[gmData.sessionToken]) {
+          const sTok = gmData.sessionToken;
+          currentData.savedMembers[sTok].role = 'player';
+          currentData.savedMembers[sTok].displayName = currentData.members[gmUid].displayName;
+          currentData.savedMembers[sTok].portfolio = currentData.members[gmUid].portfolio;
+          currentData.savedMembers[sTok].backupPlayerProfile = null;
+        }
+      }
+
+      // 3. Promote claiming player to GM
+      currentData.members[claimingUid].backupPlayerProfile = claimingBackup;
+      currentData.members[claimingUid].role = 'game_master';
+      currentData.members[claimingUid].displayName = 'GM';
+      currentData.members[claimingUid].portfolio = null;
+
+      // Clear pending orders of claiming player
+      if (currentData.pendingOrders) {
+        Object.keys(currentData.pendingOrders).forEach(orderId => {
+          const order = currentData.pendingOrders[orderId];
+          if (order && (order.uid === claimingUid || order.userUid === claimingUid)) {
+            delete currentData.pendingOrders[orderId];
+          }
+        });
+      }
+
+      // Sync savedMembers for new GM
+      if (currentData.savedMembers && claimingMember.sessionToken && currentData.savedMembers[claimingMember.sessionToken]) {
+        const sTok = claimingMember.sessionToken;
+        currentData.savedMembers[sTok].role = 'game_master';
+        currentData.savedMembers[sTok].displayName = 'GM';
+        currentData.savedMembers[sTok].backupPlayerProfile = claimingBackup;
+        currentData.savedMembers[sTok].portfolio = null;
+      }
+
+      // Reset any active GM transfer request
+      currentData.gmTransferRequest = {
+        active: false,
+        claimedBy: claimingUid,
+        claimedByName: claimingPlayerName || claimingMember.displayName || 'Player',
+        timestamp: Date.now()
+      };
+
+      claimSuccess = true;
+      return currentData;
+    }, { applyLocally: false });
+
+    return {
+      success: claimSuccess && result.committed
+    };
+  }
+
   // Realtime Database: Force kick a player and purge all their data from room atomically
   async kickPlayerAndPurgeData(roomCode, targetUid) {
     if (!roomCode || !targetUid) return { success: false, reason: 'Invalid parameters' };
