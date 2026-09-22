@@ -352,7 +352,19 @@
 }
 
 /* --------------------------------------------------------------------------
-   4. 🚫 No Bounce / No Pop / No Blink Animations for SweetAlert2
+   4. 🔘 SweetAlert2 Confirm Dialog Actions Layout
+      - ปุ่ม Confirm อยู่ฝั่งขวา, ปุ่ม Cancel อยู่ฝั่งซ้าย (มาตรฐานเดียวกับ HTML modals)
+      - SweetAlert2 render confirm ก่อน cancel ใน DOM ดังนั้นต้องใช้ row-reverse
+   -------------------------------------------------------------------------- */
+.trade-alert-actions {
+  display: flex !important;
+  flex-direction: row-reverse !important;
+  gap: 12px !important;
+  justify-content: flex-start !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. 🚫 No Bounce / No Pop / No Blink Animations for SweetAlert2
    -------------------------------------------------------------------------- */
 @keyframes swal2-animate-error-x-mark {
   0%, 50%, 80%, 100% {

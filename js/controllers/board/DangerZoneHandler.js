@@ -232,7 +232,7 @@ export class DangerZoneHandler {
         const firstConfirm = await this.renderer.showConfirmAlert(
           "รีเซ็ตเกม?",
           "การดำเนินการนี้จะรีเซ็ตกระดานหุ้น ล้างคำสั่งซื้อขายทั้งหมด และนำผู้เล่นทุกคนรวมทั้งคุณกลับสู่หน้าล็อบบี้ คุณแน่ใจหรือไม่?",
-          "ใช่, รีเซ็ตเกม",
+          "ยืนยัน",
           "ยกเลิก"
         );
         if (!firstConfirm || !firstConfirm.isConfirmed) return;
@@ -241,7 +241,7 @@ export class DangerZoneHandler {
         const secondConfirm = await this.renderer.showConfirmAlert(
           "⚠️ ยืนยันอีกครั้ง",
           "ข้อมูลพอร์ตของผู้เล่นทุกคนจะถูกรีเซ็ตกลับค่าเริ่มต้น ไม่สามารถยกเลิกได้ ยืนยันการรีเซ็ตเกมหรือไม่?",
-          "ยืนยัน รีเซ็ต",
+          "ยืนยัน",
           "ยกเลิก"
         );
         if (!secondConfirm || !secondConfirm.isConfirmed) return;
